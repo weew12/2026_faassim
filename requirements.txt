@@ -1,0 +1,15 @@
+# edgerun-skippy-core 已替换为项目根目录内置的 skippy 子包，避免外部版本覆盖本地调度代码。
+# edgerun-ether 已替换为项目根目录内置的 ether 子包，避免外部版本覆盖本地网络仿真代码。
+# simpy 已替换为项目根目录内置的 simpy 子包，避免外部版本覆盖本地离散事件仿真核心。
+scipy==1.4.1
+numpy==1.22.0
+matplotlib==3.1.2
+pandas==1.0.1
+srds==0.1.0
+scikit-learn==0.23.2
+joblib==0.17.0
+tpot==0.11.5
+tqdm
+requests
+networkx>=2.4
+pyvis>=0.1.8.2
