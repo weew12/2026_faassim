@@ -8,10 +8,10 @@
 
 | 顺序 | 样例目录                           | 说明                                                             |
 | -- | ------------------------------ | -------------------------------------------------------------- |
-| 1  | `examples/autoscaling/`        | 原生自动伸缩流程，展示 `ScalingConfiguration`、副本数变化、scale up / scale down |
-| 2  | `examples/load_balancer/`      | 原生负载均衡，请求如何从多个副本中选择目标副本                                        |
-| 3  | `examples/skippy_scheduler/`   | Skippy 默认调度机制，资源过滤、节点选择、`SchedulingResult`                     |
-| 4  | `examples/network_flow/`       | Ether 网络传输，节点间 flow、带宽、延迟、网络耗时                                 |
+| 1 - | `examples/autoscaling/`        | 原生自动伸缩流程，展示 `ScalingConfiguration`、副本数变化、scale up / scale down |
+| 2 - | `examples/load_balancer/`      | 原生负载均衡，请求如何从多个副本中选择目标副本                                        |
+| 3 - | `examples/skippy_scheduler/`   | Skippy 默认调度机制，资源过滤、节点选择、`SchedulingResult`                     |
+| 4 - | `examples/network_flow/`       | Ether 网络传输，节点间 flow、带宽、延迟、网络耗时                                 |
 | 5  | `examples/image_pull_network/` | 镜像拉取过程，展示 `docker.pull()` 与网络传输的关系                             |
 | 6  | `examples/resource_monitor/`   | `ResourceState`、`ResourceMonitor`，记录 CPU / 内存使用                |
 | 7  | `examples/trace_oracle/`       | trace-driven 执行时间模型，展示函数执行时间如何从轨迹或分布中采样                        |

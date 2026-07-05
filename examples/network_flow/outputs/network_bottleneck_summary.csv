@@ -1,0 +1,3 @@
+﻿scenario,bottleneck_link,bottleneck_bandwidth_mbps,flow_count,total_bytes,avg_duration
+concurrent_bottleneck,bottleneck,10,3,90000000,74.01347079037801
+single_flow,bottleneck,10,1,20000000,16.61484536082474
