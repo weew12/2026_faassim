@@ -1,0 +1,22 @@
+﻿topology,name,object_type,arch,bandwidth,tags
+minimal,edge_node,node,x86,,
+minimal,cloud_node,node,x86,,
+minimal,direct_link,link,,100.0,"{'name': 'direct_link', 'type': 'direct'}"
+edge_cloud_star,cloud_node,node,x86,,
+edge_cloud_star,edge_0,node,x86,,
+edge_cloud_star,edge_1,node,x86,,
+edge_cloud_star,edge_2,node,x86,,
+edge_cloud_star,edge_3,node,x86,,
+edge_cloud_star,backbone,link,,50.0,"{'name': 'backbone', 'type': 'cloud_edge_backbone'}"
+edge_cloud_star,cloud_access,link,,200.0,"{'name': 'cloud_access', 'type': 'cloud_access'}"
+edge_cloud_star,access_0,link,,100.0,"{'name': 'access_0', 'type': 'edge_access'}"
+edge_cloud_star,access_1,link,,100.0,"{'name': 'access_1', 'type': 'edge_access'}"
+edge_cloud_star,access_2,link,,100.0,"{'name': 'access_2', 'type': 'edge_access'}"
+edge_cloud_star,access_3,link,,100.0,"{'name': 'access_3', 'type': 'edge_access'}"
+bottleneck,edge_a,node,x86,,
+bottleneck,edge_b,node,x86,,
+bottleneck,cloud_node,node,x86,,
+bottleneck,edge_a_access,link,,100.0,"{'name': 'edge_a_access', 'type': 'access'}"
+bottleneck,edge_b_access,link,,100.0,"{'name': 'edge_b_access', 'type': 'access'}"
+bottleneck,bottleneck,link,,10.0,"{'name': 'bottleneck', 'type': 'shared_bottleneck'}"
+bottleneck,cloud_access,link,,80.0,"{'name': 'cloud_access', 'type': 'cloud_access'}"

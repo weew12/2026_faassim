@@ -15,8 +15,8 @@
 | 5 - | `examples/image_pull_network/` | 镜像拉取过程，展示 `docker.pull()` 与网络传输的关系                             |
 | 6 - | `examples/resource_monitor/`   | `ResourceState`、`ResourceMonitor`，记录 CPU / 内存使用                |
 | 7 - | `examples/trace_oracle/`       | trace-driven 执行时间模型，展示函数执行时间如何从轨迹或分布中采样                        |
-| 8  | `examples/degradation/`        | 性能退化模型，多副本共节点时执行时间变长                                           |
-| 9  | `examples/topologies/`         | 不同拓扑构建方式，单节点、边缘集群、城市感知拓扑等                                      |
+| 8 - | `examples/degradation/`        | 性能退化模型，多副本共节点时执行时间变长                                           |
+| 9 - | `examples/topologies/`         | 不同拓扑构建方式，单节点、边缘集群、城市感知拓扑等                                      |
 | 10 | `examples/data_locality/`      | 数据本地性，函数请求依赖数据时如何影响调度和传输                                       |
 | 11 | `examples/fault_model/`        | 故障场景，节点不可用、链路退化、函数副本失败                                         |
 

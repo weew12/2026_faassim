@@ -1,0 +1,8 @@
+﻿topology,source,sink,route_available,rtt_ms,hop_count,path,hops,bottleneck_link,bottleneck_bandwidth_mbps
+minimal,edge_node,cloud_node,True,14,1,edge_node -> direct_link -> cloud_node,direct_link,direct_link,100
+edge_cloud_star,cloud_node,edge_3,True,72,3,cloud_node -> cloud_access -> cloud_switch -> backbone -> edge_switch -> access_3 -> edge_3,cloud_access -> backbone -> access_3,backbone,50
+edge_cloud_star,edge_0,edge_3,True,12,2,edge_0 -> access_0 -> edge_switch -> access_3 -> edge_3,access_0 -> access_3,access_0,100
+edge_cloud_star,edge_1,edge_3,True,12,2,edge_1 -> access_1 -> edge_switch -> access_3 -> edge_3,access_1 -> access_3,access_1,100
+edge_cloud_star,edge_2,edge_3,True,12,2,edge_2 -> access_2 -> edge_switch -> access_3 -> edge_3,access_2 -> access_3,access_2,100
+bottleneck,edge_a,cloud_node,True,76,3,edge_a -> edge_a_access -> edge_switch -> bottleneck -> cloud_switch -> cloud_access -> cloud_node,edge_a_access -> bottleneck -> cloud_access,bottleneck,10
+bottleneck,edge_b,cloud_node,True,76,3,edge_b -> edge_b_access -> edge_switch -> bottleneck -> cloud_switch -> cloud_access -> cloud_node,edge_b_access -> bottleneck -> cloud_access,bottleneck,10
