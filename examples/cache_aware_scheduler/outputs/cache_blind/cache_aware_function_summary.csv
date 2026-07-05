@@ -1,0 +1,5 @@
+﻿function_name,request_count,cache_hits,avg_final_duration,total_cold_start_penalty,cache_hit_rate
+fft,2,0,1.5,2.8,0.0
+img-resize,4,0,0.9,3.2,0.0
+json-parse,2,0,0.44999999999999996,0.7,0.0
+ml-infer,2,0,2.0,3.8,0.0

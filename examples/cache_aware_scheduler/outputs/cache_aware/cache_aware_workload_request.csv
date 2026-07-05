@@ -1,0 +1,11 @@
+﻿time,arrival_time,scenario,function_name,request_id
+2026-07-05 19:41:29.305824,0.0,cache_aware,img-resize,1
+2026-07-05 19:41:29.305996,0.2,cache_aware,fft,2
+2026-07-05 19:41:29.306238,0.4,cache_aware,img-resize,3
+2026-07-05 19:41:29.306420,0.6,cache_aware,ml-infer,4
+2026-07-05 19:41:29.306655,0.8,cache_aware,json-parse,5
+2026-07-05 19:41:29.306807,1.0,cache_aware,fft,6
+2026-07-05 19:41:29.307085,1.2,cache_aware,img-resize,7
+2026-07-05 19:41:29.307334,1.4,cache_aware,ml-infer,8
+2026-07-05 19:41:29.307587,1.6,cache_aware,json-parse,9
+2026-07-05 19:41:29.307762,1.8,cache_aware,img-resize,10

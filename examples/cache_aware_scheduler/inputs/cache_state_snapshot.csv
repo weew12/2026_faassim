@@ -1,0 +1,5 @@
+function_name,node_name,warm_replicas,cached,last_access_age,avg_cold_start,memory_units
+img-resize,server_0,1,true,0.3,0.80,1
+fft,server_1,1,true,0.6,1.40,2
+json-parse,server_0,1,true,1.0,0.35,1
+ml-infer,server_2,1,true,0.4,1.90,2

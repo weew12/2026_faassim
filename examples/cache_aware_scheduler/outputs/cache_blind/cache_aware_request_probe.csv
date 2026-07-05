@@ -1,0 +1,11 @@
+﻿time,cache_hit,warm_duration,cold_start_penalty,final_duration,avg_cold_start,scenario,function_name,request_id,node_name,replica_id
+2026-07-05 19:41:29.249882,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,1,server_1,2165613497872
+2026-07-05 19:41:29.250345,False,0.1,1.4,1.5,1.4,cache_blind,fft,2,server_0,2165613484352
+2026-07-05 19:41:29.251237,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,3,server_1,2165613497872
+2026-07-05 19:41:29.251886,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,4,server_3,2165613240416
+2026-07-05 19:41:29.252177,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,5,server_2,2165613502992
+2026-07-05 19:41:29.252335,False,0.1,1.4,1.5,1.4,cache_blind,fft,6,server_0,2165613484352
+2026-07-05 19:41:29.252622,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,7,server_1,2165613497872
+2026-07-05 19:41:29.252855,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,8,server_3,2165613240416
+2026-07-05 19:41:29.253139,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,9,server_2,2165613502992
+2026-07-05 19:41:29.253329,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,10,server_1,2165613497872

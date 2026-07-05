@@ -1,0 +1,5 @@
+﻿time,name,pod,image,replica_id
+2026-07-05 19:41:29.301542,fft,pod-fft-2,fft-cache-aware-cpu,2165613248016
+2026-07-05 19:41:29.303052,img-resize,pod-img-resize-2,img-resize-cache-aware-cpu,2165613976400
+2026-07-05 19:41:29.304106,json-parse,pod-json-parse-2,json-parse-cache-aware-cpu,2165613371984
+2026-07-05 19:41:29.305080,ml-infer,pod-ml-infer-2,ml-infer-cache-aware-cpu,2165613374976
