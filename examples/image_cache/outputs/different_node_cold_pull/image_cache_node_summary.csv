@@ -1,0 +1,2 @@
+﻿scenario,node_name,image,deploy_events,cache_hits_before,avg_pull_duration,max_cached_image_count
+different_node_cold_pull,server_10,image-cache-shared-cpu,2,1,0.5301367923401349,1
