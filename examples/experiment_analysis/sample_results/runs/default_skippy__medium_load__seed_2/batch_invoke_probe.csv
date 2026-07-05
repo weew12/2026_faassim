@@ -1,0 +1,5 @@
+case_id,policy,workload,function_name,node_name,request_id,base_duration,jitter,duration,seed,rps
+default_skippy__medium_load__seed_2,default_skippy,medium_load,batch-exp-python-pi,server_1,1,0.18,0.03,0.21,2,8
+default_skippy__medium_load__seed_2,default_skippy,medium_load,batch-exp-python-pi,server_0,2,0.18,0.07,0.25,2,8
+default_skippy__medium_load__seed_2,default_skippy,medium_load,batch-exp-python-pi,server_1,3,0.18,0.09000000000000002,0.27,2,8
+default_skippy__medium_load__seed_2,default_skippy,medium_load,batch-exp-python-pi,server_0,4,0.18,0.06,0.24,2,8

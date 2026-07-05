@@ -1,0 +1,2 @@
+case_id,policy,scheduler,workload,rps,max_requests,seed,probe_events,invocation_events,schedule_events,flow_events,avg_probe_duration,max_probe_duration,p95_probe_duration
+default_skippy__low_load__seed_1,default_skippy,default_skippy,low_load,3,12,1,4,4,3,1,0.2025,0.22,0.22

@@ -1,0 +1,5 @@
+﻿policy,workload,runs,avg_probe_events,avg_invocation_events,mean_probe_avg_duration,mean_probe_p95_duration,mean_flow_total_bytes,mean_scheduled_node_count
+default_skippy,low_load,2,12.0,12.0,0.2210785899045785,0.25170146116041947,48000000.0,1.0
+default_skippy,medium_load,2,24.0,24.0,0.21973930192886254,0.25554117436293217,48000000.0,1.0
+fixed_node,low_load,2,12.0,12.0,0.2210785899045785,0.25170146116041947,48000000.0,1.0
+fixed_node,medium_load,2,24.0,24.0,0.21973930192886254,0.25554117436293217,48000000.0,1.0
