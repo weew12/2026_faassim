@@ -1,0 +1,5 @@
+﻿time,value,function_name,node_name,replica_id
+2026-07-05 17:27:46.507382,deploy,autoscale-python-pi,server_0,2691064644672
+2026-07-05 17:27:46.507668,startup,autoscale-python-pi,server_0,2691064644672
+2026-07-05 17:27:46.507742,setup,autoscale-python-pi,server_0,2691064644672
+2026-07-05 17:27:46.507753,finish,autoscale-python-pi,server_0,2691064644672
