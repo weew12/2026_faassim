@@ -1,0 +1,5 @@
+﻿policy_name,decision,reason,events,avg_utility,avg_keep_alive_window
+cold_start_aware,extend_keep_alive,warm_hit,7,1.3942857142857146,2.9457142857142857
+cold_start_aware,keep_after_cold_start,cold_miss,23,0.8717391304347825,2.4669565217391307
+fixed_keep_alive,extend_keep_alive,warm_hit,4,0.8,2.0
+fixed_keep_alive,keep_after_cold_start,cold_miss,26,0.6493589743589744,2.0
