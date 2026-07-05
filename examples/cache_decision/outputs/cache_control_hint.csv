@@ -1,0 +1,8 @@
+﻿function_name,decision,control_action,target_replicas,executor_required,safe_to_execute,reason
+report-gen,keep_warm,protect_current_replica,1,False,True,in_flight_request_protection
+img-resize,keep_warm,protect_current_replica,1,False,True,high_cold_start_utility
+fft,prewarm_candidate,scale_to_one_if_selected,0,False,False,budget_limited
+ml-infer,prewarm_candidate,scale_to_one_if_selected,0,False,False,budget_limited
+json-parse,keep_warm,protect_current_replica,1,False,True,high_cold_start_utility
+video-transcode,observe,observe,1,False,True,warm_but_medium_utility
+thumbnail,eviction_candidate,scale_to_zero_candidate,0,True,True,idle_warm_instance

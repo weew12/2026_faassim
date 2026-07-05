@@ -1,0 +1,6 @@
+﻿rank,function_name,decision,memory_units,utility_score,priority,capacity_status,selected_by_budget,reason
+1,report-gen,keep_warm,2,2.3833333333333333,1002.3833333333333,selected_within_budget,True,in_flight_request_protection
+2,img-resize,keep_warm,1,57.86666666666667,57.86666666666667,selected_within_budget,True,high_cold_start_utility
+3,fft,prewarm_candidate,2,25.433333333333334,25.433333333333334,not_selected_budget_limited,False,missing_but_high_utility
+4,ml-infer,prewarm_candidate,2,20.583333333333332,20.583333333333332,not_selected_budget_limited,False,missing_but_high_utility
+5,json-parse,keep_warm,1,10.616666666666665,10.616666666666665,selected_within_budget,True,high_cold_start_utility

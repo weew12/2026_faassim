@@ -1,0 +1,2 @@
+﻿function_name,current_replicas,memory_units,n_req,last_seen_age,in_flight_requests,utility_score,reason,capacity_status
+thumbnail,1,1,0,12.0,0,0.0,idle_warm_instance,release_capacity_candidate
