@@ -42,7 +42,7 @@
 
 | 顺序 | 样例目录                                | 说明                                                                  |
 | -- | ----------------------------------- | ------------------------------------------------------------------- |
-| 17 | `examples/cache_policy/`            | 函数实例缓存策略，计算缓存收益、资源成本、缓存效用                                           |
+| 17- | `examples/cache_policy/`            | 函数实例缓存策略，计算缓存收益、资源成本、缓存效用                                           |
 | 18 | `examples/cache_decision/`          | 输出 `keep_warm`、`prewarm_candidate`、`scale_down_candidate`、`observe` |
 | 19 | `examples/cache_aware_scheduler/`   | 缓存状态感知调度，优先选择已有 warm replica 的节点                                    |
 | 20 | `examples/cache_aware_autoscaling/` | 缓存状态感知扩缩容，组合 `R_cache` 和 `R_load`                                   |
