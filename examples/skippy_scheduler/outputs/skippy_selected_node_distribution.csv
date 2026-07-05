@@ -1,0 +1,4 @@
+﻿selected_node,needed_images,scheduled_pods
+server_0,,2
+server_0,skippy-medium-cpu:latest,1
+server_0,skippy-small-cpu:latest,1

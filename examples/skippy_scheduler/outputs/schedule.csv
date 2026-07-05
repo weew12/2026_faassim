@@ -1,0 +1,13 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 17:52:48.126890,queue,skippy-small,skippy-small-cpu,1558448000368,,
+2026-07-05 17:52:48.126935,queue,skippy-small,skippy-small-cpu,1558447837008,,
+2026-07-05 17:52:48.126958,start,skippy-small,skippy-small-cpu,1558448000368,,
+2026-07-05 17:52:48.136091,finish,skippy-small,skippy-small-cpu,1558448000368,server_0,True
+2026-07-05 17:52:48.136280,queue,skippy-medium,skippy-medium-cpu,1558447843408,,
+2026-07-05 17:52:48.136307,queue,skippy-medium,skippy-medium-cpu,1558447494272,,
+2026-07-05 17:52:48.136847,start,skippy-small,skippy-small-cpu,1558447837008,,
+2026-07-05 17:52:48.137833,finish,skippy-small,skippy-small-cpu,1558447837008,server_0,True
+2026-07-05 17:52:48.138128,start,skippy-medium,skippy-medium-cpu,1558447843408,,
+2026-07-05 17:52:48.138980,finish,skippy-medium,skippy-medium-cpu,1558447843408,server_0,True
+2026-07-05 17:52:48.139342,start,skippy-medium,skippy-medium-cpu,1558447494272,,
+2026-07-05 17:52:48.140179,finish,skippy-medium,skippy-medium-cpu,1558447494272,server_0,True
