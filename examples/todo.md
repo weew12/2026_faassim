@@ -12,7 +12,7 @@
 | 2 - | `examples/load_balancer/`      | 原生负载均衡，请求如何从多个副本中选择目标副本                                        |
 | 3 - | `examples/skippy_scheduler/`   | Skippy 默认调度机制，资源过滤、节点选择、`SchedulingResult`                     |
 | 4 - | `examples/network_flow/`       | Ether 网络传输，节点间 flow、带宽、延迟、网络耗时                                 |
-| 5  | `examples/image_pull_network/` | 镜像拉取过程，展示 `docker.pull()` 与网络传输的关系                             |
+| 5 - | `examples/image_pull_network/` | 镜像拉取过程，展示 `docker.pull()` 与网络传输的关系                             |
 | 6  | `examples/resource_monitor/`   | `ResourceState`、`ResourceMonitor`，记录 CPU / 内存使用                |
 | 7  | `examples/trace_oracle/`       | trace-driven 执行时间模型，展示函数执行时间如何从轨迹或分布中采样                        |
 | 8  | `examples/degradation/`        | 性能退化模型，多副本共节点时执行时间变长                                           |

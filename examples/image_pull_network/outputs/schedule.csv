@@ -1,0 +1,10 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 18:02:49.647091,queue,image-pull-small-cold,image-pull-small-cpu,1515778690080,,
+2026-07-05 18:02:49.647230,start,image-pull-small-cold,image-pull-small-cpu,1515778690080,,
+2026-07-05 18:02:49.647676,finish,image-pull-small-cold,image-pull-small-cpu,1515778690080,server_0,True
+2026-07-05 18:02:49.649155,queue,image-pull-small-warm,image-pull-small-cpu,1515778469200,,
+2026-07-05 18:02:49.649350,start,image-pull-small-warm,image-pull-small-cpu,1515778469200,,
+2026-07-05 18:02:49.649506,finish,image-pull-small-warm,image-pull-small-cpu,1515778469200,server_0,True
+2026-07-05 18:02:49.650281,queue,image-pull-large-cold,image-pull-large-cpu,1515778472400,,
+2026-07-05 18:02:49.650426,start,image-pull-large-cold,image-pull-large-cpu,1515778472400,,
+2026-07-05 18:02:49.650543,finish,image-pull-large-cold,image-pull-large-cpu,1515778472400,server_0,True

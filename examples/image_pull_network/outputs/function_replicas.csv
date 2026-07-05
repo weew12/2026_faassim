@@ -1,0 +1,4 @@
+﻿time,name,pod,image,replica_id
+2026-07-05 18:02:49.647097,image-pull-small-cold,pod-image-pull-small-cold-1,image-pull-small-cpu,1515778690080
+2026-07-05 18:02:49.649164,image-pull-small-warm,pod-image-pull-small-warm-1,image-pull-small-cpu,1515778469200
+2026-07-05 18:02:49.650287,image-pull-large-cold,pod-image-pull-large-cold-1,image-pull-large-cpu,1515778472400

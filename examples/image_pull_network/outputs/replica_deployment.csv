@@ -1,0 +1,13 @@
+﻿time,value,function_name,node_name,replica_id
+2026-07-05 18:02:49.647841,deploy,image-pull-small-cold,server_0,1515778690080
+2026-07-05 18:02:49.648788,startup,image-pull-small-cold,server_0,1515778690080
+2026-07-05 18:02:49.648806,setup,image-pull-small-cold,server_0,1515778690080
+2026-07-05 18:02:49.648815,finish,image-pull-small-cold,server_0,1515778690080
+2026-07-05 18:02:49.649681,deploy,image-pull-small-warm,server_0,1515778469200
+2026-07-05 18:02:49.649938,startup,image-pull-small-warm,server_0,1515778469200
+2026-07-05 18:02:49.649952,setup,image-pull-small-warm,server_0,1515778469200
+2026-07-05 18:02:49.649959,finish,image-pull-small-warm,server_0,1515778469200
+2026-07-05 18:02:49.650683,deploy,image-pull-large-cold,server_0,1515778472400
+2026-07-05 18:02:49.651232,startup,image-pull-large-cold,server_0,1515778472400
+2026-07-05 18:02:49.651254,setup,image-pull-large-cold,server_0,1515778472400
+2026-07-05 18:02:49.651261,finish,image-pull-large-cold,server_0,1515778472400
