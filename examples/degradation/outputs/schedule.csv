@@ -1,0 +1,10 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 18:16:58.470124,queue,degradation-python-pi,degradation-python-pi-cpu,1690458262224,,
+2026-07-05 18:16:58.470165,queue,degradation-python-pi,degradation-python-pi-cpu,1690457936976,,
+2026-07-05 18:16:58.470187,start,degradation-python-pi,degradation-python-pi-cpu,1690458262224,,
+2026-07-05 18:16:58.470746,finish,degradation-python-pi,degradation-python-pi-cpu,1690458262224,server_0,True
+2026-07-05 18:16:58.470771,queue,degradation-python-pi,degradation-python-pi-cpu,1690457940816,,
+2026-07-05 18:16:58.471791,start,degradation-python-pi,degradation-python-pi-cpu,1690457936976,,
+2026-07-05 18:16:58.471923,finish,degradation-python-pi,degradation-python-pi-cpu,1690457936976,server_0,True
+2026-07-05 18:16:58.472252,start,degradation-python-pi,degradation-python-pi-cpu,1690457940816,,
+2026-07-05 18:16:58.472363,finish,degradation-python-pi,degradation-python-pi-cpu,1690457940816,server_0,True

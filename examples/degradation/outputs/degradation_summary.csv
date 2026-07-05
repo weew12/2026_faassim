@@ -1,0 +1,2 @@
+﻿function_name,node_name,degradation_events,avg_active_requests_before,max_active_requests_before,avg_degradation_factor,max_degradation_factor,avg_final_duration,max_final_duration
+degradation-python-pi,server_0,40,15.25,29,6.3374999999999995,11.149999999999999,2.5349999999999997,4.46
