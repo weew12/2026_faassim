@@ -1,0 +1,3 @@
+﻿time,name,pod,image,replica_id
+2026-07-05 18:51:29.638792,batch-exp-python-pi,pod-batch-exp-python-pi-7,batch-exp-python-pi-cpu,2926540922928
+2026-07-05 18:51:29.638842,batch-exp-python-pi,pod-batch-exp-python-pi-8,batch-exp-python-pi-cpu,2926540924832

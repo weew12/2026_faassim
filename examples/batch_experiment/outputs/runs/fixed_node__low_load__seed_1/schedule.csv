@@ -1,0 +1,7 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 18:51:29.717227,queue,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541619792,,
+2026-07-05 18:51:29.717359,queue,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541624400,,
+2026-07-05 18:51:29.717396,start,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541619792,,
+2026-07-05 18:51:29.718028,finish,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541619792,server_40,True
+2026-07-05 18:51:29.719412,start,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541624400,,
+2026-07-05 18:51:29.720015,finish,batch-exp-python-pi,batch-exp-python-pi-cpu,2926541624400,server_40,True

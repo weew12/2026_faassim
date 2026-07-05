@@ -1,0 +1,13 @@
+﻿time,base_duration,jitter,duration,seed,rps,case_id,policy,workload,function_name,node_name,request_id
+2026-07-05 18:51:29.539158,0.18,0.07648274175113995,0.25648274175113994,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,13
+2026-07-05 18:51:29.539233,0.18,0.07582619896474795,0.25582619896474795,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,14
+2026-07-05 18:51:29.539264,0.18,0.004524109418144695,0.18452410941814468,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,15
+2026-07-05 18:51:29.539292,0.18,0.006789759612713731,0.1867897596127137,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,16
+2026-07-05 18:51:29.539359,0.18,0.06683991025035596,0.24683991025035595,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,17
+2026-07-05 18:51:29.539386,0.18,0.058877599125481864,0.23887759912548184,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,18
+2026-07-05 18:51:29.539413,0.18,0.05357843211521767,0.23357843211521767,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,19
+2026-07-05 18:51:29.539470,0.18,0.024650916607131538,0.20465091660713153,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,20
+2026-07-05 18:51:29.539496,0.18,0.048475533254276996,0.228475533254277,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,21
+2026-07-05 18:51:29.539522,0.18,0.04854413869126703,0.22854413869126702,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,22
+2026-07-05 18:51:29.539578,0.18,0.04649632136896025,0.22649632136896025,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,23
+2026-07-05 18:51:29.539605,0.18,0.012670629620384446,0.19267062962038445,2,3,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_10,24
