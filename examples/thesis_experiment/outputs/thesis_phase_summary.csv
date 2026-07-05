@@ -1,0 +1,10 @@
+﻿case_id,policy_name,phase,request_count,warm_hit_rate,avg_latency,p95_latency,total_cold_start_penalty
+cache_aware_joint,CacheAwareJoint,burst,15,0.7333333333333333,0.5648,2.868,5.5
+cache_aware_joint,CacheAwareJoint,cooldown,10,0.6,0.5237999999999999,1.7564999999999973,3.45
+cache_aware_joint,CacheAwareJoint,warmup,10,0.3,1.6206,4.579399999999999,8.6
+faascache,FaasCache,burst,15,0.7333333333333333,1.2621333333333336,5.1610000000000005,5.5
+faascache,FaasCache,cooldown,10,0.5,1.2578,3.855349999999997,5.35
+faascache,FaasCache,warmup,10,0.3,1.8923999999999999,4.574999999999998,8.6
+load_only,LoadOnly,burst,15,0.3333333333333333,1.8821333333333332,5.1610000000000005,14.8
+load_only,LoadOnly,cooldown,10,0.0,1.8878,4.593349999999998,11.649999999999999
+load_only,LoadOnly,warmup,10,0.2,1.9723999999999997,4.574999999999998,9.399999999999999

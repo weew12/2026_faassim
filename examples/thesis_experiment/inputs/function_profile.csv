@@ -1,0 +1,6 @@
+function_name,cold_start_duration,warm_duration,image_pull_duration,data_fetch_duration,memory_units,replica_capacity_rps,cpu_demand,memory_demand,preferred_zone,require_accel
+img-resize,0.80,0.08,0.45,0.20,1,6.0,0.08,0.10,zone-a,false
+json-parse,0.35,0.04,0.25,0.10,1,10.0,0.04,0.06,zone-a,false
+fft,1.40,0.18,0.70,0.35,2,2.4,0.16,0.20,zone-b,false
+ml-infer,1.90,0.30,1.10,0.55,2,1.8,0.22,0.28,zone-b,true
+video-analytics,2.40,0.45,1.40,0.90,3,1.0,0.30,0.35,zone-c,true

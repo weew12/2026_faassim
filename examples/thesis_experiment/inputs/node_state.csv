@@ -1,0 +1,7 @@
+node_name,edge_zone,cpu_free,memory_free,current_load,network_latency_ms,supports_accel
+edge-a-1,zone-a,0.80,0.72,0.20,8,true
+edge-a-2,zone-a,0.68,0.66,0.32,12,false
+edge-b-1,zone-b,0.83,0.77,0.16,10,true
+edge-b-2,zone-b,0.60,0.63,0.40,16,false
+edge-c-1,zone-c,0.72,0.67,0.28,18,true
+cloud-1,cloud,0.92,0.88,0.10,45,true

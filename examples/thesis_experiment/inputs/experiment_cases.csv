@@ -1,0 +1,4 @@
+case_id,policy_name,use_cache_decision,use_load_scaling,use_cache_aware_scheduler,cache_capacity_units,target_utilization,cache_utility_threshold,base_keep_alive,max_keep_alive,description
+load_only,LoadOnly,false,true,false,3,0.70,1.00,0.8,1.2,仅根据 R_load 保留运行副本，作为传统负载扩缩容基线
+faascache,FaasCache,true,false,false,5,0.70,1.00,1.5,5.0,根据冷启动收益进行函数实例缓存，调度不感知缓存位置
+cache_aware_joint,CacheAwareJoint,true,true,true,5,0.70,1.00,1.5,6.0,组合 R_cache 与 R_load，并在节点选择中利用缓存状态

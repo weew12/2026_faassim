@@ -1,0 +1,8 @@
+﻿case_id,policy_name,action,reason,events,avg_r_cache,avg_r_load,avg_r_desired,avg_cache_utility
+cache_aware_joint,CacheAwareJoint,protect,cache_keeps_replica,30,1.0,1.0,1.0,4.636111111111111
+cache_aware_joint,CacheAwareJoint,scale_out,load_requires_more_replicas,5,0.8,1.0,1.0,1.2
+faascache,FaasCache,observe,no_change,1,0.0,0.0,0.0,0.5833333333333334
+faascache,FaasCache,prewarm,cache_requires_warm_replica,5,1.0,0.0,1.0,1.3166666666666669
+faascache,FaasCache,protect,cache_keeps_replica,29,1.0,0.0,1.0,4.755747126436782
+load_only,LoadOnly,observe,no_change,30,0.0,1.0,1.0,4.636111111111111
+load_only,LoadOnly,scale_out,load_requires_more_replicas,5,0.0,1.0,1.0,1.2

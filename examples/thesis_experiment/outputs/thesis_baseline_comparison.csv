@@ -1,0 +1,4 @@
+﻿case_id,policy_name,avg_latency,avg_latency_change_vs_load_only,total_cold_start_penalty,cold_start_reduction_vs_load_only,warm_hit_rate,warm_hit_rate_delta_vs_load_only
+cache_aware_joint,CacheAwareJoint,0.8547428571428571,0.5523835173713979,17.55,0.5104602510460251,0.5714285714285714,0.3714285714285714
+faascache,FaasCache,1.4409714285714286,0.24538408594427988,19.45,0.4574616457461646,0.5428571428571428,0.3428571428571428
+load_only,LoadOnly,1.9095428571428572,0.0,35.85,0.0,0.2,0.0
