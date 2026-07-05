@@ -47,7 +47,7 @@
 | 19- | `examples/cache_aware_scheduler/`   | 缓存状态感知调度，优先选择已有 warm replica 的节点                                    |
 | 20- | `examples/cache_aware_autoscaling/` | 缓存状态感知扩缩容，组合 `R_cache` 和 `R_load`                                   |
 | 21- | `examples/cold_start_aware_policy/` | 冷启动感知策略，对高冷启动成本函数给予更高缓存优先级                                          |
-| 22 | `examples/edge_cache_scheduler/`    | 面向边缘异构节点的缓存与调度联合样例                                                  |
+| 22- | `examples/edge_cache_scheduler/`    | 面向边缘异构节点的缓存与调度联合样例                                                  |
 | 23 | `examples/thesis_experiment/`       | 论文实验入口，整合缓存策略、调度策略、伸缩策略和批量实验                                        |
 
 这一组的目标是：**服务第三章、第四章和最终论文实验。**

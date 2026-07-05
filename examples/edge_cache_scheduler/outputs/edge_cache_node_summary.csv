@@ -1,0 +1,11 @@
+﻿policy_name,selected_node,request_count,avg_estimated_latency,function_cache_hits
+edge_cache_aware,edge-a-1,4,0.088,4
+edge_cache_aware,edge-a-2,3,0.08533333333333333,3
+edge_cache_aware,edge-b-1,6,0.25,6
+edge_cache_aware,edge-c-1,2,1.668,1
+edge_round_robin,cloud-1,2,3.2849999999999997,0
+edge_round_robin,edge-a-1,4,1.8079999999999998,1
+edge_round_robin,edge-a-2,2,1.397,1
+edge_round_robin,edge-b-1,4,1.94,1
+edge_round_robin,edge-b-2,1,1.546,0
+edge_round_robin,edge-c-1,2,2.208,0

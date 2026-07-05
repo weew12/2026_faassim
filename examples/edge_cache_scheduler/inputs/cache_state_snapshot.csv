@@ -1,0 +1,16 @@
+cache_type,cache_key,node_name,cached,freshness
+function,img-resize,edge-a-1,true,0.92
+function,fft,edge-b-1,true,0.86
+function,ml-infer,edge-b-1,true,0.78
+function,json-parse,edge-a-2,true,0.80
+image,img-resize,edge-a-1,true,0.95
+image,img-resize,edge-a-2,true,0.80
+image,fft,edge-b-1,true,0.90
+image,ml-infer,edge-b-1,true,0.88
+image,video-analytics,edge-c-1,true,0.76
+image,json-parse,edge-a-2,true,0.82
+data,img-resize,edge-a-1,true,0.90
+data,fft,edge-b-1,true,0.84
+data,ml-infer,edge-b-1,true,0.70
+data,video-analytics,edge-c-1,true,0.75
+data,json-parse,edge-a-1,true,0.88
