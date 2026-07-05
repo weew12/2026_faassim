@@ -1,0 +1,6 @@
+﻿phase_name,controller_action,exchange_events,avg_runtime_factor,avg_network_delay,avg_observed_active_requests
+cooldown,release_attention,4,0.95,0.0,0.0
+edge_pressure,scale_attention,4,1.35,0.08,0.0
+idle,observe,3,0.9499999999999998,0.0,0.0
+network_slowdown,network_attention,4,1.1,0.25,0.0
+normal,observe,4,1.0,0.0,0.0

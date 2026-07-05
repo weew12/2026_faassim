@@ -32,7 +32,7 @@
 | 13- | `examples/image_cache/`         | 镜像缓存样例，对比首次拉取和节点已有镜像时的耗时                     |
 | 14- | `examples/batch_experiment/`    | 批量实验样例，多策略、多负载、多随机种子循环运行                     |
 | 15- | `examples/experiment_analysis/` | 统一读取 CSV / DataFrame，生成 summary 指标           |
-| 16 | `examples/cosimulation/`        | 协同仿真样例，用仿真比较多个候选策略并输出建议                      |
+| 16 -| `examples/cosimulation/`        | 协同仿真样例，用仿真比较多个候选策略并输出建议                      |
 
 这一组的目标是：**从单个演示脚本，升级到可批量运行、可分析、可复现实验的平台。**
 

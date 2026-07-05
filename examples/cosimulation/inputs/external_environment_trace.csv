@@ -1,0 +1,5 @@
+phase_name,start_time,duration,rps,runtime_factor,network_delay,controller_action,description
+normal,0.0,2.0,3,1.00,0.00,observe,稳定阶段，外部环境无明显扰动
+edge_pressure,2.0,2.0,8,1.35,0.08,scale_attention,边缘节点压力升高，函数执行时间被放大
+network_slowdown,4.0,2.0,5,1.10,0.25,network_attention,外部网络退化，请求额外引入网络延迟
+cooldown,6.0,2.0,2,0.95,0.00,release_attention,负载回落，外部控制器释放关注

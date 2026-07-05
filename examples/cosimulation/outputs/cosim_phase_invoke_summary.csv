@@ -1,0 +1,5 @@
+﻿phase_name,controller_action,invoke_events,avg_final_duration,max_final_duration,avg_runtime_factor,avg_network_delay
+cooldown,release_attention,7,0.17099999999999999,0.17099999999999999,0.95,0.0
+edge_pressure,scale_attention,13,0.323,0.323,1.35,0.08
+network_slowdown,network_attention,12,0.448,0.448,1.1,0.25
+normal,observe,4,0.18,0.18,1.0,0.0
