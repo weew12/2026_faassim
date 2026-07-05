@@ -1,0 +1,7 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 18:33:37.361500,queue,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005816336,,
+2026-07-05 18:33:37.361556,queue,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005475280,,
+2026-07-05 18:33:37.361581,start,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005816336,,
+2026-07-05 18:33:37.362196,finish,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005816336,server_0,True
+2026-07-05 18:33:37.363251,start,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005475280,,
+2026-07-05 18:33:37.363382,finish,fault-prone-python-pi,fault-prone-python-pi-cpu,1992005475280,server_0,True

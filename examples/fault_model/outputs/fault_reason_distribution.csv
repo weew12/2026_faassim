@@ -1,0 +1,5 @@
+﻿reason,success,request_count,avg_final_duration,max_final_duration
+node_outage,False,4,0.03,0.03
+replica_error,False,3,0.03,0.03
+normal,True,16,0.25,0.25
+network_degradation,True,7,0.7,0.7
