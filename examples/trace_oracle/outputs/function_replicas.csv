@@ -1,0 +1,3 @@
+﻿time,name,pod,image,replica_id
+2026-07-05 18:13:03.829268,trace-fast-python-pi,pod-trace-fast-python-pi-1,trace-fast-python-pi-cpu,2353298983632
+2026-07-05 18:13:03.829436,trace-slow-python-pi,pod-trace-slow-python-pi-1,trace-slow-python-pi-cpu,2353298515408

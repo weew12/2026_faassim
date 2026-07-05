@@ -1,0 +1,3 @@
+﻿function_name,sample_count,avg_duration,min_duration,max_duration
+trace-fast-python-pi,12,0.10166666666666667,0.08,0.13
+trace-slow-python-pi,12,0.53,0.45,0.62
