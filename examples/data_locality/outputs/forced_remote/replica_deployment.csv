@@ -1,0 +1,5 @@
+﻿time,value,function_name,node_name,replica_id
+2026-07-05 18:26:50.151838,deploy,data-locality-python-pi,edge_far,1485826725904
+2026-07-05 18:26:50.152221,startup,data-locality-python-pi,edge_far,1485826725904
+2026-07-05 18:26:50.152398,setup,data-locality-python-pi,edge_far,1485826725904
+2026-07-05 18:26:50.153274,finish,data-locality-python-pi,edge_far,1485826725904

@@ -1,0 +1,2 @@
+﻿scenario,selected_node,download_events,total_download_duration,avg_download_duration,data_flow_events,total_data_flow_duration,total_data_flow_bytes
+data_locality_aware,edge_near,1,2.654175257731959,2.654175257731959,1,2.654175257731959,64000000

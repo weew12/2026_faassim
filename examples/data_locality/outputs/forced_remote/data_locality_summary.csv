@@ -1,0 +1,2 @@
+﻿scenario,selected_node,download_events,total_download_duration,avg_download_duration,data_flow_events,total_data_flow_duration,total_data_flow_bytes
+forced_remote,edge_far,1,52.879505154639176,52.879505154639176,1,52.879505154639176,64000000

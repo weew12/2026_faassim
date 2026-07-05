@@ -1,0 +1,4 @@
+﻿time,value,function_name,image,replica_id,node_name,successful
+2026-07-05 18:26:50.106448,queue,data-locality-python-pi,data-locality-python-pi-cpu,1485826392480,,
+2026-07-05 18:26:50.106556,start,data-locality-python-pi,data-locality-python-pi-cpu,1485826392480,,
+2026-07-05 18:26:50.107626,finish,data-locality-python-pi,data-locality-python-pi-cpu,1485826392480,edge_near,True
