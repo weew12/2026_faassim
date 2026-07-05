@@ -1,0 +1,3 @@
+﻿time,name,pod,image,replica_id
+2026-07-05 18:08:15.763606,resource-heavy-python-pi,pod-resource-heavy-python-pi-1,resource-heavy-python-pi-cpu,2575668218240
+2026-07-05 18:08:15.763652,resource-heavy-python-pi,pod-resource-heavy-python-pi-2,resource-heavy-python-pi-cpu,2575668023120

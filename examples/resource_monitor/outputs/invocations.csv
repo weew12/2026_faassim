@@ -1,0 +1,13 @@
+﻿time,t_wait,t_exec,t_start,memory,function_name,function_image,node,replica_id
+2026-07-05 18:08:15.774216,0.0,1.4999999999999998,0.8333333333333333,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.774430,0.0,1.5,1.1666666666666665,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
+2026-07-05 18:08:15.774645,0.0,1.5000000000000002,1.4999999999999998,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.774885,0.0,1.5,1.833333333333333,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
+2026-07-05 18:08:15.775088,0.0,1.5,2.1666666666666665,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.775281,0.0,1.5,2.5,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
+2026-07-05 18:08:15.775517,0.0,1.5000000000000004,2.8333333333333335,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.775722,0.0,1.5,3.166666666666667,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
+2026-07-05 18:08:15.775814,0.0,1.4999999999999996,3.5000000000000004,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.775945,0.0,1.5,3.833333333333334,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
+2026-07-05 18:08:15.776040,0.0,1.5,4.166666666666667,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668218240
+2026-07-05 18:08:15.776140,0.0,1.5,4.5,268435456,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,2575668023120
