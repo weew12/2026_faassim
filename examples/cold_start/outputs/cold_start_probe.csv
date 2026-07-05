@@ -1,0 +1,7 @@
+﻿time,phase_duration,phase_start,phase_finish,function_name,image,node_name,replica_id,phase,request_id
+2026-07-05 18:40:08.170423,0.7963866460227262,0.014136791229248047,0.8105234372519743,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,deploy,
+2026-07-05 18:40:08.170657,0.75,0.8105234372519743,1.5605234372519743,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,startup,
+2026-07-05 18:40:08.170868,0.55,1.5605234372519743,2.1105234372519743,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,setup,
+2026-07-05 18:40:08.171171,0.2999999999999998,3.0,3.3,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,first_invoke,1.0
+2026-07-05 18:40:08.171318,0.08000000000000007,3.5,3.58,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,warm_invoke,2.0
+2026-07-05 18:40:08.171485,0.08000000000000007,4.0,4.08,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2178896645152,warm_invoke,3.0

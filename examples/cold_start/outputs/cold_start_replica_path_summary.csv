@@ -1,0 +1,2 @@
+﻿replica_id,function_name,node_name,deploy_events,deploy_total_duration,startup_events,startup_total_duration,setup_events,setup_total_duration,first_invoke_events,first_invoke_total_duration,warm_invoke_events,warm_invoke_total_duration,cold_activation_duration,first_request_path_duration
+2178896645152,cold-start-python-pi,server_0,1,0.7963866460227262,1,0.75,1,0.55,1,0.2999999999999998,2,0.16000000000000014,2.0963866460227263,2.396386646022726
