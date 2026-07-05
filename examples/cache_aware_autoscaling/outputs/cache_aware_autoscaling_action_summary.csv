@@ -1,0 +1,6 @@
+﻿action,reason,events,avg_r_cache,avg_r_load,avg_r_desired,total_delta
+observe,no_replica_change,1,0.0,1.0,1.0,0
+protect,cache_or_load_keeps_replica,8,1.0,1.0,1.0,0
+scale_in,desired_replicas_lower_than_current,2,1.0,1.0,1.0,-3
+scale_in,no_cache_or_load_demand,4,0.0,0.0,0.0,-4
+scale_out,load_requires_more_replicas,5,1.0,2.4,2.4,6

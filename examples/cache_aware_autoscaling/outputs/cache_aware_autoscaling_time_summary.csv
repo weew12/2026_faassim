@@ -1,0 +1,6 @@
+﻿time,total_current_replicas,total_r_cache,total_r_load,total_r_desired,total_delta,selected_cache_functions
+0.0,3,3,3,3,0,3
+1.0,4,4,6,6,2,3
+2.0,6,3,8,8,2,3
+3.0,7,3,3,3,-4,3
+4.0,4,2,3,3,-1,2
