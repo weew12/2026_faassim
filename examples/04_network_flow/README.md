@@ -4,7 +4,7 @@
 
 ## 运行方式
 
-将 `network_flow/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+将 `04_network_flow/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
 python -u examples/04_network_flow/main.py
