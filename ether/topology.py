@@ -1,4 +1,33 @@
-"""Ether 拓扑图实现文件，在 networkx 有向图基础上封装连接添加、最短路径路由、RTT 计算、互联网延迟图加载和场景物化能力。"""
+"""Ether 拓扑图实现文件，在 networkx 有向图基础上封装连接添加、最短路径路由、RTT 计算、互联网延迟图加载和场景物化能力。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 仿真引擎的【Layer 3】—— DiGraph 包装 + 路由缓存。
+
+在 core.py (Node/Link/Connection) + cell.py (Cell) 之上,提供:
+    1) 继承 networkx.DiGraph 的 Topology 类 (统一图接口)
+    2) 强制拓扑不变量: Node→Node 不能直连 (必须经过 Link/TransparentLink)
+    3) 路由缓存: _route_cache[(src, dst)] = Route (避免重算)
+    4) 两种 RTT 模式:
+         - 拓扑模式: 走 shortest_path + 累加 Connection.latency (精确)
+         - 坐标模式: 走 Vivaldi/地理坐标距离 (轻量 O(d))
+    5) 双源 RTT 数据: Connection (ether 自己的边) + latency 字段 (internet graphml)
+    6) 链式 API: topology.add(cell).add(cell2).load_inet_graph('cloudping')
+
+设计哲学:
+    1. 强制 Node→Node 不可直连: 防止拓扑建模错误,保证路由正确
+    2. 路由缓存两阶段时延 (mode 缓存 + 实际采样): 稳定基准 + 网络抖动
+    3. use_coordinates 参数切换两套 RTT 模式: 精度 vs 性能的权衡
+    4. _update_rtt 双源 (Connection / latency 字段): 兼容 ether 自建边 + 互联网图
+
+对 CSAC 论文的接口:
+    - topology.route(src, dst) → 算调度节点间 RTT 的标准接口
+    - topology.latency(use_coordinates=True) → 轻量 RTT 估算
+    - topology.load_inet_graph('cloudping') → 接入真实云区域延迟
+    - topology.add(cell) → 链式添加场景,搭建 CSAC 实验拓扑
+================================================================================
+"""
 
 import abc
 import logging
@@ -46,11 +75,30 @@ class Topology(nx.DiGraph):
 
     def add_connection(self, connection: Connection, directed=False):
         """
-        把 Connection 添加为拓扑边；无向连接会自动添加反向边。
+        把 Connection 添加为拓扑边；无向连接自动添加反向边。
 
         参数：
         - directed：是否只添加单向边；为 False 时自动添加反向连接。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】为什么强制拒绝 Node→Node 直连?
+        ─────────────────────────────────────────────────────────────
+        配合 core.py 的 NetworkNode = Union[Node, Link, TransparentLink]
+        和 Connection 的 source/target 必须是 NetworkNode 的约定,
+        这里强制做"拓扑不变量"检查:
+
+          Node→Node 直连 = ValueError
+
+        原因:
+          1) Node 是计算节点,本身不消耗带宽,只产生/接收流量
+             真正的带宽消耗在 Link 上 (透明链路除外)
+          2) 允许 Node→Node 直连会让 Flow 算端到端瓶颈时找不到 Link
+             导致 Flow.run 报 "no hops in route"
+          3) 防止用户建模错误: 误以为 Node 之间的边有意义
+
+        实际建模中,任何 Node→Node 通信必须经过:
+          Node → Host 的 Link → switch (透明) → ... → 目标 Node
+        ─────────────────────────────────────────────────────────────
         """
         if isinstance(connection.source, Node) and isinstance(connection.target, Node):
             raise ValueError('Cannot have direct Node-to-Node connections')
@@ -83,6 +131,26 @@ class Topology(nx.DiGraph):
 
         返回：源节点到目标节点的单向时延。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】两套 RTT 模式的权衡
+        ─────────────────────────────────────────────────────────────
+        模式 1: 拓扑模式 (use_coordinates=False, 默认)
+          - 内部: route(src, dst).rtt / 2
+          - 路径: shortest_path + 累加每条 Connection.get_latency()
+          - 性能: O(路径长度 × 单次采样)
+          - 精确度: 真实拓扑 + 真实时延 = 精确
+          - 适用: 调度决策、需要精确路径成本
+
+        模式 2: 坐标模式 (use_coordinates=True)
+          - 内部: source.distance_to(destination)  ← 委托给 Vivaldi
+          - 路径: 不查图,直接用 Vivaldi 坐标距离
+          - 性能: O(d) = O(8)  ← 常数
+          - 精确度: Vivaldi 估算 (有误差,但有收敛性证明)
+          - 适用: 轻量估算、大规模仿真、节点很多时
+
+        选哪个? 取决于"精度 vs 性能"的权衡。
+        ether 给两种选择,而不是只做一种,是设计上的灵活。
+        ─────────────────────────────────────────────────────────────
         """
         if use_coordinates:
             return source.distance_to(destination)
@@ -99,6 +167,29 @@ class Topology(nx.DiGraph):
 
         返回：源节点到目标节点的 Route。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】路由缓存 + 两阶段时延
+        ─────────────────────────────────────────────────────────────
+        经典问题: 同一 (src, dst) 对的 RTT 每次访问都该一致吗?
+          - 调度决策需要稳定基准 (避免抖动)
+          - 实际仿真需要网络抖动 (更贴近真实)
+        解决: 缓存写入用众数,实际使用重新采样
+          ┌────────────────┐
+          │ _route_cache   │ ← 众数 RTT (稳定)
+          │ [(a,b): Route]│
+          └────────────────┘
+                 │
+                 │ 首次解析或 use_mode=True
+                 ↓
+            返回缓存 (稳定基准)
+                 │
+                 │ use_mode=False 实际使用
+                 ↓
+            copy + _update_rtt (新采样) ← 体现抖动
+
+        关键: copy(self._route_cache[k]) 防止污染缓存
+              (见 core.py Route.__copy__ 的设计意图)
+        ─────────────────────────────────────────────────────────────
         """
         k = (source, destination)
 
@@ -167,6 +258,23 @@ class Topology(nx.DiGraph):
         - route：网络流使用的端到端路由。
         - use_mode：是否使用时延分布众数；用于缓存路由时避免随机采样扰动。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】双源 RTT 数据: Connection vs latency 字段
+        ─────────────────────────────────────────────────────────────
+        边的数据来源有两种:
+          1) ether 自己生成的边:  edge_data['connection'] 是 Connection 对象
+             → 用 connection.get_mode_latency() (use_mode=True) 或
+                        connection.get_latency()    (use_mode=False)
+          2) internet graphml 边: edge_data['latency'] 是数值 (ms)
+             → 直接累加
+
+        为什么两种?
+          - ether 的 Cell 物化时调用 add_connection,挂的是 Connection 对象
+          - load_inet_graph('cloudping') 加载的边是 graphml,挂的是 latency 字段
+          - 两种数据需要统一处理,否则混合拓扑下 RTT 算不全
+
+        结果: route.rtt = 单向时延累加 × 2 = 双向 RTT
+        ─────────────────────────────────────────────────────────────
         """
         # 固定单向链路时延。
         latency: float = 0

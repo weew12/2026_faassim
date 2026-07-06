@@ -1,4 +1,34 @@
-"""城市感知场景文件，参考 Array of Things 思路生成城市小区、感知节点、近端计算资源和 Cloudlet。"""
+"""城市感知场景文件，参考 Array of Things 思路生成城市小区、感知节点、近端计算资源和 Cloudlet。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 的【场景层】—— UrbanSensingScenario (城市感知场景)。
+
+类: UrbanSensingScenario(num_cells, cell_density, cloudlet_size, internet='internet')
+    - num_cells: 城区数量 (默认 3)
+    - cell_density: 每个城区的节点数分布 (默认 lognorm((0.82, 2.02)))
+    - cloudlet_size: Cloudlet 规模 (默认 (5, 2) = 5×2 server)
+
+    场景分两部分:
+      1) create_city():    GeoCell 生成 num_cells 个城区
+                          每个城区是 SharedLinkCell(500M, MobileConnection)
+                          城区节点数从 cell_density.sample() 采样
+      2) create_cloudlet(): 城市级 Cloudlet(FiberToExchange 上联)
+
+设计哲学:
+    1. Array of Things 思路: 每个城市角落布 RPI3 传感器
+    2. GeoCell + 真实分布: 城区节点数从对数正态采样,贴近现实
+    3. 移动回传: MobileConnection (125/25 Mbit/s, mobile_isp 时延)
+    4. lambda size: 工厂接收 GeoCell 注入的 density.sample() 值
+       → 近端计算资源(NUC + 2N TX2)跟节点数成比例
+
+对 CSAC 论文的接口:
+    - 城市级边缘部署 (规模可调)
+    - 移动回传场景 (5G/4G)
+    - 非固定节点数 (从分布采样)
+================================================================================
+"""
 
 from srds import ParameterizedDistribution
 
@@ -45,6 +75,18 @@ class UrbanSensingScenario:
         参数：
         - topology：需要写入节点、链路和连接的 Ether 拓扑图。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】create_city + create_cloudlet 分两步物化
+        ─────────────────────────────────────────────────────────────
+        分成两个方法:
+          1) create_city()    → GeoCell, 城市级重复
+          2) create_cloudlet() → Cloudlet, 城市级聚合资源
+        然后 materialize 调 topology.add(self.create_city()) + add(create_cloudlet)
+
+        好处:
+          - 用户可以单独用 create_city() 或 create_cloudlet()
+          - 也可以扩展类,重写其中一个方法做自定义
+        ─────────────────────────────────────────────────────────────
         """
         topology.add(self.create_city())
         topology.add(self.create_cloudlet())
@@ -53,6 +95,23 @@ class UrbanSensingScenario:
         """
         构造城市感知场景中的城区单元，包含感知节点、近端计算盒和移动回传链路。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】lambda size: SharedLinkCell(...) 的妙用
+        ─────────────────────────────────────────────────────────────
+        neighborhood = lambda size: SharedLinkCell(
+            nodes=[
+                [aot_node] * size,                                # N 个 AOT
+                IoTComputeBox([nodes.nuc] + ([nodes.tx2] * size * 2))  # 1 NUC + 2N TX2
+            ],
+            ...
+        )
+        size 由 GeoCell 注入 (来自 density.sample() 的返回值)。
+        inspect.signature 检测到 len(parameters) > 0 → 调 c(n) 而不是 c()。
+
+        实际效果: 每个城区的 AOT 数 = size, TX2 数 = 2 * size
+                  → 近端计算资源跟传感器数成比例
+                  → 符合"每 N 个传感器配 1 个 NUC + 2N 个 TX2"工程经验
+        ─────────────────────────────────────────────────────────────
         """
         aot_node = IoTComputeBox(nodes=[nodes.rpi3, nodes.rpi3])
 

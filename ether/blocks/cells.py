@@ -1,4 +1,32 @@
-"""Ether 预置网络单元文件，定义移动接入、企业 ISP、光纤回传、IoT 计算盒和 Cloudlet 等常见边缘网络结构。"""
+"""Ether 预置网络单元文件，定义移动接入、企业 ISP、光纤回传、IoT 计算盒和 Cloudlet 等常见边缘网络结构。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 的【预置层】—— 典型边缘网络单元工厂。
+
+类层次:
+    UpDownLink (继承自 cell.py)
+    ├── MobileConnection   ← 移动 4G/5G: 125/25 Mbit/s, mobile_isp 时延
+    ├── BusinessIsp        ← 企业 ISP:    500/50 Mbit/s, business_isp 时延
+    └── FiberToExchange    ← 光纤到机房: 1000/1000 Mbit/s, lan 时延
+
+    LANCell (继承自 cell.py)
+    ├── IoTComputeBox      ← 现场 IoT 计算盒 (空 pass,纯语义化别名)
+    └── Cloudlet           ← 机架式边缘 Cloudlet (server_per_rack × racks)
+
+设计哲学:
+    1. 复用 + 特化: 继承 cell.py 的 UpDownLink / LANCell,只覆盖构造参数
+    2. 真实场景驱动: 3 种回传对应"移动 / 企业 / 机房"3 种典型部署
+    3. Cloudlet 用 "[method_ref] * racks" 模式: 复用方法引用做"工厂列表"
+    4. 所有 server_per_rack × racks server_node 共享一个 switch
+
+对 CSAC 论文的接口:
+    - 异构回传: 混用 MobileConnection / BusinessIsp / FiberToExchange
+    - 边缘 Cloudlet: 模拟"机房级"边缘资源
+    - IoT 现场计算: IoTComputeBox 是语义化 LANCell 别名
+================================================================================
+"""
 
 import itertools
 from collections import defaultdict
@@ -88,7 +116,25 @@ class Cloudlet(LANCell):
 
     def _create_rack(self):
         """
-        内部辅助方法，服务于当前模块的主要业务流程。
+        创建单个机架,内部是 server_per_rack 个 server_node 的 LANCell,共享 self.switch。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】[self._create_rack] * racks 模式
+        ─────────────────────────────────────────────────────────────
+        `nodes = [self._create_rack] * racks` 用方法引用 × 次数:
+          - materialize 时调 N 次 self._create_rack()
+          - 每次新建一个 rack (不共享对象)
+          - self.switch 在 _create_identity 设好后,所有 rack 共享
+
+        为什么用方法引用而不是 lambda?
+          - lambda 闭包会捕获 self, 跟方法引用等价
+          - 但方法引用更简洁, 无需额外参数
+
+        实际效果 (Cloudlet = N 个机架):
+            Cloudlet
+            ├── rack_0 = LANCell([server × 5], backhaul=switch)
+            ├── rack_1 = LANCell([server × 5], backhaul=switch)
+            └── switch_cloudlet_X  ← 所有 rack 共享
+        ─────────────────────────────────────────────────────────────
         """
         return LANCell([create_server_node] * self.server_per_rack, backhaul=self.switch)

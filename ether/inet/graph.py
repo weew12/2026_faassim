@@ -1,4 +1,34 @@
-"""互联网延迟图处理文件，负责 graphml 文件路径管理、图保存、图加载以及把测量数据写入拓扑边。"""
+"""互联网延迟图处理文件，负责 graphml 文件路径管理、图保存、图加载以及把测量数据写入拓扑边。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 的【数据层】—— 真实云区域延迟图加载/保存。
+
+    graph_directory = ether/inet/graphs/  ← 6 个 graphml 数据文件
+    3 个数据源: cloudping (AWS) / gcloudping (GCP) / wondernetwork
+
+    主要函数:
+      load_latest(graph, source)         ← 加载 <source>_latest.graphml
+      load_tagged(graph, source, tag)    ← 加载 <source>_<tag>.graphml
+      load_from_file(graph, path)        ← 读 graphml,加 internet_ 前缀,写入图
+      fetch_to_graph(graph, module)      ← 在线抓数据
+      add_to_graph(graph, measurements)  ← 把 measurements 写进图
+      save_graph(g, path)                ← nx.write_graphml
+      load_graph(path)                   ← nx.read_graphml
+
+设计哲学:
+    1. 节点前缀 'internet_': 避免和 topology 内部顶点冲突
+       (配合 topology.py _update_rtt 的 elif 'latency' 分支)
+    2. 双源支持: graphml 数据 (含 latency 字段) + 在线抓取 (Measurement)
+    3. 数据可重现: 6 个 graphml 文件带日期戳 (2020_05_18 / 2020_06_20 / latest)
+
+对 CSAC 论文的接口:
+    - Topology.load_inet_graph('cloudping') 加载真实云区域延迟
+    - 多区域调度实验 (跨大洲 RTT)
+    - 数据可重现 (commit 固定的 graphml)
+================================================================================
+"""
 
 import os
 from typing import List
@@ -27,12 +57,12 @@ def load_latest(graph: nx.DiGraph, source, *args, **kwargs):
 
 def load_tagged(graph: nx.DiGraph, source, tag, *args, **kwargs):
     """
-    load_tagged 函数的业务逻辑入口，负责完成当前模块中的对应处理步骤。
+    加载指定数据源 + tag 版本的 graphml 到 graph 中。
 
     参数：
     - graph：networkx 图对象。
     - source：路由、连接或测量数据的源端。
-
+    - tag: 版本标签, 如 'latest' / '2020_05_18'
     """
     path = os.path.join(graph_directory, f'{source}_{tag}.graphml')
     print('loading from', path)
@@ -41,11 +71,25 @@ def load_tagged(graph: nx.DiGraph, source, tag, *args, **kwargs):
 
 def load_from_file(graph: nx.DiGraph, file_path, node_prefix='internet_'):
     """
-    load_from_file 函数的业务逻辑入口，负责完成当前模块中的对应处理步骤。
+    读 graphml 文件,把每个节点加 node_prefix 前缀后,边属性原样写入 graph。
 
     参数：
     - graph：networkx 图对象。
+    - file_path: graphml 文件路径
+    - node_prefix: 节点名前缀,默认 'internet_' (避免和拓扑内部顶点冲突)
 
+    ─────────────────────────────────────────────────────────────
+    【设计意图】为什么加 'internet_' 前缀?
+    ─────────────────────────────────────────────────────────────
+    避免命名空间冲突:
+        - 用户节点: cloudvm_0, rpi3_0, switch_lan_0
+        - internet 节点: 不加前缀会撞名 (如 'us-east-1' 可能被误用)
+    加 'internet_' 前缀后:
+        - 'us-east-1' → 'internet_us-east-1'  (图顶点唯一)
+    同时配合 topology.py 的 _update_rtt 双源处理:
+        - ether 自己的边 → 'connection' 字段 (Connection 对象)
+        - internet 边   → 'latency' 字段 (数值)
+    ─────────────────────────────────────────────────────────────
     """
     inet_graph: nx.Graph = load_graph(file_path)
 
@@ -96,10 +140,9 @@ def save_graph(g: nx.Graph, path: str) -> None:
 
 def load_graph(path: str) -> nx.Graph:
     """
-    load_graph 函数的业务逻辑入口，负责完成当前模块中的对应处理步骤。
+    读 graphml 文件,返回 networkx 图对象(封装 nx.read_graphml)。
 
     参数：
-    - path：最短路径结果，包含从源到目的的所有拓扑顶点。
-
+    - path：graphml 文件路径
     """
     return nx.read_graphml(path)

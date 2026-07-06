@@ -1,4 +1,22 @@
-"""GCloudPing 数据抓取文件，从 gcloudping 公共接口获取 Google Cloud 区域间延迟并转换为 Measurement。"""
+"""GCloudPing 数据抓取文件，从 gcloudping 公共接口获取 Google Cloud 区域间延迟并转换为 Measurement。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件实现 gcloudping (GCP 区域) 数据源:
+    resource = 'http://35.202.190.222/api/latencies/matrix'
+    fetch() -> List[Measurement]  ← GCP 区域间延迟
+
+数据格式 (跟 cloudping 不同):
+    返回 JSON 包含 'regions' (区域名列表) + 'latencies' (二维矩阵)
+    第 [i][j] 项 = regions[i] → regions[j] 的延迟
+    None 值表示无数据, 跳过
+
+对外接口(供 sources['gcloudping'].fetch() 调用):
+    fetch()     抓取并转 Measurement 列表
+    _query()    内部 HTTP 请求
+================================================================================
+"""
 
 from typing import List
 
@@ -40,8 +58,7 @@ def fetch() -> List[Measurement]:
 
 def _query():
     """
-    内部辅助方法，服务于当前模块的主要业务流程。
-
+    内部 HTTP 请求: GET http://35.202.190.222/api/latencies/matrix,返回 JSON。
     """
     response = requests.get(resource)
 

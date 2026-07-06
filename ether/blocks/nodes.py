@@ -1,4 +1,39 @@
-"""Ether 预置节点构造文件，封装 VM、服务器、Raspberry Pi、Intel NUC、Jetson、Coral、RockPi 等典型云边设备的资源容量和标签。"""
+"""Ether 预置节点构造文件，封装 VM、服务器、Raspberry Pi、Intel NUC、Jetson、Coral、RockPi 等典型云边设备的资源容量和标签。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 的【预置层】—— 11 种典型云边设备的工厂函数。
+
+按设备类型分:
+    云端:
+      - create_vm_node:    4 核 / 8GB    / x86    / type=vm
+      - create_server_node: 88 核 / 188GB / x86    / type=server
+    边缘 SBC (单板机):
+      - create_rpi3_node:  4 核 / 1GB    / arm32  / model=rpi3b+
+      - create_rpi4_node:  4 核 / 1GB    / arm32v7/ model=rpi4
+      - create_rockpi:     6 核 / 4GB    / aarch64/ model=rockpi4
+      - create_nuc_node:   4 核 / 16GB   / x86    / model=nuci5
+    边缘 AI:
+      - create_coral:      4 核 / 1GB    / aarch64/ capabilities/tpu=edgetpu
+      - create_tx2_node:   4 核 / 8GB    / aarch64/ capabilities/cuda=10, gpu=pascal
+      - create_nano:       4 核 / 4GB    / aarch64/ capabilities/cuda=10, gpu=maxwell
+      - create_nx:         6 核 / 8GB    / aarch64/ capabilities/cuda=10, gpu=volta
+
+设计哲学:
+    1. 工厂模式: 每个 create_xxx_node() 返回一个 Node 实例
+    2. K8s 风格 labels: 用 'ether.edgerun.io/<key>' 命名空间
+       → 调度器可直接按 label 匹配 (nodeSelector / affinity)
+    3. arch 字段独立: 镜像架构约束 (arm/x86) 用 arch 单独判断
+    4. 异构性: 核数 4-88, 内存 1GB-188GB, 反映真实边缘设备的巨大差异
+
+对 CSAC 论文的接口:
+    - 节点异构性实验: 混用 rpi3 / tx2 / nx / server
+    - 镜像架构约束: if image.arch != node.arch: skip
+    - GPU/TPU 调度: if 'cuda' in node.labels: 选 GPU 节点
+    - 设备能力过滤: node.labels['ether.edgerun.io/type']
+================================================================================
+"""
 
 import itertools
 from collections import defaultdict
@@ -202,18 +237,32 @@ def create_nx(name=None) -> Node:
 
 def create_node(name: str, cpus: int, mem: str, arch: str, labels: Dict[str, str]) -> Node:
     """
-    根据 CPU 核数、内存字符串、架构和标签构造 Ether Node。
+        根据 CPU 核数、内存字符串、架构和标签构造 Ether Node。
 
-    参数：
-    - name：节点、网络单元或数据源名称，用于生成拓扑顶点和日志标识。
-    - cpus：CPU 核数，函数内部会转换为 millicores。
-    - mem：内存容量字符串，例如 1G、16Gi 或 999036Ki。
-    - arch：CPU 架构标签，用于函数镜像或设备能力匹配。
-    - labels：节点标签集合，描述设备类型、型号和加速器能力。
+        参数：
+        - name：节点、网络单元或数据源名称，用于生成拓扑顶点和日志标识。
+        - cpus：CPU 核数，函数内部会转换为 millicores。
+        - mem：内存容量字符串，例如 1G、16Gi 或 999036Ki。
+        - arch：CPU 架构标签，用于函数镜像或设备能力匹配。
+        - labels：节点标签集合，描述设备类型、型号和加速器能力。
 
-    返回：构造好的 Ether Node。
+        返回：构造好的 Ether Node。
 
-    """
+        ─────────────────────────────────────────────────────────────
+        【设计意图】为什么 cpus 要 × 1000?
+        ─────────────────────────────────────────────────────────────
+        11 个工厂都用 cpus × 1000 转成 millicores:
+          - 4 核 → 4000 millicores
+          - 88 核 → 88000 millicores
+        不用核数而用毫核, 精度更高 (可表示 0.5 核、0.25 核等),
+        符合 Kubernetes 资源模型, 调度器能精细分配。
+
+        mem 用 util.parse_size_string 解析:
+          - "1G" → 10^9 字节 (SI 十进制)
+          - "16Gi" → 2^30 字节 (二进制,K8s 默认)
+        直接对接 K8s/Docker 资源定义。
+        ─────────────────────────────────────────────────────────────
+        """
     # 把 CPU 核数转换为 millicores，并把内存字符串转换为字节容量。
     capacity = Capacity(cpu_millis=cpus * 1000, memory=parse_size_string(mem))
     return Node(name, capacity=capacity, arch=arch, labels=labels)

@@ -1,4 +1,30 @@
-"""Vivaldi 坐标算法实现文件，用虚拟坐标近似节点间网络距离，可用于基于延迟的节点位置估计和拓扑分析。"""
+"""Vivaldi 坐标算法实现文件，用虚拟坐标近似节点间网络距离，可用于基于延迟的节点位置估计和拓扑分析。
+
+================================================================================
+架构定位 (Architecture)
+================================================================================
+本文件是 ether 仿真引擎的【Layer 4】—— Vivaldi 网络坐标。
+
+在 core.py (Node/Coordinate 抽象) + topology.py (latency 模式) 之上,
+提供"轻量 RTT 估算"的实现:
+    - 把节点映射到 N 维欧氏空间 (N=8)
+    - position (8 维向量) + height (残差项) 估算距离
+    - 实测 RTT 后用弹簧式力调整坐标 (EMA 风格误差更新)
+    - 估算距离 = ||pos_a - pos_b|| + height_a + height_b
+
+设计哲学:
+    1. 分布式: 每个节点只跟自己通信过的节点交换信息,无中心协调
+    2. 收敛性: 算法有论文证明 (Dabek et al., SIGCOMM 2004)
+    3. 工业级: apply_force 移植自 Hashicorp Serf 的 Go 实现
+    4. 轻量: O(d) 距离计算 (d=8),适合大规模仿真
+
+对 CSAC 论文的接口:
+    - VivaldiCoordinate: 节点坐标
+    - vivaldi.execute(node, other, rtt): 用一次 RTT 测量更新坐标
+    - topology.latency(src, dst, use_coordinates=True): 通过 Vivaldi 估算
+    - 适用: 冷启动时延建模 / 大规模节点间通信成本估算
+================================================================================
+"""
 
 import random
 from typing import Tuple
@@ -54,11 +80,30 @@ class VivaldiCoordinate(Coordinate):
 
     def apply_force(self, force: float, other: 'VivaldiCoordinate'):
         """
-        apply_force 函数的业务逻辑入口，负责完成当前模块中的对应处理步骤。
+        沿"指向 other 的单位向量"移动 position，同时按 force/norm 调整 height 残差项。
 
         参数：
         - other：另一个坐标或节点，用于计算距离。
 
+        ─────────────────────────────────────────────────────────────
+        【设计意图】弹簧式位置调整 + 残差项更新
+        ─────────────────────────────────────────────────────────────
+        Vivaldi 借鉴物理弹簧模型:
+          - force: 弹簧的"力", 来自 execute() 算的 c_c * weight * (rtt - old_distance)
+          - 单位向量: 从 self 指向 other 的方向
+          - norm: 当前欧氏距离, 用于反比调整 height
+
+        移动公式:  self.position += unit * force
+          force > 0 (实际 RTT > 估算): 朝外推 (拉远)
+          force < 0 (实际 RTT < 估算): 朝内拉 (拉近)
+
+        height 更新:  self.height += (self.height + other.height) * force / norm
+          - 残差项 (height) 也会被 force 影响
+          - norm > 0 才更新 (避免除零)
+          - 更新后限制在 10e-3 以上,防止 height 退化为 0
+
+        移植来源: Hashicorp Serf (Go 实现) 的同名函数。
+        ─────────────────────────────────────────────────────────────
         """
         unit, norm = self._unit_vector_at(self.position, other.position)
         self.position += unit * force
@@ -95,12 +140,36 @@ class VivaldiCoordinate(Coordinate):
 
 def execute(node: Node, other: Node, rtt: float):
     """
-    execute 函数的业务逻辑入口，负责完成当前模块中的对应处理步骤。
+    用一次实测 RTT 调整 Vivaldi 坐标,实现分布式、自适应的网络距离估算。
 
     参数：
     - other：另一个坐标或节点，用于计算距离。
     - rtt：路径往返时延，单位为毫秒。
 
+    ─────────────────────────────────────────────────────────────
+    【设计意图】5 步核心逻辑: weight → old_distance → error → force → apply
+    ─────────────────────────────────────────────────────────────
+    1) weight: 平衡本地/远端误差
+         w = err_self / (err_self + err_other)
+       自己误差大 → 信任别人的少, 自己调整多
+
+    2) old_distance: 当前坐标估算的距离
+         ||pos_a - pos_b|| + height_a + height_b
+
+    3) sample_error: 相对误差
+         |old - rtt| / rtt
+
+    4) EMA 更新误差 (c_e = 0.9):
+         err = sample * c_e * w + err * (1 - c_e * w)
+       平滑收敛, 防止抖动; 上限 max_error = 1.5 防止发散
+
+    5) 弹簧式力:
+         force = c_c * w * (rtt - old_distance)
+       rtt > old → force > 0 → 朝外推 (距离被低估, 拉远)
+       rtt < old → force < 0 → 朝内拉 (距离被高估, 拉近)
+
+    论文支撑: F. Dabek et al., SIGCOMM 2004 (Vivaldi)
+    ─────────────────────────────────────────────────────────────
     """
     if not node.coordinate:
         node.coordinate = VivaldiCoordinate()
