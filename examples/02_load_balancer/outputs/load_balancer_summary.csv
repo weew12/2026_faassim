@@ -1,2 +1,2 @@
-﻿route_events,invocation_events,selected_replica_count,selected_node_count
-30,30,3,1
+﻿route_events,invocation_events,selected_replica_count,selected_node_count,max_routed_requests,min_routed_requests,balance_std,balance_ratio,max_consecutive_same_replica
+30,30,3,1,10,10,0.0,1.0,1
