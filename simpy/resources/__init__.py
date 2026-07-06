@@ -8,4 +8,9 @@ SimPy 共享资源包入口。
 
 faas-sim 可以在函数模拟器、负载均衡器或扩展实验中复用这些资源对象表达排队、容量
 限制和竞争关系。
+
+注意：本文件**没有**任何 import 或 ``__all__``，也不做聚合导出。faas-sim 顶层
+``simpy/__init__.py`` 通过显式 ``from simpy.resources.container import Container``
+等方式把每个具体类直接 re-export 出去。因此本子包的"公开入口"实际上在
+``simpy/__init__.py``，不在这里。
 """
