@@ -33,6 +33,24 @@ image-pull-large-cold   使用 large 镜像，首次部署，触发更大的 doc
 
 为了稳定观察缓存复用，样例使用 `FixedNodeScheduler` 将函数副本固定部署到同一节点。
 
+### 拓扑与瓶颈链路
+
+本样例用 `UrbanSensingScenario` 生成拓扑：
+- 3 个城区的 `SharedLinkCell(shared_bandwidth=500 Mbps)`，每个内含若干感知节点 + `IoTComputeBox`；
+- 1 个 `Cloudlet(5, 2)`，上联 `FiberToExchange(1000 Mbps)`；
+- `FixedNodeScheduler` 把 pod 优先放在 `server_0`，**`server_0` 位于 cloudlet 内部**。
+
+所以 `docker.pull` 的端到端路径是：
+
+```text
+DockerRegistry → internet → cloudlet downlink(1 Gbps) → switch → switch_lan_11 → link_server_0(1 Gbps) → server_0
+```
+
+**端到端瓶颈 = 1 Gbps cloudlet 上联**（不是 25 Mbps MobileConnection）。
+`pull_speed_mb_per_sec` 实测 ~120 MB/s，对应 1 Gbps × 0.97 / 8 = **121.25 MB/s**，理论与仿真一致。
+
+> 提示：若想让 `server_0` 走 neighborhood 的 25 Mbps MobileConnection 链路，需把 `server_0` 放到 `SharedLinkCell` 内（不是 cloudlet）。
+
 ## 输出文件
 
 运行结束后，结果会保存到：
@@ -44,17 +62,68 @@ examples/05_image_pull_network/outputs/
 主要包括：
 
 ```text
-image_pull_probe.csv           # 每次 deploy 阶段的镜像拉取耗时原始记录
-image_pull_summary.csv         # 按 function × image × node 分组的拉取摘要
-image_pull_cold_warm_comparison.csv  # 按 image × cold/warm 分类的对比
-flow.csv                       # 全部网络流记录，action_type=docker_pull 等
-image_pull_flow_summary.csv    # 按 action_type × source × sink × image 分组的流摘要
+image_pull_probe.csv                   # 每次 deploy 阶段的镜像拉取耗时原始记录
+image_pull_summary.csv                 # 按 function × image × node 分组的拉取摘要
+image_pull_cold_warm_comparison.csv    # 按 image × cold/warm 分类 + cache_savings_seconds
+image_pull_size_duration_comparison.csv # 论文 demo 关键图：image_size vs pull_duration
+image_pull_deploy_phase_duration.csv   # 论文 demo 关键图：3 个 pod 的 deploy 阶段总耗时
+flow.csv                               # 全部网络流记录，action_type=docker_pull 等
+image_pull_flow_summary.csv            # 按 action_type × source × sink 分组的流摘要
 schedule.csv
 function_deployments.csv
 function_deployment_lifecycle.csv
 function_replicas.csv
 replica_deployment.csv
-invocations.csv                # main.py 末尾对 small-cold 触发 10 个请求的调用记录
+invocations.csv                        # main.py 末尾对 small-cold 触发 10 个请求的调用记录
+```
+
+### 论文 demo 关键图说明
+
+**1. `image_pull_size_duration_comparison.csv`** —— 镜像大小 vs 拉取耗时散点图
+
+列：`function_name / image / node_name / image_size_mb / pull_duration_seconds / pull_speed_mb_per_sec`
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("examples/05_image_pull_network/outputs/image_pull_size_duration_comparison.csv")
+# 排除 warm cache hit 的数据点（duration=0）
+cold_df = df[df.pull_duration_seconds > 0]
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.scatter(cold_df.image_size_mb, cold_df.pull_duration_seconds, s=100, c="steelblue")
+for _, row in cold_df.iterrows():
+    ax.annotate(row["image"], (row["image_size_mb"], row["pull_duration_seconds"]))
+ax.set_xlabel("image size (MB)"); ax.set_ylabel("pull duration (s)")
+ax.set_title("Image pull duration vs image size")
+ax.grid(True, alpha=0.3)
+plt.show()
+```
+
+**2. `image_pull_deploy_phase_duration.csv`** —— 3 个 pod 的 deploy 阶段总耗时对比
+
+列：`function_name / image / node_name / image_pull_duration / startup_simtime / setup_simtime / deploy_to_finish_simtime`
+
+> 单位是 simtime（仿真秒），不是 wall clock。
+> `deploy_to_finish_simtime = image_pull_duration + startup_simtime + setup_simtime`，
+> 其中 `startup_simtime=0.1, setup_simtime=0` 来自 `simulator.py`。
+
+```python
+df = pd.read_csv("examples/05_image_pull_network/outputs/image_pull_deploy_phase_duration.csv")
+df.set_index("function_name")["deploy_to_finish_simtime"].plot.bar(figsize=(8, 4))
+plt.ylabel("deploy-to-finish (simtime seconds)")
+plt.title("Pod deploy phase duration (simtime)")
+plt.xticks(rotation=20, ha="right")
+plt.tight_layout(); plt.show()
+```
+
+**3. `image_pull_cold_warm_comparison.csv`** —— 含 cache_savings 字段
+
+`cache_savings_seconds` 字段：cold_pull - warm_cache_hit 的差值，**论文里最直观的"缓存节省"指标**。
+
+```python
+df = pd.read_csv("examples/05_image_pull_network/outputs/image_pull_cold_warm_comparison.csv")
+print(df[["image", "cold_or_warm", "cache_savings_seconds", "cache_savings_ratio"]])
 ```
 
 ## 文件说明

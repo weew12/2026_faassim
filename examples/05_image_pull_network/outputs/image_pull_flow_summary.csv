@@ -1,2 +1,2 @@
 ﻿action_type,source,sink,flow_count,total_bytes,avg_duration,max_duration
-docker_pull,registry,server_0,2,224000000,0.9284552485599176,1.5881653513133887
+docker_pull,registry,server_0,2,224000000,0.9281022042239631,1.5879013206136934
