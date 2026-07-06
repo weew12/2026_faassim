@@ -32,11 +32,43 @@ examples/04_network_flow/outputs/
 主要包括：
 
 ```text
-network_flow.csv
-network_route.csv
-network_flow_summary.csv
-network_bottleneck_summary.csv
+network_flow.csv                 # 每次网络流传输的原始记录
+network_route.csv                # 静态路由信息（edge client -> cloud）
+network_flow_performance.csv     # 每个 flow 的完整性能指标（论文 demo 关键图）
+network_flow_summary.csv          # 增强版摘要（含 throughput_mbps 和 scaling_factor）
+network_bottleneck_summary.csv    # 按 bottleneck 链路分组的统计
 ```
+
+### 论文 demo 关键图说明
+
+**1. `network_flow_performance.csv`** —— 每个 flow 的完整性能
+
+列：scenario / flow_id / bytes / size_mb / duration / start_time / finish_time / throughput_mbps / rtt_ms / hop_count / bottleneck_link / bottleneck_bandwidth_mbps / bottleneck_utilization_ratio
+
+画图：
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("outputs/network_flow_performance.csv")
+fig, ax = plt.subplots(figsize=(8, 4))
+colors = df["scenario"].map({"single_flow": "steelblue", "concurrent_bottleneck": "indianred"})
+ax.bar(df.flow_id, df.throughput_mbps, color=colors, label=df.scenario)
+ax.set_ylabel("throughput (Mbps)")
+ax.set_xlabel("flow_id")
+ax.set_title("Per-flow throughput: single vs concurrent bottleneck")
+plt.xticks(rotation=30, ha="right")
+plt.legend()
+plt.tight_layout()
+plt.show()
+```
+
+**2. `network_flow_summary.csv`** —— 单流 vs 并发对比 + 延迟放大系数
+
+`scaling_factor` 字段：concurrent 相对 single_flow 的平均延迟放大倍数。
+
+论文叙事点：
+- `scaling_factor ≈ 4.5`（74s / 16.6s）证明"3 个并发流共享 10Mbps bottleneck 时，延迟放大到原来的 4.5 倍"
 
 ## 文件说明
 

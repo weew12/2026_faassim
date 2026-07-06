@@ -1,0 +1,5 @@
+﻿scenario,flow_id,bytes,size_mb,duration,start_time,finish_time,throughput_mbps,rtt_ms,hop_count,bottleneck_link,bottleneck_bandwidth_mbps,bottleneck_utilization_ratio
+concurrent_bottleneck,flow_a,30000000,30.0,74.09680412371134,0.0,74.09680412371134,3.2390060926149826,80,3,bottleneck,10,0.3239006092614983
+concurrent_bottleneck,flow_b,30000000,30.0,74.09680412371134,0.0,74.09680412371134,3.2390060926149826,80,3,bottleneck,10,0.3239006092614983
+concurrent_bottleneck,flow_c,30000000,30.0,73.84680412371134,0.5,74.34680412371134,3.249971381265758,80,3,bottleneck,10,0.3249971381265758
+single_flow,single_a_to_cloud,20000000,20.0,16.61484536082474,0.0,16.61484536082474,9.6299421707081,80,3,bottleneck,10,0.96299421707081

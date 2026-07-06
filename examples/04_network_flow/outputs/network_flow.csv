@@ -1,5 +1,5 @@
 ﻿scenario,flow_id,action_type,source,sink,start_time,finish_time,duration,bytes,size_mb,rtt_ms,hop_count,hops,bottleneck_link,bottleneck_bandwidth_mbps
 single_flow,single_a_to_cloud,data_transfer,edge_client_a,cloud_server,0.0,16.61484536082474,16.61484536082474,20000000,20.0,80,3,access_a -> bottleneck -> cloud_access,bottleneck,10
-concurrent_bottleneck,flow_b,data_transfer,edge_client_b,cloud_server,0.0,74.09680412371134,74.09680412371134,30000000,30.0,80,3,access_b -> bottleneck -> cloud_access,bottleneck,10
 concurrent_bottleneck,flow_a,data_transfer,edge_client_a,cloud_server,0.0,74.09680412371134,74.09680412371134,30000000,30.0,80,3,access_a -> bottleneck -> cloud_access,bottleneck,10
+concurrent_bottleneck,flow_b,data_transfer,edge_client_b,cloud_server,0.0,74.09680412371134,74.09680412371134,30000000,30.0,80,3,access_b -> bottleneck -> cloud_access,bottleneck,10
 concurrent_bottleneck,flow_c,data_transfer,edge_client_c,cloud_server,0.5,74.34680412371134,73.84680412371134,30000000,30.0,80,3,access_c -> bottleneck -> cloud_access,bottleneck,10
