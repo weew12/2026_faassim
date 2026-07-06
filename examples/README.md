@@ -1,15 +1,16 @@
-Examples
-========
+# `examples` 包结构说明
 
-This package contains examples that demonstrate various ways to work with *faas-sim*. Each example has a
-runnable `main.py`. You can run them from the faas-sim root directory with:
+示例包：展示不同扩展点的最小可运行使用方式。
 
-    make venv
-    source .venv/bin/activate
-    python -m examples.<example>.main
+## 包内 Python 文件
 
-Replace `<example>` with one of the example packages:
+- `__init__.py`：该文件参与本包对应的仿真支撑逻辑。
 
-* `basic`: set up and run a simulation
-* `custom_function_sim`: create a custom function simulator that models the behavior of functions
-* `custom_scheduler`: replace the default scheduler with a custom implementation
+## 子目录
+
+- `analysis/`：结果分析示例包。
+- `basic/`：基础示例包：展示标准 Simulation + Benchmark 工作流。
+- `custom_function_sim/`：自定义函数模拟器示例包。
+- `custom_scheduler/`：自定义调度器示例包。
+- `request_gen/`：请求生成器示例包。
+- `watchdogs/`：watchdog 执行模式示例包。
