@@ -4,7 +4,7 @@
 
 ## 运行方式
 
-将 `examples_autoscaling/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+将 `01_autoscaling/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
 python -u examples/01_autoscaling/main.py
@@ -32,14 +32,41 @@ examples/01_autoscaling/outputs/
 主要包括：
 
 ```text
-scale.csv
-schedule.csv
-function_deployment.csv
-replica_deployment.csv
-invocations.csv
-flow.csv
-autoscaling_replica_timeline.csv
-autoscaling_summary.csv
+scale.csv                                # faas-sim 内置：每次 scale 事件（time 是 wall clock）
+schedule.csv                             # faas-sim 内置：调度事件
+function_deployment.csv                  # faas-sim 内置：函数部署记录
+replica_deployment.csv                   # faas-sim 内置：副本部署/启动/setup/finish 记录
+invocations.csv                          # faas-sim 内置：每次调用（t_start 是 simtime）
+flow.csv                                 # faas-sim 内置：网络流
+autoscaling_rps_replicas_timeline.csv    # 1s 窗口聚合的 RPS 与 replicas 数（论文 demo 关键图）
+autoscaling_summary.csv                  # 增强版摘要
+```
+
+### 论文 demo 关键图说明
+
+`autoscaling_rps_replicas_timeline.csv` 是本样例的核心导出。其列含义：
+
+- `simtime`：仿真时间（秒），从 invocations.csv 的 t_start 派生
+- `window`：聚合窗口大小（秒），固定为 1.0
+- `invocation_count`：窗口内的 invocation 次数
+- `rps`：该窗口的请求率（= invocation_count / window）
+- `replicas`：窗口结束时实际副本数
+
+画图直接用：
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("outputs/autoscaling_rps_replicas_timeline.csv")
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
+ax1.plot(df.simtime, df.rps, "b-", label="RPS")
+ax2.plot(df.simtime, df.replicas, "r-", label="Replicas")
+ax1.set_xlabel("simtime (s)"); ax1.set_ylabel("RPS", color="b")
+ax2.set_ylabel("Replicas", color="r")
+plt.title("Autoscaling behavior under 40 RPS load")
+plt.show()
 ```
 
 ## 文件说明
