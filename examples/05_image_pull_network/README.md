@@ -4,7 +4,7 @@
 
 ## 运行方式
 
-将 `image_pull_network/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+将 `05_image_pull_network/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
 python -u examples/05_image_pull_network/main.py
@@ -44,16 +44,17 @@ examples/05_image_pull_network/outputs/
 主要包括：
 
 ```text
-image_pull_probe.csv
-image_pull_summary.csv
-flow.csv
-image_pull_flow_summary.csv
+image_pull_probe.csv           # 每次 deploy 阶段的镜像拉取耗时原始记录
+image_pull_summary.csv         # 按 function × image × node 分组的拉取摘要
+image_pull_cold_warm_comparison.csv  # 按 image × cold/warm 分类的对比
+flow.csv                       # 全部网络流记录，action_type=docker_pull 等
+image_pull_flow_summary.csv    # 按 action_type × source × sink × image 分组的流摘要
 schedule.csv
 function_deployments.csv
 function_deployment_lifecycle.csv
 function_replicas.csv
 replica_deployment.csv
-invocations.csv
+invocations.csv                # main.py 末尾对 small-cold 触发 10 个请求的调用记录
 ```
 
 ## 文件说明

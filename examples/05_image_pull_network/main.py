@@ -32,6 +32,7 @@ from sim.faas import (
     KubernetesResourceConfiguration,
 )
 from sim.faassim import Simulation
+from sim.requestgen import function_trigger, constant_rps_profile, static_arrival_profile
 from sim.topology import Topology
 
 from analysis import export_outputs
@@ -104,6 +105,8 @@ class ImagePullNetworkBenchmark(Benchmark):
         运行镜像拉取网络实验。
 
         通过顺序部署函数，稳定观察冷拉取与缓存复用。
+        在第三个函数部署完成后，触发少量小镜像请求，
+        让 invocations.csv 也有数据，使样例输出文件清单完整。
         """
         deployments = self.prepare_deployments()
 
@@ -116,6 +119,22 @@ class ImagePullNetworkBenchmark(Benchmark):
 
             # 增加一个很短的间隔，使不同部署阶段在日志和指标中更容易区分。
             yield env.timeout(0.2)
+
+        # 给 small-cold 触发少量请求，让 invocations.csv 有数据。
+        # 选 small-cold 是因为它的镜像已经在 server_0 缓存，请求路径最快。
+        # 选 10 个请求 + 10 RPS 是为了演示完整调用链而不拖慢仿真。
+        logger.info("triggering demo workload on small-cold")
+        small_ia = static_arrival_profile(constant_rps_profile(rps=10))
+        yield from function_trigger(
+            env,
+            deployments[0],
+            small_ia,
+            max_requests=10,
+        )
+
+        # 等所有 invoke 完成。function_trigger 不等 invoke 进程完成。
+        # 05 的 invoke 耗时 0.05s，10 个请求在 1s 内全部分发完，留 1s 缓冲足够。
+        yield env.timeout(1.0)
 
         logger.info("image pull network benchmark finished")
 

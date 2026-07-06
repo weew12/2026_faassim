@@ -1,0 +1,4 @@
+﻿image,cold_or_warm,pull_events,avg_pull_duration,min_pull_duration,max_pull_duration
+image-pull-large-cpu,cold_pull,1,1.5881653513133887,1.5881653513133887,1.5881653513133887
+image-pull-small-cpu,cold_pull,1,0.2687451458064466,0.2687451458064466,0.2687451458064466
+image-pull-small-cpu,warm_cache_hit,1,0.0,0.0,0.0

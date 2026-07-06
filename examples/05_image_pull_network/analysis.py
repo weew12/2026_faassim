@@ -84,7 +84,9 @@ def build_flow_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     生成网络 Flow 摘要。
 
-    重点统计 action_type=docker_pull 的网络传输事件。
+    按 action_type × source × sink 分组，统计 docker_pull 等网络传输事件。
+    flow.csv 不含 image 列，所以这里的分组不包含 image。
+    如需按 image 拆分的拉取对比，请使用 image_pull_cold_warm_comparison.csv。
     """
     flow_df = dfs.get("flow", pd.DataFrame())
 
@@ -109,6 +111,46 @@ def build_flow_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
             max_duration=("duration", "max"),
         )
         .reset_index()
+        .sort_values(["action_type", "source"], ascending=[True, True])
+    )
+
+
+def build_cold_warm_comparison(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    生成冷/热拉取对比摘要。
+
+    按 (image, cold_or_warm) 维度汇总 image_pull_probe 数据：
+    - cold：首次拉取，duration > 0
+    - warm：缓存命中，duration == 0
+
+    这是论文里最直观的"小镜像冷拉 vs 热复用"对比图的数据源。
+    """
+    probe_df = dfs.get("image_pull_probe", pd.DataFrame())
+
+    if probe_df.empty or "image_pull_duration" not in probe_df.columns:
+        return pd.DataFrame()
+
+    work_df = probe_df.copy()
+    work_df["cold_or_warm"] = work_df["cache_hit_like"].map(
+        {True: "warm_cache_hit", False: "cold_pull"}
+    ).fillna("unknown")
+
+    group_columns = ["image", "cold_or_warm"]
+    available = [c for c in group_columns if c in work_df.columns]
+    if not available:
+        return pd.DataFrame()
+
+    return (
+        work_df
+        .groupby(available)
+        .agg(
+            pull_events=("image_pull_duration", "count"),
+            avg_pull_duration=("image_pull_duration", "mean"),
+            min_pull_duration=("image_pull_duration", "min"),
+            max_pull_duration=("image_pull_duration", "max"),
+        )
+        .reset_index()
+        .sort_values(["image", "cold_or_warm"], ascending=[True, True])
     )
 
 
@@ -135,7 +177,13 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     flow_summary_df.to_csv(flow_summary_path, index=False, encoding="utf-8-sig")
     logger.info("saved %s", flow_summary_path)
 
+    cold_warm_df = build_cold_warm_comparison(dfs)
+    cold_warm_path = output_dir / "image_pull_cold_warm_comparison.csv"
+    cold_warm_df.to_csv(cold_warm_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", cold_warm_path)
+
     dfs["image_pull_summary"] = image_pull_summary_df
     dfs["image_pull_flow_summary"] = flow_summary_df
+    dfs["image_pull_cold_warm_comparison"] = cold_warm_df
 
     return dfs
