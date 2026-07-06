@@ -1,4 +1,4 @@
-# trace_oracle：faas-sim trace-driven 执行时间样例
+# 07_trace_oracle：faas-sim trace-driven 执行时间样例
 
 本样例用于演示 trace-driven / oracle-style 的函数执行时间建模方式。样例从 CSV 文件读取函数执行时间轨迹，并在函数 invoke 阶段按 trace 样本控制执行时间。
 

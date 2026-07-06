@@ -1,4 +1,4 @@
-# cold_start：faas-sim 冷启动生命周期拆分样例
+# 12_cold_start：faas-sim 冷启动生命周期拆分样例
 
 本样例用于演示 faas-sim 中函数副本冷启动路径的拆分建模方法，重点展示 `deploy`、`startup`、`setup`、`first_invoke` 和 `warm_invoke` 的区别。
 

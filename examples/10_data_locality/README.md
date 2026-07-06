@@ -1,4 +1,4 @@
-# data_locality：faas-sim 数据本地性样例
+# 10_data_locality：faas-sim 数据本地性样例
 
 本样例用于演示 faas-sim / Skippy 中的数据本地性机制，重点展示 `StorageIndex`、函数数据标签、`DataLocalityPriority` 和 `simulate_data_download()` 之间的关系。
 

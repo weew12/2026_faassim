@@ -1,4 +1,4 @@
-# experiment_analysis：faas-sim 实验结果分析样例
+# 15_experiment_analysis：faas-sim 实验结果分析样例
 
 本样例用于演示如何统一读取 faas-sim 实验输出 CSV，并生成标准化 summary 指标。它适合接在 `examples/14_batch_experiment/` 后面使用，也可以独立运行自带的 `sample_results/`。
 

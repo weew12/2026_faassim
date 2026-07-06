@@ -1,4 +1,4 @@
-# skippy_scheduler：faas-sim 原生 Skippy 默认调度机制样例
+# 03_skippy_scheduler：faas-sim 原生 Skippy 默认调度机制样例
 
 本样例用于演示 faas-sim 中默认 Skippy 调度机制，重点展示资源过滤、节点可行性判断、节点选择和 `SchedulingResult` 的含义。
 

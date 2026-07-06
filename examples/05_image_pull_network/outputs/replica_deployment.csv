@@ -1,13 +1,13 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-06 22:43:14.236915,deploy,image-pull-small-cold,server_0,2374927697968
-2026-07-06 22:43:14.237859,startup,image-pull-small-cold,server_0,2374927697968
-2026-07-06 22:43:14.237873,setup,image-pull-small-cold,server_0,2374927697968
-2026-07-06 22:43:14.237880,finish,image-pull-small-cold,server_0,2374927697968
-2026-07-06 22:43:14.238318,deploy,image-pull-small-warm,server_0,2374927412560
-2026-07-06 22:43:14.238405,startup,image-pull-small-warm,server_0,2374927412560
-2026-07-06 22:43:14.238416,setup,image-pull-small-warm,server_0,2374927412560
-2026-07-06 22:43:14.238425,finish,image-pull-small-warm,server_0,2374927412560
-2026-07-06 22:43:14.238722,deploy,image-pull-large-cold,server_0,2374927415760
-2026-07-06 22:43:14.239205,startup,image-pull-large-cold,server_0,2374927415760
-2026-07-06 22:43:14.239222,setup,image-pull-large-cold,server_0,2374927415760
-2026-07-06 22:43:14.239228,finish,image-pull-large-cold,server_0,2374927415760
+2026-07-06 23:04:05.710064,deploy,image-pull-small-cold,server_0,2761668806704
+2026-07-06 23:04:05.711084,startup,image-pull-small-cold,server_0,2761668806704
+2026-07-06 23:04:05.711096,setup,image-pull-small-cold,server_0,2761668806704
+2026-07-06 23:04:05.711103,finish,image-pull-small-cold,server_0,2761668806704
+2026-07-06 23:04:05.711422,deploy,image-pull-small-warm,server_0,2761668521296
+2026-07-06 23:04:05.711503,startup,image-pull-small-warm,server_0,2761668521296
+2026-07-06 23:04:05.711513,setup,image-pull-small-warm,server_0,2761668521296
+2026-07-06 23:04:05.711522,finish,image-pull-small-warm,server_0,2761668521296
+2026-07-06 23:04:05.711800,deploy,image-pull-large-cold,server_0,2761668524496
+2026-07-06 23:04:05.712132,startup,image-pull-large-cold,server_0,2761668524496
+2026-07-06 23:04:05.712150,setup,image-pull-large-cold,server_0,2761668524496
+2026-07-06 23:04:05.712156,finish,image-pull-large-cold,server_0,2761668524496

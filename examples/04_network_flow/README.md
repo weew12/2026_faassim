@@ -1,4 +1,4 @@
-# network_flow：faas-sim / Ether 原生网络流样例
+# 04_network_flow：faas-sim / Ether 原生网络流样例
 
 本样例用于演示 faas-sim 底层 Ether 网络流仿真能力，重点展示网络拓扑、路由、链路带宽、RTT、单流传输和多流共享瓶颈链路。
 

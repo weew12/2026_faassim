@@ -17,10 +17,8 @@ logger = logging.getLogger(__name__)
 # 不同 faas-sim 版本中资源监控指标名称可能略有差异。
 # 因此这里同时尝试多个常见名称，缺失的指标会被安全跳过。
 METRIC_NAMES = [
-    "resource",
-    "resources",
-    "resource_monitor",
-    "resource_state",
+    "function_utilization",
+    "node_utilization",
     "invocations",
     "schedule",
     "function_deployments",
@@ -51,9 +49,9 @@ def extract_metrics(sim) -> Dict[str, pd.DataFrame]:
 
 def find_resource_dataframe(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
-    从候选指标中选择一个非空资源监控 DataFrame。
+    从候选指标中选一个非空的资源监控 DataFrame。
     """
-    for name in ["resource", "resources", "resource_monitor", "resource_state"]:
+    for name in ["function_utilization", "node_utilization"]:
         df = dfs.get(name, pd.DataFrame())
         if not df.empty:
             return df

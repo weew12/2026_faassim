@@ -1,4 +1,4 @@
-# resource_monitor：faas-sim 原生 ResourceMonitor 资源监控样例
+# 06_resource_monitor：faas-sim 原生 ResourceMonitor 资源监控样例
 
 本样例用于演示 faas-sim 中 `ResourceState` 和 `ResourceMonitor` 的基本用法，重点展示函数执行期间如何登记 CPU / 内存资源占用，以及如何导出资源监控结果。
 

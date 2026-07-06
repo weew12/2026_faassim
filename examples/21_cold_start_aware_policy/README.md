@@ -1,4 +1,4 @@
-# cold_start_aware_policy：冷启动感知函数实例保活策略样例
+# 21_cold_start_aware_policy：冷启动感知函数实例保活策略样例
 
 本样例用于演示冷启动感知函数实例保活策略。它将函数 warm 实例抽象为有限容量缓存，并比较固定 keep-alive 策略与冷启动感知 keep-alive 策略的差异。
 

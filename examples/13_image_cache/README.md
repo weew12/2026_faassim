@@ -1,4 +1,4 @@
-# image_cache：faas-sim 节点级镜像缓存样例
+# 13_image_cache：faas-sim 节点级镜像缓存样例
 
 本样例用于演示 faas-sim 中节点级镜像缓存机制，重点展示 `docker.pull()`、`node_state.docker_images` 和 `flow.csv` 中 `docker_pull` 网络流之间的关系。
 

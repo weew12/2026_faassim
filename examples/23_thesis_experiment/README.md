@@ -1,4 +1,4 @@
-# thesis_experiment：论文实验组织样例
+# 23_thesis_experiment：论文实验组织样例
 
 本样例用于组织一个最小但完整的论文实验闭环。它不直接依赖 faas-sim 核心接口，而是采用 trace-driven 方式模拟函数画像、节点状态、缓存状态、扩缩容决策和调度选择，便于稳定生成论文实验所需的 CSV 指标和 Markdown 报告。
 

@@ -127,6 +127,12 @@ class AutoscalingBenchmark(Benchmark):
             max_requests=2000,
         )
 
+        # 等所有 invoke 进程完成。
+        # function_trigger(max_requests=N) 只保证触发 N 个请求就返回，
+        # 不等待 N 次 invoke 全部跑完。仿真本身已经跑了约 50s 让 2000 个
+        # 请求自然完成；这里再加 1s 缓冲确保最后几个 invoke 落盘。
+        yield env.timeout(1.0)
+
         logger.info("autoscaling workload finished")
 
     def prepare_deployments(self) -> List[FunctionDeployment]:

@@ -136,6 +136,13 @@ class SkippySchedulerBenchmark(Benchmark):
             max_requests=12,
         )
 
+        # 等所有 invoke 进程完成。
+        # function_trigger(max_requests=N) 只保证触发 N 个请求就返回，
+        # 不等待 N 次 invoke 全部跑完。在本样例中每个 invoke 耗时 0.25s，
+        # 留 2s 缓冲即可让 20+12=32 个请求全部完成并写入 invocations.csv，
+        # 使调度结果与 invocation 记录一致，summary 数据自洽。
+        yield env.timeout(2.0)
+
         logger.info("skippy scheduler workload finished")
 
     def prepare_deployments(self) -> List[FunctionDeployment]:

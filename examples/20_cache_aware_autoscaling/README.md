@@ -1,4 +1,4 @@
-# cache_aware_autoscaling：缓存状态感知扩缩容样例
+# 20_cache_aware_autoscaling：缓存状态感知扩缩容样例
 
 本样例用于演示缓存状态感知扩缩容的最小实验闭环。核心思想是同时计算缓存需求副本数 `R_cache` 和负载需求副本数 `R_load`，并组合得到最终目标副本数：
 

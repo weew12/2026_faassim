@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 METRIC_NAMES = [
     "cosim_exchange",
     "cosim_phase",
+    "cosim_workload_phase",
     "cosim_invoke_probe",
     "invocations",
     "schedule",
@@ -25,10 +26,8 @@ METRIC_NAMES = [
     "function_replicas",
     "replica_deployment",
     "flow",
-    "resource",
-    "resources",
-    "resource_monitor",
-    "resource_state",
+    "function_utilization",
+    "node_utilization",
 ]
 
 

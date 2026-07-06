@@ -1,4 +1,4 @@
-# topologies：faas-sim / Ether 拓扑构建样例
+# 09_topologies：faas-sim / Ether 拓扑构建样例
 
 本样例用于演示 faas-sim / Ether 中常见拓扑构建方式，重点展示节点、链路、连接、路由和官方场景拓扑的基本使用方法。
 

@@ -1,4 +1,4 @@
-# cosimulation：faas-sim 协同仿真样例
+# 16_cosimulation：faas-sim 协同仿真样例
 
 本样例用于演示 faas-sim 与外部控制/环境模型之间的协同仿真组织方式。它提供一个最小模板：外部 trace 周期性更新环境状态，faas-sim 函数模拟器读取该状态，并据此改变函数执行时间。
 

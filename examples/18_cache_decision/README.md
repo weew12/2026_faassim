@@ -1,4 +1,4 @@
-# cache_decision：冷启动感知缓存决策样例
+# 18_cache_decision：冷启动感知缓存决策样例
 
 本样例用于演示函数实例缓存决策过程。它基于函数画像快照计算冷启动收益、资源代价和缓存效用，并输出 keep warm、prewarm、eviction 和 observe 等决策结果。
 

@@ -1,4 +1,4 @@
 ﻿time,image_pull_duration,cache_hit_like,function_name,image,node_name,replica_id
-2026-07-06 22:43:14.237852,0.2685914675795193,False,image-pull-small-cold,image-pull-small-cpu,server_0,2374927697968
-2026-07-06 22:43:14.238399,0.0,True,image-pull-small-warm,image-pull-small-cpu,server_0,2374927412560
-2026-07-06 22:43:14.239200,1.5881861102975892,False,image-pull-large-cold,image-pull-large-cpu,server_0,2374927415760
+2026-07-06 23:04:05.711078,0.26853833451675446,False,image-pull-small-cold,image-pull-small-cpu,server_0,2761668806704
+2026-07-06 23:04:05.711499,0.0,True,image-pull-small-warm,image-pull-small-cpu,server_0,2761668521296
+2026-07-06 23:04:05.712128,1.5881490180138194,False,image-pull-large-cold,image-pull-large-cpu,server_0,2761668524496

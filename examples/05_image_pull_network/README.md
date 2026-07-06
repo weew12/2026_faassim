@@ -1,4 +1,4 @@
-# image_pull_network：faas-sim 镜像拉取网络样例
+# 05_image_pull_network：faas-sim 镜像拉取网络样例
 
 本样例用于演示 faas-sim 中 `docker.pull()` 与网络传输之间的关系，重点展示首次镜像拉取、同节点镜像缓存复用以及镜像大小对拉取耗时的影响。
 

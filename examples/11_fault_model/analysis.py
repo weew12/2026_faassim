@@ -24,10 +24,8 @@ METRIC_NAMES = [
     "function_replicas",
     "replica_deployment",
     "flow",
-    "resource",
-    "resources",
-    "resource_monitor",
-    "resource_state",
+    "function_utilization",
+    "node_utilization",
 ]
 
 

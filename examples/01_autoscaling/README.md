@@ -1,4 +1,4 @@
-# examples_autoscaling：faas-sim 原生自动伸缩样例
+# 01_autoscaling：faas-sim 原生自动伸缩样例
 
 本样例用于演示 faas-sim 的原生自动伸缩能力，重点展示函数部署、请求负载生成、自动伸缩触发、伸缩指标导出和副本数量时间线分析。
 

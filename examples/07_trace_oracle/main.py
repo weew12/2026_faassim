@@ -132,6 +132,11 @@ class TraceOracleBenchmark(Benchmark):
             max_requests=12,
         )
 
+        # 等所有 invoke 进程完成。
+        # function_trigger(max_requests=N) 只保证触发 N 个请求就返回，
+        # 不等待 N 次 invoke 全部跑完。留 2s 缓冲让 16+12=28 个 invoke 全部落盘。
+        yield env.timeout(2.0)
+
         logger.info("trace oracle workload finished")
 
     def prepare_deployments(self) -> List[FunctionDeployment]:
