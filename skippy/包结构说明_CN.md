@@ -1,39 +1,23 @@
-# skippy 包结构说明
+# skippy 包结构说明（精简入口）
 
-`skippy/` 是本版本内置的调度器子包，用于替换原先的 `edgerun-skippy-core` 外部依赖。它提供 Kubernetes 风格的调度模型，将函数副本抽象为 Pod，将边缘/云节点抽象为 Node，并通过“谓词过滤 + 优先级打分”的流程选择部署节点。
+> 本文档是**精简入口**。完整导航与各模块深度解析请见 [doc/](doc/)。
+>
+> 本包的目的、目录结构、文件职责与核心业务流程的**完整说明**已拆分到以下子文档：
+>
+> - [00 · 包结构与导航](doc/00_包结构与导航.md) — 总览（推荐从这里开始）
+> - [01 · 包入口与 core 子包](doc/01_包入口与core子包.md) — 两个 __init__.py
+> - [02 · 调度领域模型](doc/02_调度领域模型_model.md) — core/model.py
+> - [03 · 集群运行态上下文](doc/03_集群运行态上下文_clustercontext.md) — core/clustercontext.py
+> - [04 · 调度谓词过滤](doc/04_调度谓词过滤_predicates.md) — core/predicates.py
+> - [05 · 调度优先级打分](doc/05_调度优先级打分_priorities.md) — core/priorities.py
+> - [06 · 调度器主流程](doc/06_调度器主流程_scheduler.md) — core/scheduler.py
+> - [07 · 对象存储索引](doc/07_对象存储索引_storage.md) — core/storage.py
+> - [08 · 调度工具函数](doc/08_调度工具函数_utils.md) — core/utils.py
+>
+> 本文件保留作为从仓库根目录快速进入的入口指引，**避免与 doc/00_包结构与导航.md 重复维护**。
 
-## 目录结构
+---
 
-```text
-skippy/
-├── __init__.py
-└── core/
-    ├── __init__.py
-    ├── model.py
-    ├── clustercontext.py
-    ├── predicates.py
-    ├── priorities.py
-    ├── scheduler.py
-    ├── storage.py
-    └── utils.py
-```
+## 一句话总览
 
-## 文件职责
-
-- `model.py`：定义调度领域对象，包括 `ImageState`、`ResourceRequirements`、`Container`、`PodSpec`、`Pod`、`Capacity`、`Node` 和 `SchedulingResult`。
-- `clustercontext.py`：定义集群运行态上下文，维护节点、镜像、剩余资源、带宽图和对象存储索引。
-- `predicates.py`：定义调度过滤逻辑，例如资源是否足够、节点是否带有或不带有指定标签。
-- `priorities.py`：定义调度打分逻辑，例如资源均衡、镜像本地性、带宽感知镜像拉取代价、数据本地性、边缘节点优先和硬件能力匹配。
-- `scheduler.py`：串联过滤和打分流程，选择最高分节点，并将调度结果写回 `ClusterContext`。
-- `storage.py`：维护对象存储 bucket、数据对象和存储节点之间的索引关系，供数据本地性调度使用。
-- `utils.py`：提供镜像名规范化、容量字符串解析、计时器和递增计数器等工具。
-
-## 核心业务流程
-
-1. faas-sim 通过 `sim/skippy.py` 将 Ether 节点转换为 Skippy `Node`，将函数部署转换为 Skippy `Pod`。
-2. `Scheduler.schedule(pod)` 从 `ClusterContext` 获取节点列表。
-3. 调度器执行默认谓词：资源必须足够，且普通函数不能被放到存储专用节点。
-4. 对可行节点执行默认优先级函数：资源均衡、镜像拉取代价、边缘位置、数据本地性和能力匹配。
-5. 调度器选择总分最高节点，并计算该节点缺失的镜像列表。
-6. 调度器调用 `ClusterContext.place_pod_on_node()`，扣减节点剩余资源并登记镜像缓存状态。
-7. faas-sim 根据调度结果继续模拟镜像拉取、函数启动、setup 和请求执行。
+skippy/ 是 faas-sim 内置的调度器子包（替换原 dgerun-skippy-core），通过 **Kubernetes 风格的「谓词过滤 + 优先级打分」** 决定「函数副本 Pod 应该放到哪个边缘/云节点」。
