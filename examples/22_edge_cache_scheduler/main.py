@@ -5,7 +5,7 @@
 这样可以避免不同 faas-sim 源码版本的接口差异影响样例运行。
 
 运行方式：
-    python -u examples/edge_cache_scheduler/main.py
+    python -u examples/22_edge_cache_scheduler/main.py
 """
 
 import logging

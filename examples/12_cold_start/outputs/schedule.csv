@@ -1,4 +1,4 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-06 21:37:37.642610,queue,cold-start-python-pi,cold-start-python-pi-cpu,2299476724432,,
-2026-07-06 21:37:37.642763,start,cold-start-python-pi,cold-start-python-pi-cpu,2299476724432,,
-2026-07-06 21:37:37.654742,finish,cold-start-python-pi,cold-start-python-pi-cpu,2299476724432,server_0,True
+2026-07-06 22:43:28.076309,queue,cold-start-python-pi,cold-start-python-pi-cpu,2092054776528,,
+2026-07-06 22:43:28.076395,start,cold-start-python-pi,cold-start-python-pi-cpu,2092054776528,,
+2026-07-06 22:43:28.094156,finish,cold-start-python-pi,cold-start-python-pi-cpu,2092054776528,server_0,True

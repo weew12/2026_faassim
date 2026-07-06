@@ -7,7 +7,7 @@
 将 `examples_autoscaling/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/examples_autoscaling/main.py
+python -u examples/01_autoscaling/main.py
 ```
 
 ## 样例目标
@@ -26,7 +26,7 @@ python -u examples/examples_autoscaling/main.py
 运行结束后，结果会保存到：
 
 ```text
-examples/examples_autoscaling/outputs/
+examples/01_autoscaling/outputs/
 ```
 
 主要包括：

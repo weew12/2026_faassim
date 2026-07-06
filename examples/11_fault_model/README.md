@@ -7,7 +7,7 @@
 将 `fault_model/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/fault_model/main.py
+python -u examples/11_fault_model/main.py
 ```
 
 ## 样例目标
@@ -55,7 +55,7 @@ final_duration
 运行结束后，结果会保存到：
 
 ```text
-examples/fault_model/outputs/
+examples/11_fault_model/outputs/
 ```
 
 主要包括：

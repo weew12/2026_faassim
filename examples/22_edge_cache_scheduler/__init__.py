@@ -8,5 +8,5 @@ edge_cache_scheduler 样例包。
 - 导出候选节点评分、请求级调度结果、缓存命中统计和策略对比摘要。
 
 运行入口：
-    python -u examples/edge_cache_scheduler/main.py
+    python -u examples/22_edge_cache_scheduler/main.py
 """

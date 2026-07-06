@@ -7,7 +7,7 @@
 将 `cosimulation/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cosimulation/main.py
+python -u examples/16_cosimulation/main.py
 ```
 
 ## 样例目标
@@ -52,7 +52,7 @@ final_duration = base_duration * runtime_factor + network_delay
 运行结束后，结果会保存到：
 
 ```text
-examples/cosimulation/outputs/
+examples/16_cosimulation/outputs/
 ```
 
 主要包括：

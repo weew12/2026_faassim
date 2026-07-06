@@ -1,2 +1,2 @@
 ﻿time,feasible_nodes,needed_images_count,scheduler,pod_name,selected_node,needed_images
-2026-07-06 21:35:08.798549,3,1,data_locality_aware,pod-data-locality-python-pi-1,edge_near,data-locality-python-pi-cpu:latest
+2026-07-06 22:43:24.101755,3,1,data_locality_aware,pod-data-locality-python-pi-1,edge_near,data-locality-python-pi-cpu:latest

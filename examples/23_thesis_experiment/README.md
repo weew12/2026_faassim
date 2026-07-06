@@ -7,7 +7,7 @@
 将 `thesis_experiment/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/thesis_experiment/main.py
+python -u examples/23_thesis_experiment/main.py
 ```
 
 ## 实验目标
@@ -69,7 +69,7 @@ inputs/experiment_cases.csv
 运行结束后，结果会保存到：
 
 ```text
-examples/thesis_experiment/outputs/
+examples/23_thesis_experiment/outputs/
 ```
 
 主要包括：

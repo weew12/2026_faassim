@@ -8,7 +8,7 @@
 - 导出请求级结果、驱逐事件、缓存状态和策略摘要。
 
 运行方式：
-    python -u examples/cache_policy/main.py
+    python -u examples/17_cache_policy/main.py
 """
 
 import logging

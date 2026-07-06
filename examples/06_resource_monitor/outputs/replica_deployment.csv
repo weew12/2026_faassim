@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-06 21:30:51.101194,deploy,resource-heavy-python-pi,server_0,2117900257328
-2026-07-06 21:30:51.101959,deploy,resource-heavy-python-pi,server_0,2117899997648
-2026-07-06 21:30:51.101976,startup,resource-heavy-python-pi,server_0,2117899997648
-2026-07-06 21:30:51.102154,setup,resource-heavy-python-pi,server_0,2117899997648
-2026-07-06 21:30:51.102164,finish,resource-heavy-python-pi,server_0,2117899997648
-2026-07-06 21:30:51.102331,startup,resource-heavy-python-pi,server_0,2117900257328
-2026-07-06 21:30:51.102456,setup,resource-heavy-python-pi,server_0,2117900257328
-2026-07-06 21:30:51.102467,finish,resource-heavy-python-pi,server_0,2117900257328
+2026-07-06 22:43:16.322205,deploy,resource-heavy-python-pi,server_0,2368811436080
+2026-07-06 22:43:16.323210,deploy,resource-heavy-python-pi,server_0,2368811142992
+2026-07-06 22:43:16.323224,startup,resource-heavy-python-pi,server_0,2368811142992
+2026-07-06 22:43:16.323413,setup,resource-heavy-python-pi,server_0,2368811142992
+2026-07-06 22:43:16.323426,finish,resource-heavy-python-pi,server_0,2368811142992
+2026-07-06 22:43:16.323515,startup,resource-heavy-python-pi,server_0,2368811436080
+2026-07-06 22:43:16.323564,setup,resource-heavy-python-pi,server_0,2368811436080
+2026-07-06 22:43:16.323571,finish,resource-heavy-python-pi,server_0,2368811436080

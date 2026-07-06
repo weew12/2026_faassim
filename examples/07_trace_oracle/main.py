@@ -8,7 +8,7 @@
 - 导出实际取样记录和调用结果。
 
 运行方式：
-    python -u examples/trace_oracle/main.py
+    python -u examples/07_trace_oracle/main.py
 """
 
 import logging

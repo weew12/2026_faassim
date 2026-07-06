@@ -9,5 +9,5 @@ image_pull_network 样例包。
 - flow、image_pull_probe、replica_deployment 等指标导出。
 
 运行入口：
-    python -u examples/image_pull_network/main.py
+    python -u examples/05_image_pull_network/main.py
 """

@@ -1,20 +1,20 @@
 ﻿time,runtime_factor,network_delay,rps,observed_active_requests,phase_name,controller_action,description
-2026-07-06 21:46:17.307244,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
-2026-07-06 21:46:17.320074,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
-2026-07-06 21:46:17.320526,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
-2026-07-06 21:46:17.320854,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
-2026-07-06 21:46:17.321195,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
-2026-07-06 21:46:17.321361,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
-2026-07-06 21:46:17.322117,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
-2026-07-06 21:46:17.322665,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
-2026-07-06 21:46:17.323362,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
-2026-07-06 21:46:17.323981,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
-2026-07-06 21:46:17.324710,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
-2026-07-06 21:46:17.325045,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
-2026-07-06 21:46:17.325682,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
-2026-07-06 21:46:17.325984,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
-2026-07-06 21:46:17.326278,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
-2026-07-06 21:46:17.326425,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
-2026-07-06 21:46:17.326604,0.95,0.0,0.0,0,idle,observe,no active external phase
-2026-07-06 21:46:17.326739,0.95,0.0,0.0,0,idle,observe,no active external phase
-2026-07-06 21:46:17.326917,0.95,0.0,0.0,0,idle,observe,no active external phase
+2026-07-06 22:43:35.249145,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
+2026-07-06 22:43:35.264879,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
+2026-07-06 22:43:35.265143,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
+2026-07-06 22:43:35.265332,1.0,0.0,3.0,0,normal,observe,稳定阶段，外部环境无明显扰动
+2026-07-06 22:43:35.265503,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
+2026-07-06 22:43:35.265603,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
+2026-07-06 22:43:35.265948,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
+2026-07-06 22:43:35.266225,1.35,0.08,8.0,0,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
+2026-07-06 22:43:35.266571,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
+2026-07-06 22:43:35.266833,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
+2026-07-06 22:43:35.267130,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
+2026-07-06 22:43:35.267277,1.1,0.25,5.0,0,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
+2026-07-06 22:43:35.267572,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
+2026-07-06 22:43:35.267738,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
+2026-07-06 22:43:35.267897,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
+2026-07-06 22:43:35.267980,0.95,0.0,2.0,0,cooldown,release_attention,负载回落，外部控制器释放关注
+2026-07-06 22:43:35.268100,0.95,0.0,0.0,0,idle,observe,no active external phase
+2026-07-06 22:43:35.268338,0.95,0.0,0.0,0,idle,observe,no active external phase
+2026-07-06 22:43:35.268461,0.95,0.0,0.0,0,idle,observe,no active external phase

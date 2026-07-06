@@ -9,7 +9,7 @@
 - 导出 degradation_probe 和调用结果指标。
 
 运行方式：
-    python -u examples/degradation/main.py
+    python -u examples/08_degradation/main.py
 """
 
 import logging

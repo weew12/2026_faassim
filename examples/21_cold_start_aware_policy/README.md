@@ -7,7 +7,7 @@
 将 `cold_start_aware_policy/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cold_start_aware_policy/main.py
+python -u examples/21_cold_start_aware_policy/main.py
 ```
 
 ## 样例目标
@@ -78,7 +78,7 @@ function_name
 运行结束后，结果会保存到：
 
 ```text
-examples/cold_start_aware_policy/outputs/
+examples/21_cold_start_aware_policy/outputs/
 ```
 
 主要包括：

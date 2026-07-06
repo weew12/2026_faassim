@@ -9,5 +9,5 @@ skippy_scheduler 样例包。
 - 调度过程指标导出。
 
 运行入口：
-    python -u examples/skippy_scheduler/main.py
+    python -u examples/03_skippy_scheduler/main.py
 """

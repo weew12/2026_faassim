@@ -9,7 +9,7 @@
 - 导出网络传输耗时和路由信息。
 
 运行方式：
-    python -u examples/network_flow/main.py
+    python -u examples/04_network_flow/main.py
 """
 
 import logging

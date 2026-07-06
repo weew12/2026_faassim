@@ -9,5 +9,5 @@ cold_start_aware_policy 样例包。
 - 导出请求结果、策略决策、驱逐事件和策略摘要。
 
 运行入口：
-    python -u examples/cold_start_aware_policy/main.py
+    python -u examples/21_cold_start_aware_policy/main.py
 """

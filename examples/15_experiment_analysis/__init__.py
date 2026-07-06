@@ -9,5 +9,5 @@ experiment_analysis 样例包。
 - 生成策略对比表和 Markdown 分析报告。
 
 运行入口：
-    python -u examples/experiment_analysis/main.py
+    python -u examples/15_experiment_analysis/main.py
 """

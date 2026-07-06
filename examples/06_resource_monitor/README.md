@@ -7,7 +7,7 @@
 将 `resource_monitor/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/resource_monitor/main.py
+python -u examples/06_resource_monitor/main.py
 ```
 
 ## 样例目标
@@ -43,7 +43,7 @@ Memory：128 MiB
 运行结束后，结果会保存到：
 
 ```text
-examples/resource_monitor/outputs/
+examples/06_resource_monitor/outputs/
 ```
 
 主要包括：

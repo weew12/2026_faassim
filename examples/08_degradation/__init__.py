@@ -8,5 +8,5 @@ degradation 样例包。
 - degradation_probe、invocations、replica_deployment 等指标导出。
 
 运行入口：
-    python -u examples/degradation/main.py
+    python -u examples/08_degradation/main.py
 """

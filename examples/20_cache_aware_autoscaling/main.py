@@ -9,7 +9,7 @@ R_desired = max(R_cache, R_load)
 样例只生成扩缩容决策与控制计划，不直接调用 faas-sim 的真实扩缩容执行器。
 
 运行方式：
-    python -u examples/cache_aware_autoscaling/main.py
+    python -u examples/20_cache_aware_autoscaling/main.py
 """
 
 import logging

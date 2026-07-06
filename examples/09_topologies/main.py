@@ -9,7 +9,7 @@
 - 节点、边、路由和摘要结果导出。
 
 运行方式：
-    python -u examples/topologies/main.py
+    python -u examples/09_topologies/main.py
 """
 
 import logging

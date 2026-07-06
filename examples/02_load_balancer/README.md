@@ -1,13 +1,13 @@
-# examples_load_balancer：faas-sim 原生负载均衡样例
+# 02_load_balancer：faas-sim 原生负载均衡样例
 
 本样例用于演示 faas-sim 的原生负载均衡能力，重点展示多个函数副本存在时，请求如何被路由到具体副本。
 
 ## 运行方式
 
-将 `examples_load_balancer/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+将 `02_load_balancer/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/examples_load_balancer/main.py
+python -u examples/02_load_balancer/main.py
 ```
 
 ## 样例目标
@@ -26,7 +26,7 @@ python -u examples/examples_load_balancer/main.py
 运行结束后，结果会保存到：
 
 ```text
-examples/examples_load_balancer/outputs/
+examples/02_load_balancer/outputs/
 ```
 
 主要包括：

@@ -7,7 +7,7 @@
 将 `image_pull_network/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/image_pull_network/main.py
+python -u examples/05_image_pull_network/main.py
 ```
 
 ## 样例目标
@@ -38,7 +38,7 @@ image-pull-large-cold   使用 large 镜像，首次部署，触发更大的 doc
 运行结束后，结果会保存到：
 
 ```text
-examples/image_pull_network/outputs/
+examples/05_image_pull_network/outputs/
 ```
 
 主要包括：

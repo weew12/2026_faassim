@@ -7,7 +7,7 @@
 将 `degradation/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/degradation/main.py
+python -u examples/08_degradation/main.py
 ```
 
 ## 样例目标
@@ -59,7 +59,7 @@ scale_max = 3
 运行结束后，结果会保存到：
 
 ```text
-examples/degradation/outputs/
+examples/08_degradation/outputs/
 ```
 
 主要包括：

@@ -11,7 +11,7 @@ R_desired = max(R_cache, R_load)
 将 `cache_aware_autoscaling/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cache_aware_autoscaling/main.py
+python -u examples/20_cache_aware_autoscaling/main.py
 ```
 
 ## 样例目标
@@ -77,7 +77,7 @@ R_desired = max(R_cache, R_load)
 运行结束后，结果会保存到：
 
 ```text
-examples/cache_aware_autoscaling/outputs/
+examples/20_cache_aware_autoscaling/outputs/
 ```
 
 主要包括：

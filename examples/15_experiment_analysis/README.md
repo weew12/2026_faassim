@@ -1,35 +1,35 @@
 # experiment_analysis：faas-sim 实验结果分析样例
 
-本样例用于演示如何统一读取 faas-sim 实验输出 CSV，并生成标准化 summary 指标。它适合接在 `examples/batch_experiment/` 后面使用，也可以独立运行自带的 `sample_results/`。
+本样例用于演示如何统一读取 faas-sim 实验输出 CSV，并生成标准化 summary 指标。它适合接在 `examples/14_batch_experiment/` 后面使用，也可以独立运行自带的 `sample_results/`。
 
 ## 运行方式
 
 将 `experiment_analysis/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/experiment_analysis/main.py
+python -u examples/15_experiment_analysis/main.py
 ```
 
 默认情况下，脚本会优先读取：
 
 ```text
-examples/batch_experiment/outputs/
+examples/14_batch_experiment/outputs/
 ```
 
 如果该目录不存在或没有 `runs/` 子目录，则自动回退到：
 
 ```text
-examples/experiment_analysis/sample_results/
+examples/15_experiment_analysis/sample_results/
 ```
 
 也可以手动指定输入输出目录：
 
 ```bash
-python -u examples/experiment_analysis/main.py --input-dir examples/batch_experiment/outputs
+python -u examples/15_experiment_analysis/main.py --input-dir examples/14_batch_experiment/outputs
 ```
 
 ```bash
-python -u examples/experiment_analysis/main.py --output-dir examples/experiment_analysis/outputs
+python -u examples/15_experiment_analysis/main.py --output-dir examples/15_experiment_analysis/outputs
 ```
 
 ## 样例目标
@@ -48,7 +48,7 @@ python -u examples/experiment_analysis/main.py --output-dir examples/experiment_
 运行结束后，结果会保存到：
 
 ```text
-examples/experiment_analysis/outputs/
+examples/15_experiment_analysis/outputs/
 ```
 
 主要包括：
@@ -88,7 +88,7 @@ experiment_analysis 汇总结果
 
 分析配置文件。
 
-该文件负责解析默认输入路径。脚本会优先读取 `examples/batch_experiment/outputs/`，如果不存在则使用 `sample_results/`。
+该文件负责解析默认输入路径。脚本会优先读取 `examples/14_batch_experiment/outputs/`，如果不存在则使用 `sample_results/`。
 
 ### `loaders.py`
 

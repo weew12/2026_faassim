@@ -8,7 +8,7 @@
 - 导出 image_pull_probe、flow 和部署生命周期指标。
 
 运行方式：
-    python -u examples/image_pull_network/main.py
+    python -u examples/05_image_pull_network/main.py
 """
 
 import logging

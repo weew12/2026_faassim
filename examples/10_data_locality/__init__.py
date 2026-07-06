@@ -9,5 +9,5 @@ data_locality 样例包。
 - 数据本地性调度与强制远端调度的结果对比。
 
 运行入口：
-    python -u examples/data_locality/main.py
+    python -u examples/10_data_locality/main.py
 """

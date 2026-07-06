@@ -8,7 +8,7 @@
 - 故障事件时间线和请求结果导出。
 
 运行方式：
-    python -u examples/fault_model/main.py
+    python -u examples/11_fault_model/main.py
 """
 
 import logging

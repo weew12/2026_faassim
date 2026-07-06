@@ -9,7 +9,7 @@
 - 导出路由分布与调用结果。
 
 运行方式：
-    python -u examples/examples_load_balancer/main.py
+    python -u examples/02_load_balancer/main.py
 """
 
 import logging
@@ -116,6 +116,13 @@ class LoadBalancerBenchmark(Benchmark):
             ia_generator,
             max_requests=30,
         )
+
+        # 等所有 invoke 进程完成。
+        # function_trigger(max_requests=N) 只保证触发 N 个请求就返回，
+        # 不等待 N 次 invoke 全部跑完。在本样例中每个 invoke 耗时 0.3s，
+        # 留 2s 缓冲即可让 30 个请求全部完成并写入 invocations.csv，
+        # 使 route_events == invocation_events，summary 数据自洽。
+        yield env.timeout(2.0)
 
         logger.info("load balancer workload finished")
 

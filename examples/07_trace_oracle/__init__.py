@@ -9,5 +9,5 @@ trace_oracle 样例包。
 - invocations、trace_oracle_sample、summary 等结果导出。
 
 运行入口：
-    python -u examples/trace_oracle/main.py
+    python -u examples/07_trace_oracle/main.py
 """

@@ -7,7 +7,7 @@
 将 `cache_policy/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cache_policy/main.py
+python -u examples/17_cache_policy/main.py
 ```
 
 ## 样例目标
@@ -66,7 +66,7 @@ memory_units
 运行结束后，结果会保存到：
 
 ```text
-examples/cache_policy/outputs/
+examples/17_cache_policy/outputs/
 ```
 
 主要包括：

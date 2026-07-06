@@ -1,13 +1,13 @@
-# batch_experiment：faas-sim 批量实验样例
+# 14_batch_experiment：faas-sim 批量实验样例
 
 本样例用于演示如何在 faas-sim 中组织多策略、多负载、多随机种子的批量仿真实验。它不关注某一个复杂策略本身，而是展示实验工程组织方式：配置生成、循环运行、单次结果导出和批量汇总。
 
 ## 运行方式
 
-将 `batch_experiment/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+将 `14_batch_experiment/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/batch_experiment/main.py
+python -u examples/14_batch_experiment/main.py
 ```
 
 ## 样例目标
@@ -49,7 +49,7 @@ medium_load   rps=8, max_requests=24
 运行结束后，结果会保存到：
 
 ```text
-examples/batch_experiment/outputs/
+examples/14_batch_experiment/outputs/
 ```
 
 其中每个实验组合有独立目录：

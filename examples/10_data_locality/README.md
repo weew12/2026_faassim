@@ -7,7 +7,7 @@
 将 `data_locality/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/data_locality/main.py
+python -u examples/10_data_locality/main.py
 ```
 
 ## 样例目标
@@ -56,7 +56,7 @@ forced_remote         强制调度到 edge_far，作为远端访问对比组
 运行结束后，结果会保存到：
 
 ```text
-examples/data_locality/outputs/
+examples/10_data_locality/outputs/
 ```
 
 每个场景有独立子目录：

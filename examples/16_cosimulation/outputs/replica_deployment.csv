@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-06 21:46:17.318906,deploy,cosim-python-pi,server_0,2644781944848
-2026-07-06 21:46:17.319918,deploy,cosim-python-pi,server_0,2644781488784
-2026-07-06 21:46:17.319941,startup,cosim-python-pi,server_0,2644781488784
-2026-07-06 21:46:17.320028,setup,cosim-python-pi,server_0,2644781488784
-2026-07-06 21:46:17.320037,finish,cosim-python-pi,server_0,2644781488784
-2026-07-06 21:46:17.320259,startup,cosim-python-pi,server_0,2644781944848
-2026-07-06 21:46:17.320272,setup,cosim-python-pi,server_0,2644781944848
-2026-07-06 21:46:17.320279,finish,cosim-python-pi,server_0,2644781944848
+2026-07-06 22:43:35.263906,deploy,cosim-python-pi,server_0,2210504265744
+2026-07-06 22:43:35.264781,deploy,cosim-python-pi,server_0,2210503809040
+2026-07-06 22:43:35.264792,startup,cosim-python-pi,server_0,2210503809040
+2026-07-06 22:43:35.264841,setup,cosim-python-pi,server_0,2210503809040
+2026-07-06 22:43:35.264850,finish,cosim-python-pi,server_0,2210503809040
+2026-07-06 22:43:35.264974,startup,cosim-python-pi,server_0,2210504265744
+2026-07-06 22:43:35.264983,setup,cosim-python-pi,server_0,2210504265744
+2026-07-06 22:43:35.264990,finish,cosim-python-pi,server_0,2210504265744

@@ -6,7 +6,7 @@
 为后续冷启动感知缓存和预热策略提供基础。
 
 运行方式：
-    python -u examples/cold_start/main.py
+    python -u examples/12_cold_start/main.py
 """
 
 import logging

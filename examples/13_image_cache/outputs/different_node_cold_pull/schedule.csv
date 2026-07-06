@@ -1,7 +1,7 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-06 21:38:44.931715,queue,image-cache-first,image-cache-shared-cpu,1887442444816,,
-2026-07-06 21:38:44.931908,start,image-cache-first,image-cache-shared-cpu,1887442444816,,
-2026-07-06 21:38:44.932249,finish,image-cache-first,image-cache-shared-cpu,1887442444816,server_10,True
-2026-07-06 21:38:44.933465,queue,image-cache-second,image-cache-shared-cpu,1887441304800,,
-2026-07-06 21:38:44.933589,start,image-cache-second,image-cache-shared-cpu,1887441304800,,
-2026-07-06 21:38:44.933696,finish,image-cache-second,image-cache-shared-cpu,1887441304800,server_10,True
+2026-07-06 22:43:30.239558,queue,image-cache-first,image-cache-shared-cpu,1850718642704,,
+2026-07-06 22:43:30.239630,start,image-cache-first,image-cache-shared-cpu,1850718642704,,
+2026-07-06 22:43:30.239882,finish,image-cache-first,image-cache-shared-cpu,1850718642704,server_10,True
+2026-07-06 22:43:30.240567,queue,image-cache-second,image-cache-shared-cpu,1850717567312,,
+2026-07-06 22:43:30.240638,start,image-cache-second,image-cache-shared-cpu,1850717567312,,
+2026-07-06 22:43:30.240690,finish,image-cache-second,image-cache-shared-cpu,1850717567312,server_10,True

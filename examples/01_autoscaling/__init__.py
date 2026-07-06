@@ -8,5 +8,5 @@ examples_autoscaling 包。
 - scale、schedule、replica_deployment、invocations 等指标导出。
 
 运行入口：
-    python -u examples/examples_autoscaling/main.py
+    python -u examples/01_autoscaling/main.py
 """

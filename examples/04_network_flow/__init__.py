@@ -9,5 +9,5 @@ network_flow 样例包。
 - flow、route、summary 等 CSV 结果导出。
 
 运行入口：
-    python -u examples/network_flow/main.py
+    python -u examples/04_network_flow/main.py
 """

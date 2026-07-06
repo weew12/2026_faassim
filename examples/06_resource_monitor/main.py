@@ -8,7 +8,7 @@
 - 导出资源监控和调用结果指标。
 
 运行方式：
-    python -u examples/resource_monitor/main.py
+    python -u examples/06_resource_monitor/main.py
 """
 
 import logging

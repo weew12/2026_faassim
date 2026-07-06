@@ -9,5 +9,5 @@ image_cache 样例包。
 - same_node_cache_reuse 与 different_node_cold_pull 两组场景对比。
 
 运行入口：
-    python -u examples/image_cache/main.py
+    python -u examples/13_image_cache/main.py
 """

@@ -1,5 +1,5 @@
 ﻿time,name,pod,image,replica_id
-2026-07-06 21:50:04.730067,fft,pod-fft-2,fft-cache-aware-cpu,2890551683248
-2026-07-06 21:50:04.731879,img-resize,pod-img-resize-2,img-resize-cache-aware-cpu,2890551834480
-2026-07-06 21:50:04.732905,json-parse,pod-json-parse-2,json-parse-cache-aware-cpu,2890552039888
-2026-07-06 21:50:04.733962,ml-infer,pod-ml-infer-2,ml-infer-cache-aware-cpu,2890552042880
+2026-07-06 22:43:38.961224,fft,pod-fft-2,fft-cache-aware-cpu,1792703178624
+2026-07-06 22:43:38.962083,img-resize,pod-img-resize-2,img-resize-cache-aware-cpu,1792703312336
+2026-07-06 22:43:38.962682,json-parse,pod-json-parse-2,json-parse-cache-aware-cpu,1792703421696
+2026-07-06 22:43:38.963254,ml-infer,pod-ml-infer-2,ml-infer-cache-aware-cpu,1792703424688

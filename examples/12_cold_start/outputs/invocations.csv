@@ -1,4 +1,4 @@
 ﻿time,t_wait,t_exec,t_start,memory,function_name,function_image,node,replica_id
-2026-07-06 21:37:37.656415,0.0,0.2999999999999998,3.0,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2299476724432
-2026-07-06 21:37:37.656603,0.0,0.08000000000000007,3.5,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2299476724432
-2026-07-06 21:37:37.656814,0.0,0.08000000000000007,4.0,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2299476724432
+2026-07-06 22:43:28.095081,0.0,0.2999999999999998,3.0,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2092054776528
+2026-07-06 22:43:28.095162,0.0,0.08000000000000007,3.5,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2092054776528
+2026-07-06 22:43:28.095272,0.0,0.08000000000000007,4.0,268435456,cold-start-python-pi,cold-start-python-pi-cpu,server_0,2092054776528

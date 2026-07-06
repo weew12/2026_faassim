@@ -1,2 +1,2 @@
 ﻿scenario,deploy_events,cache_hit_before_count,cold_pull_count,total_pull_duration,avg_pull_duration,docker_pull_flow_events,docker_pull_total_bytes
-different_node_cold_pull,2,1,1,1.0600686072991754,0.5300343036495877,1,128000000
+different_node_cold_pull,2,1,1,1.0603488812528088,0.5301744406264044,1,128000000

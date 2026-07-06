@@ -7,7 +7,7 @@
 将 `trace_oracle/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/trace_oracle/main.py
+python -u examples/07_trace_oracle/main.py
 ```
 
 ## 样例目标
@@ -58,7 +58,7 @@ trace-slow-python-pi   使用较长执行时间样本
 运行结束后，结果会保存到：
 
 ```text
-examples/trace_oracle/outputs/
+examples/07_trace_oracle/outputs/
 ```
 
 主要包括：

@@ -9,5 +9,5 @@ cache_aware_scheduler 样例包。
 - 导出 cache_aware_candidate、cache_aware_scheduler_result、request_probe 和对比摘要。
 
 运行入口：
-    python -u examples/cache_aware_scheduler/main.py
+    python -u examples/19_cache_aware_scheduler/main.py
 """

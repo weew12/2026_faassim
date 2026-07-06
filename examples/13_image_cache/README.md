@@ -7,7 +7,7 @@
 将 `image_cache/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/image_cache/main.py
+python -u examples/13_image_cache/main.py
 ```
 
 ## 样例目标
@@ -47,7 +47,7 @@ different_node_cold_pull    两个节点各自首次部署，应产生两次冷�
 运行结束后，结果会保存到：
 
 ```text
-examples/image_cache/outputs/
+examples/13_image_cache/outputs/
 ```
 
 每个场景有独立子目录：

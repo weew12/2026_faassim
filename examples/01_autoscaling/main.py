@@ -9,7 +9,7 @@
 - 副本数量时间线与摘要结果保存。
 
 运行方式：
-    python -u examples/examples_autoscaling/main.py
+    python -u examples/01_autoscaling/main.py
 """
 
 import logging
@@ -124,7 +124,7 @@ class AutoscalingBenchmark(Benchmark):
             env,
             deployments[0],
             ia_generator,
-            max_requests=200,
+            max_requests=2000,
         )
 
         logger.info("autoscaling workload finished")
@@ -161,8 +161,8 @@ class AutoscalingBenchmark(Benchmark):
         scaling_config = ScalingConfiguration()
         scaling_config.scale_min = 1
         scaling_config.scale_max = 8
-        scaling_config.alert_window = 10
-        scaling_config.target_average_rps = 8
+        scaling_config.alert_window = 2
+        scaling_config.target_average_rps = 4
         scaling_config.target_average_rps_threshold = 0.05
 
         return FunctionDeployment(

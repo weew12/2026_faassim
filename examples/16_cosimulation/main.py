@@ -8,7 +8,7 @@
 - 输出 cosim_exchange、cosim_phase 和 cosim_invoke_probe 等指标。
 
 运行方式：
-    python -u examples/cosimulation/main.py
+    python -u examples/16_cosimulation/main.py
 """
 
 import logging

@@ -8,7 +8,7 @@
 - 汇总生成 batch_results.csv 和 batch_summary.csv。
 
 运行方式：
-    python -u examples/batch_experiment/main.py
+    python -u examples/14_batch_experiment/main.py
 """
 
 import logging

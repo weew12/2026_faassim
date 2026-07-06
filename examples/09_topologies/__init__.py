@@ -9,5 +9,5 @@ topologies 样例包。
 - 拓扑节点、链路、路由与摘要信息导出。
 
 运行入口：
-    python -u examples/topologies/main.py
+    python -u examples/09_topologies/main.py
 """

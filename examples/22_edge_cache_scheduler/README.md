@@ -7,7 +7,7 @@
 将 `edge_cache_scheduler/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/edge_cache_scheduler/main.py
+python -u examples/22_edge_cache_scheduler/main.py
 ```
 
 ## 样例目标
@@ -54,7 +54,7 @@ latency_penalty   网络延迟惩罚
 运行结束后，结果会保存到：
 
 ```text
-examples/edge_cache_scheduler/outputs/
+examples/22_edge_cache_scheduler/outputs/
 ```
 
 主要包括：

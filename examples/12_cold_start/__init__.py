@@ -9,5 +9,5 @@ cold_start 样例包。
 - 副本首次可用时间与冷启动路径摘要导出。
 
 运行入口：
-    python -u examples/cold_start/main.py
+    python -u examples/12_cold_start/main.py
 """

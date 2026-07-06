@@ -7,7 +7,7 @@
 将 `network_flow/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/network_flow/main.py
+python -u examples/04_network_flow/main.py
 ```
 
 ## 样例目标
@@ -26,7 +26,7 @@ python -u examples/network_flow/main.py
 运行结束后，结果会保存到：
 
 ```text
-examples/network_flow/outputs/
+examples/04_network_flow/outputs/
 ```
 
 主要包括：

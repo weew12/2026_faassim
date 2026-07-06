@@ -1,5 +1,5 @@
 ﻿time,all_nodes,feasible_nodes_full,returned_feasible_nodes,needed_images_count,pod_name,selected_node,needed_images
-2026-07-06 21:27:31.912458,41,41,41,1,pod-skippy-small-1,server_0,skippy-small-cpu:latest
-2026-07-06 21:27:31.914036,41,41,41,0,pod-skippy-small-2,server_0,
-2026-07-06 21:27:31.915302,41,41,41,1,pod-skippy-medium-1,server_0,skippy-medium-cpu:latest
-2026-07-06 21:27:31.916966,41,41,41,0,pod-skippy-medium-2,server_0,
+2026-07-06 22:43:10.515252,69,69,69,1,pod-skippy-small-1,server_0,skippy-small-cpu:latest
+2026-07-06 22:43:10.518460,69,69,69,0,pod-skippy-small-2,server_0,
+2026-07-06 22:43:10.520402,69,69,69,1,pod-skippy-medium-1,server_0,skippy-medium-cpu:latest
+2026-07-06 22:43:10.523167,69,69,69,0,pod-skippy-medium-2,server_0,

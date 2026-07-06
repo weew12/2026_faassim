@@ -9,5 +9,5 @@ thesis_experiment 样例包。
 - 候选节点评分、驱逐事件、策略摘要和 Markdown 实验报告导出。
 
 运行入口：
-    python -u examples/thesis_experiment/main.py
+    python -u examples/23_thesis_experiment/main.py
 """

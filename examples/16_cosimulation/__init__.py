@@ -9,5 +9,5 @@ cosimulation 样例包。
 - 为后续与外部调度器、强化学习控制器或网络仿真器联动提供最小模板。
 
 运行入口：
-    python -u examples/cosimulation/main.py
+    python -u examples/16_cosimulation/main.py
 """

@@ -1,7 +1,7 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-06 21:46:17.306947,queue,cosim-python-pi,cosim-python-pi-cpu,2644781944848,,
-2026-07-06 21:46:17.307287,queue,cosim-python-pi,cosim-python-pi-cpu,2644781488784,,
-2026-07-06 21:46:17.307313,start,cosim-python-pi,cosim-python-pi-cpu,2644781944848,,
-2026-07-06 21:46:17.318397,finish,cosim-python-pi,cosim-python-pi-cpu,2644781944848,server_0,True
-2026-07-06 21:46:17.319157,start,cosim-python-pi,cosim-python-pi-cpu,2644781488784,,
-2026-07-06 21:46:17.319727,finish,cosim-python-pi,cosim-python-pi-cpu,2644781488784,server_0,True
+2026-07-06 22:43:35.249023,queue,cosim-python-pi,cosim-python-pi-cpu,2210504265744,,
+2026-07-06 22:43:35.249178,queue,cosim-python-pi,cosim-python-pi-cpu,2210503809040,,
+2026-07-06 22:43:35.249205,start,cosim-python-pi,cosim-python-pi-cpu,2210504265744,,
+2026-07-06 22:43:35.263686,finish,cosim-python-pi,cosim-python-pi-cpu,2210504265744,server_0,True
+2026-07-06 22:43:35.264105,start,cosim-python-pi,cosim-python-pi-cpu,2210503809040,,
+2026-07-06 22:43:35.264699,finish,cosim-python-pi,cosim-python-pi-cpu,2210503809040,server_0,True

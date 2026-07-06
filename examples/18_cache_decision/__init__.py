@@ -9,5 +9,5 @@ cache_decision 样例包。
 - 导出 decision detail、summary、rank 和 control hint。
 
 运行入口：
-    python -u examples/cache_decision/main.py
+    python -u examples/18_cache_decision/main.py
 """

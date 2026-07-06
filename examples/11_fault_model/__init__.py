@@ -9,5 +9,5 @@ fault_model 样例包。
 - fault_model_probe、fault_timeline、invocations 等指标导出。
 
 运行入口：
-    python -u examples/fault_model/main.py
+    python -u examples/11_fault_model/main.py
 """

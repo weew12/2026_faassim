@@ -7,7 +7,7 @@
 将 `cold_start/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cold_start/main.py
+python -u examples/12_cold_start/main.py
 ```
 
 ## 样例目标
@@ -49,7 +49,7 @@ first_request_path_duration = deploy + startup + setup + first_invoke
 运行结束后，结果会保存到：
 
 ```text
-examples/cold_start/outputs/
+examples/12_cold_start/outputs/
 ```
 
 主要包括：

@@ -7,7 +7,7 @@
 将 `cache_decision/` 放入项目的 `examples/` 目录后，在项目根目录运行：
 
 ```bash
-python -u examples/cache_decision/main.py
+python -u examples/18_cache_decision/main.py
 ```
 
 ## 样例目标
@@ -58,7 +58,7 @@ utility_score = cold_benefit / resource_cost
 运行结束后，结果会保存到：
 
 ```text
-examples/cache_decision/outputs/
+examples/18_cache_decision/outputs/
 ```
 
 主要包括：

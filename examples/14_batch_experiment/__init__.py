@@ -9,5 +9,5 @@ batch_experiment 样例包。
 - 生成按策略和负载聚合的 batch_summary.csv。
 
 运行入口：
-    python -u examples/batch_experiment/main.py
+    python -u examples/14_batch_experiment/main.py
 """

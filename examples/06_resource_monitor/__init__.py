@@ -8,5 +8,5 @@ resource_monitor 样例包。
 - resource、invocations、replica_deployment 等指标导出。
 
 运行入口：
-    python -u examples/resource_monitor/main.py
+    python -u examples/06_resource_monitor/main.py
 """

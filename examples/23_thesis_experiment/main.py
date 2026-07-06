@@ -8,7 +8,7 @@
 - 输出：CSV 结果和 Markdown 实验报告。
 
 运行方式：
-    python -u examples/thesis_experiment/main.py
+    python -u examples/23_thesis_experiment/main.py
 """
 
 import logging

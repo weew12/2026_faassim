@@ -7,7 +7,7 @@
 - 导出 image_cache_probe、flow 和跨场景对比结果。
 
 运行方式：
-    python -u examples/image_cache/main.py
+    python -u examples/13_image_cache/main.py
 """
 
 import logging

@@ -9,5 +9,5 @@ cache_policy 样例包。
 - eviction、cache_state、request_result 和策略对比结果导出。
 
 运行入口：
-    python -u examples/cache_policy/main.py
+    python -u examples/17_cache_policy/main.py
 """

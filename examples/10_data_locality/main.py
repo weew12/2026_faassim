@@ -9,7 +9,7 @@
 - 导出数据下载耗时、网络流和调度结果指标。
 
 运行方式：
-    python -u examples/data_locality/main.py
+    python -u examples/10_data_locality/main.py
 """
 
 import logging

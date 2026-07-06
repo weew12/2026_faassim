@@ -9,7 +9,7 @@
 - 调度指标导出。
 
 运行方式：
-    python -u examples/skippy_scheduler/main.py
+    python -u examples/03_skippy_scheduler/main.py
 """
 
 import logging

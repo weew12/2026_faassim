@@ -6,7 +6,7 @@
 - 冷启动感知 keep-alive 策略。
 
 运行方式：
-    python -u examples/cold_start_aware_policy/main.py
+    python -u examples/21_cold_start_aware_policy/main.py
 """
 
 import logging

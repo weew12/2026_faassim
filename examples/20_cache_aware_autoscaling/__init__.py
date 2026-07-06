@@ -9,5 +9,5 @@ cache_aware_autoscaling 样例包。
 - 输出扩缩容动作、容量约束状态、动作原因和时间序列摘要。
 
 运行入口：
-    python -u examples/cache_aware_autoscaling/main.py
+    python -u examples/20_cache_aware_autoscaling/main.py
 """

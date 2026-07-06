@@ -2,14 +2,14 @@
 文件作用：faas-sim 实验结果分析样例。
 
 本样例演示如何统一读取多个仿真 run 的 CSV 输出，并生成标准化 summary 指标。
-默认优先分析 examples/batch_experiment/outputs/，如果不存在，则使用本样例自带 sample_results。
+默认优先分析 examples/14_batch_experiment/outputs/，如果不存在，则使用本样例自带 sample_results。
 
 运行方式：
-    python -u examples/experiment_analysis/main.py
+    python -u examples/15_experiment_analysis/main.py
 
 也可以指定输入输出目录：
-    python -u examples/experiment_analysis/main.py --input-dir examples/batch_experiment/outputs
-    python -u examples/experiment_analysis/main.py --output-dir examples/experiment_analysis/outputs
+    python -u examples/15_experiment_analysis/main.py --input-dir examples/14_batch_experiment/outputs
+    python -u examples/15_experiment_analysis/main.py --output-dir examples/15_experiment_analysis/outputs
 """
 
 import argparse
@@ -77,7 +77,7 @@ def main():
     if not runs:
         raise RuntimeError(
             f"没有发现可分析的 run 目录：{config.input_dir}。"
-            "请先运行 examples/batch_experiment/main.py，或检查 sample_results 是否存在。"
+            "请先运行 examples/14_batch_experiment/main.py，或检查 sample_results 是否存在。"
         )
 
     run_metrics = [build_run_metrics(run) for run in runs]

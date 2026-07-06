@@ -1,4 +1,4 @@
 ﻿function_name,image,node_name,pull_events,avg_pull_duration,max_pull_duration,cache_hit_like_count
-image-pull-large-cold,image-pull-large-cpu,server_0,1,1.5879931186997962,1.5879931186997962,0
-image-pull-small-cold,image-pull-small-cpu,server_0,1,0.2685629497192538,0.2685629497192538,0
+image-pull-large-cold,image-pull-large-cpu,server_0,1,1.5881861102975892,1.5881861102975892,0
+image-pull-small-cold,image-pull-small-cpu,server_0,1,0.2685914675795193,0.2685914675795193,0
 image-pull-small-warm,image-pull-small-cpu,server_0,1,0.0,0.0,1

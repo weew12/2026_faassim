@@ -5,7 +5,7 @@
 并生成 keep_warm、prewarm_candidate、eviction_candidate 和 observe 四类缓存决策。
 
 运行方式：
-    python -u examples/cache_decision/main.py
+    python -u examples/18_cache_decision/main.py
 """
 
 import logging

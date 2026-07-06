@@ -5,7 +5,7 @@
 同时运行 cache_blind 和 cache_aware 两个场景，用于对比缓存命中率和冷启动惩罚。
 
 运行方式：
-    python -u examples/cache_aware_scheduler/main.py
+    python -u examples/19_cache_aware_scheduler/main.py
 """
 
 import logging
