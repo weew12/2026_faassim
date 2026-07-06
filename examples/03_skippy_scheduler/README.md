@@ -32,8 +32,12 @@ examples/03_skippy_scheduler/outputs/
 主要包括：
 
 ```text
-skippy_scheduler_result.csv
-skippy_scheduler_candidate.csv
+skippy_scheduler_result.csv             # 每次调度的 SchedulingResult（论文关键源数据）
+skippy_scheduler_candidate.csv          # 每个 pod 的候选节点快照（前 30 个）
+skippy_feasible_nodes_per_pod.csv       # 每个 pod 的可行节点数（论文 demo 关键图）
+skippy_node_scheduling_stats.csv        # 按 node 详细分组的调度统计（论文关键图）
+skippy_scheduler_summary.csv            # 增强版摘要（含 max/min feasible_nodes / 首调 vs 复用）
+skippy_selected_node_distribution.csv   # selected_node × needed_images 分组
 schedule.csv
 allocation.csv
 function_deployments.csv
@@ -42,8 +46,42 @@ function_replicas.csv
 replica_deployment.csv
 invocations.csv
 flow.csv
-skippy_scheduler_summary.csv
-skippy_selected_node_distribution.csv
+```
+
+### 论文 demo 关键图说明
+
+**1. `skippy_feasible_nodes_per_pod.csv`** —— 每个 pod 的可行节点数
+
+列：pod_name / all_nodes / feasible_nodes_full / returned_feasible_nodes / needed_images_count / selected_node
+
+画图：
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv("outputs/skippy_feasible_nodes_per_pod.csv")
+fig, ax = plt.subplots(figsize=(8, 4))
+x = range(len(df))
+ax.bar(x, df.all_nodes, color="lightgray", label="all_nodes")
+ax.bar(x, df.feasible_nodes_full, color="steelblue", label="feasible_nodes_full")
+ax.set_xticks(list(x))
+ax.set_xticklabels(df.pod_name, rotation=20, ha="right")
+ax.set_ylabel("Node count")
+ax.set_title("Skippy resource filtering: candidates vs feasible nodes")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+**2. `skippy_node_scheduling_stats.csv`** —— 按 node 详细分组
+
+列：node_name / arch / node_type / scheduled_pod_count
+
+画图：
+```python
+df = pd.read_csv("outputs/skippy_node_scheduling_stats.csv")
+# 按 arch 分组看调度分布
+print(df.groupby("arch")["scheduled_pod_count"].sum())
 ```
 
 ## 文件说明

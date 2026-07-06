@@ -1,0 +1,5 @@
+﻿pod_name,all_nodes,feasible_nodes_full,returned_feasible_nodes,needed_images_count,selected_node
+pod-skippy-medium-1,49,49,49,1,server_0
+pod-skippy-medium-2,49,49,49,0,server_0
+pod-skippy-small-1,49,49,49,1,server_0
+pod-skippy-small-2,49,49,49,0,server_0
