@@ -2,15 +2,7 @@
 
 本版本在项目根目录新增 `simpy/` 独立子包，用用户上传的 SimPy 源码替换原先的外部 `simpy==3.0.11` 依赖。faas-sim 中所有 `import simpy`、`from simpy...` 导入保持兼容，运行时优先解析到本项目内置实现。详见 `内置SimPy替换说明_CN.md` 与 `simpy/包结构说明_CN.md`。
 
-# 内置 Skippy 调度子包补充
-
-本版本在项目根目录新增 `skippy/` 独立子包，用用户上传的 Skippy Core 源码替换原先的外部 `edgerun-skippy-core` 依赖。faas-sim 中所有 `from skippy...` / `import skippy...` 导入保持兼容，运行时优先解析到本项目内置实现。详见 `内置Skippy替换说明_CN.md` 与 `skippy/包结构说明_CN.md`。
-
-# 内置 Ether 网络仿真子包补充
-
-本版本在项目根目录新增 `ether/` 独立子包，用用户上传的 Ether 源码替换原先的外部 `edgerun-ether` 依赖。faas-sim 中所有 `from ether...` / `import ether...` 导入保持兼容，运行时优先解析到本项目内置实现。详见 `内置Ether替换说明_CN.md` 与 `ether/包结构说明_CN.md`。
-
-# faas-sim 源码结构说明（中文注释增强版）
+# faas-sim 源码结构说明
 
 本代码包在不改变原始业务逻辑、导入关系和函数签名的前提下，补充了更偏“业务语义”的中文注释。注释重点说明每个文件负责什么、每个类封装什么状态、每个函数推进什么流程，以及关键字段在仿真流程中的作用。
 
