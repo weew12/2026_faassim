@@ -1,4 +1,4 @@
 ﻿time,estimated_download_time,best_bandwidth_bytes_per_s,scheduler,pod_name,candidate_node,data_path,data_size,storage_node
-2026-07-05 18:26:50.107160,320000.0,200,data_locality_aware,pod-data-locality-python-pi-1,edge_near,video-bucket/frame-seq-001,64M,storage_near
-2026-07-05 18:26:50.107211,1066666.6666666667,60,data_locality_aware,pod-data-locality-python-pi-1,edge_mid,video-bucket/frame-seq-001,64M,storage_near
-2026-07-05 18:26:50.107247,6400000.0,10,data_locality_aware,pod-data-locality-python-pi-1,edge_far,video-bucket/frame-seq-001,64M,storage_near
+2026-07-06 21:35:08.798062,320000.0,200,data_locality_aware,pod-data-locality-python-pi-1,edge_near,video-bucket/frame-seq-001,64M,storage_near
+2026-07-06 21:35:08.798110,1066666.6666666667,60,data_locality_aware,pod-data-locality-python-pi-1,edge_mid,video-bucket/frame-seq-001,64M,storage_near
+2026-07-06 21:35:08.798147,6400000.0,10,data_locality_aware,pod-data-locality-python-pi-1,edge_far,video-bucket/frame-seq-001,64M,storage_near

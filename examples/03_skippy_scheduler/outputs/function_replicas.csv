@@ -1,5 +1,5 @@
 ﻿time,name,pod,image,replica_id
-2026-07-05 17:52:48.126896,skippy-small,pod-skippy-small-1,skippy-small-cpu,1558448000368
-2026-07-05 17:52:48.126939,skippy-small,pod-skippy-small-2,skippy-small-cpu,1558447837008
-2026-07-05 17:52:48.136285,skippy-medium,pod-skippy-medium-1,skippy-medium-cpu,1558447843408
-2026-07-05 17:52:48.136310,skippy-medium,pod-skippy-medium-2,skippy-medium-cpu,1558447494272
+2026-07-06 21:27:31.904053,skippy-small,pod-skippy-small-1,skippy-small-cpu,2540742101712
+2026-07-06 21:27:31.904092,skippy-small,pod-skippy-small-2,skippy-small-cpu,2540741808912
+2026-07-06 21:27:31.912620,skippy-medium,pod-skippy-medium-1,skippy-medium-cpu,2540741815312
+2026-07-06 21:27:31.912639,skippy-medium,pod-skippy-medium-2,skippy-medium-cpu,2540741628752

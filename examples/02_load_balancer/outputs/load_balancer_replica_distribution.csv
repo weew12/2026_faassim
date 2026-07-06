@@ -1,0 +1,4 @@
+﻿function_name,selected_node,selected_image,selected_replica_id,policy,routed_requests
+load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2345947598992,instrumented_round_robin,10
+load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2345947603152,instrumented_round_robin,10
+load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2345947893440,instrumented_round_robin,10

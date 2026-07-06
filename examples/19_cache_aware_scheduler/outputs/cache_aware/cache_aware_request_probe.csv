@@ -1,11 +1,11 @@
 ﻿time,cache_hit,warm_duration,cold_start_penalty,final_duration,avg_cold_start,scenario,function_name,request_id,node_name,replica_id
-2026-07-05 19:41:29.305966,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,1,server_10,2165613976400
-2026-07-05 19:41:29.306128,False,0.1,1.4,1.5,1.4,cache_aware,fft,2,server_10,2165613248016
-2026-07-05 19:41:29.306365,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,3,server_10,2165613976400
-2026-07-05 19:41:29.306540,False,0.1,1.9,2.0,1.9,cache_aware,ml-infer,4,server_10,2165613374976
-2026-07-05 19:41:29.306783,False,0.1,0.35,0.44999999999999996,0.35,cache_aware,json-parse,5,server_10,2165613371984
-2026-07-05 19:41:29.306939,False,0.1,1.4,1.5,1.4,cache_aware,fft,6,server_10,2165613248016
-2026-07-05 19:41:29.307248,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,7,server_10,2165613976400
-2026-07-05 19:41:29.307464,False,0.1,1.9,2.0,1.9,cache_aware,ml-infer,8,server_10,2165613374976
-2026-07-05 19:41:29.307734,False,0.1,0.35,0.44999999999999996,0.35,cache_aware,json-parse,9,server_10,2165613371984
-2026-07-05 19:41:29.307930,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,10,server_10,2165613976400
+2026-07-06 21:50:04.734782,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,1,server_10,2890551834480
+2026-07-06 21:50:04.734989,False,0.1,1.4,1.5,1.4,cache_aware,fft,2,server_10,2890551683248
+2026-07-06 21:50:04.735245,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,3,server_10,2890551834480
+2026-07-06 21:50:04.735444,False,0.1,1.9,2.0,1.9,cache_aware,ml-infer,4,server_10,2890552042880
+2026-07-06 21:50:04.735699,False,0.1,0.35,0.44999999999999996,0.35,cache_aware,json-parse,5,server_10,2890552039888
+2026-07-06 21:50:04.735860,False,0.1,1.4,1.5,1.4,cache_aware,fft,6,server_10,2890551683248
+2026-07-06 21:50:04.736131,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,7,server_10,2890551834480
+2026-07-06 21:50:04.736354,False,0.1,1.9,2.0,1.9,cache_aware,ml-infer,8,server_10,2890552042880
+2026-07-06 21:50:04.736666,False,0.1,0.35,0.44999999999999996,0.35,cache_aware,json-parse,9,server_10,2890552039888
+2026-07-06 21:50:04.736845,False,0.1,0.8,0.9,0.8,cache_aware,img-resize,10,server_10,2890551834480

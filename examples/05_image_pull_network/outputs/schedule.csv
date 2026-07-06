@@ -1,10 +1,10 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-05 18:02:49.647091,queue,image-pull-small-cold,image-pull-small-cpu,1515778690080,,
-2026-07-05 18:02:49.647230,start,image-pull-small-cold,image-pull-small-cpu,1515778690080,,
-2026-07-05 18:02:49.647676,finish,image-pull-small-cold,image-pull-small-cpu,1515778690080,server_0,True
-2026-07-05 18:02:49.649155,queue,image-pull-small-warm,image-pull-small-cpu,1515778469200,,
-2026-07-05 18:02:49.649350,start,image-pull-small-warm,image-pull-small-cpu,1515778469200,,
-2026-07-05 18:02:49.649506,finish,image-pull-small-warm,image-pull-small-cpu,1515778469200,server_0,True
-2026-07-05 18:02:49.650281,queue,image-pull-large-cold,image-pull-large-cpu,1515778472400,,
-2026-07-05 18:02:49.650426,start,image-pull-large-cold,image-pull-large-cpu,1515778472400,,
-2026-07-05 18:02:49.650543,finish,image-pull-large-cold,image-pull-large-cpu,1515778472400,server_0,True
+2026-07-06 21:29:55.874746,queue,image-pull-small-cold,image-pull-small-cpu,1863146374544,,
+2026-07-06 21:29:55.874860,start,image-pull-small-cold,image-pull-small-cpu,1863146374544,,
+2026-07-06 21:29:55.875179,finish,image-pull-small-cold,image-pull-small-cpu,1863146374544,server_0,True
+2026-07-06 21:29:55.876825,queue,image-pull-small-warm,image-pull-small-cpu,1863145992464,,
+2026-07-06 21:29:55.876976,start,image-pull-small-warm,image-pull-small-cpu,1863145992464,,
+2026-07-06 21:29:55.877110,finish,image-pull-small-warm,image-pull-small-cpu,1863145992464,server_0,True
+2026-07-06 21:29:55.877774,queue,image-pull-large-cold,image-pull-large-cpu,1863145995664,,
+2026-07-06 21:29:55.877897,start,image-pull-large-cold,image-pull-large-cpu,1863145995664,,
+2026-07-06 21:29:55.878006,finish,image-pull-large-cold,image-pull-large-cpu,1863145995664,server_0,True

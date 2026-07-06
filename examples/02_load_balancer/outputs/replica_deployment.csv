@@ -1,0 +1,13 @@
+﻿time,value,function_name,node_name,replica_id
+2026-07-06 21:26:14.487458,deploy,load-balanced-python-pi,server_0,2345947893440
+2026-07-06 21:26:14.488460,deploy,load-balanced-python-pi,server_0,2345947598992
+2026-07-06 21:26:14.488475,startup,load-balanced-python-pi,server_0,2345947598992
+2026-07-06 21:26:14.489372,deploy,load-balanced-python-pi,server_0,2345947603152
+2026-07-06 21:26:14.489383,startup,load-balanced-python-pi,server_0,2345947603152
+2026-07-06 21:26:14.489571,setup,load-balanced-python-pi,server_0,2345947598992
+2026-07-06 21:26:14.489583,finish,load-balanced-python-pi,server_0,2345947598992
+2026-07-06 21:26:14.489597,setup,load-balanced-python-pi,server_0,2345947603152
+2026-07-06 21:26:14.489605,finish,load-balanced-python-pi,server_0,2345947603152
+2026-07-06 21:26:14.489635,startup,load-balanced-python-pi,server_0,2345947893440
+2026-07-06 21:26:14.489884,setup,load-balanced-python-pi,server_0,2345947893440
+2026-07-06 21:26:14.489897,finish,load-balanced-python-pi,server_0,2345947893440

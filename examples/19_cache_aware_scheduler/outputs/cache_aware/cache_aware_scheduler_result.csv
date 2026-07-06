@@ -1,5 +1,5 @@
 ﻿time,cache_hit,selected_score,needed_images_count,function_name,pod_name,selected_node,scheduler,needed_images
-2026-07-05 19:41:29.301997,False,0.2,1,fft,pod-fft-2,server_10,cache_aware,fft-cache-aware-cpu:latest
-2026-07-05 19:41:29.303343,False,0.2,1,img-resize,pod-img-resize-2,server_10,cache_aware,img-resize-cache-aware-cpu:latest
-2026-07-05 19:41:29.304348,False,0.2,1,json-parse,pod-json-parse-2,server_10,cache_aware,json-parse-cache-aware-cpu:latest
-2026-07-05 19:41:29.305328,False,0.2,1,ml-infer,pod-ml-infer-2,server_10,cache_aware,ml-infer-cache-aware-cpu:latest
+2026-07-06 21:50:04.730708,False,0.2,1,fft,pod-fft-2,server_10,cache_aware,fft-cache-aware-cpu:latest
+2026-07-06 21:50:04.732160,False,0.2,1,img-resize,pod-img-resize-2,server_10,cache_aware,img-resize-cache-aware-cpu:latest
+2026-07-06 21:50:04.733205,False,0.2,1,json-parse,pod-json-parse-2,server_10,cache_aware,json-parse-cache-aware-cpu:latest
+2026-07-06 21:50:04.734190,False,0.2,1,ml-infer,pod-ml-infer-2,server_10,cache_aware,ml-infer-cache-aware-cpu:latest

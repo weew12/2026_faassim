@@ -1,4 +1,4 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-05 17:27:46.497595,queue,autoscale-python-pi,autoscale-python-pi-cpu,2691064644672,,
-2026-07-05 17:27:46.497683,start,autoscale-python-pi,autoscale-python-pi-cpu,2691064644672,,
-2026-07-05 17:27:46.507229,finish,autoscale-python-pi,autoscale-python-pi-cpu,2691064644672,server_0,True
+2026-07-06 21:26:04.587524,queue,autoscale-python-pi,autoscale-python-pi-cpu,2173444867808,,
+2026-07-06 21:26:04.587660,start,autoscale-python-pi,autoscale-python-pi-cpu,2173444867808,,
+2026-07-06 21:26:04.597628,finish,autoscale-python-pi,autoscale-python-pi-cpu,2173444867808,server_0,True

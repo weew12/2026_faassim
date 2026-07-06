@@ -1,0 +1,4 @@
+﻿time,name,pod,image,replica_id
+2026-07-06 21:26:14.476958,load-balanced-python-pi,pod-load-balanced-python-pi-1,load-balanced-python-pi-cpu,2345947893440
+2026-07-06 21:26:14.476996,load-balanced-python-pi,pod-load-balanced-python-pi-2,load-balanced-python-pi-cpu,2345947598992
+2026-07-06 21:26:14.486731,load-balanced-python-pi,pod-load-balanced-python-pi-3,load-balanced-python-pi-cpu,2345947603152
