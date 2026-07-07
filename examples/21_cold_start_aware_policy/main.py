@@ -78,11 +78,24 @@ def main():
 
     summary_df = outputs.get("cold_start_policy_summary")
     if summary_df is not None and len(summary_df) > 0:
-        logger.info("cold start policy summary:\\n%s", summary_df.to_string(index=False))
+        logger.info("cold start policy summary:\n%s", summary_df.to_string(index=False))
 
     function_summary_df = outputs.get("cold_start_function_summary")
     if function_summary_df is not None and len(function_summary_df) > 0:
-        logger.info("cold start function summary:\\n%s", function_summary_df.to_string(index=False))
+        logger.info("cold start function summary:\n%s", function_summary_df.to_string(index=False))
+
+    paper_highlight_df = outputs.get("cold_start_policy_paper_highlight")
+    if paper_highlight_df is not None and len(paper_highlight_df) > 0:
+        # 论文 demo 关键：cold_start_aware vs fixed_keep_alive 提升
+        for _, row in paper_highlight_df.iterrows():
+            metric = row["metric"]
+            value = row["value"]
+            if metric.startswith("hit_rate_ratio") or metric.startswith("hit_rate_improvement"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
+            elif metric.startswith("cold_start_penalty_reduction") or metric.startswith("latency_reduction"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
+            elif metric.startswith("hit_rate__") or metric.startswith("total_cold_start_penalty__"):
+                logger.info("paper highlight: %s = %s", metric, value)
 
     logger.info("outputs saved to %s", output_dir)
 

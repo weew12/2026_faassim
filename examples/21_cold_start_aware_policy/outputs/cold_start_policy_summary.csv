@@ -1,3 +1,3 @@
-﻿policy_name,request_count,hit_count,avg_latency,max_latency,total_latency,total_cold_start_penalty,avg_keep_alive_window,avg_cache_used,hit_rate,eviction_count
-cold_start_aware,30,7,1.0479999999999998,2.6500000000000004,31.439999999999998,26.7,2.5786666666666664,3.3333333333333335,0.23333333333333334,22
-fixed_keep_alive,30,4,1.1280000000000001,2.6500000000000004,33.84,29.1,2.0,3.4,0.13333333333333333,24
+﻿policy_name,request_count,hit_count,miss_count,avg_latency,max_latency,total_latency,total_cold_start_penalty,avg_keep_alive_window,avg_cache_used,hit_rate,eviction_count
+cold_start_aware,30,7,23,1.0479999999999998,2.6500000000000004,31.439999999999998,26.7,2.5786666666666664,3.3333333333333335,0.23333333333333334,22
+fixed_keep_alive,30,4,26,1.1280000000000001,2.6500000000000004,33.84,29.1,2.0,3.4,0.13333333333333333,24
