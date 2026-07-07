@@ -1,3 +1,3 @@
-﻿policy_name,request_count,function_cache_hits,image_cache_hits,data_cache_hits,avg_estimated_latency,total_estimated_latency,total_cold_start_penalty,total_image_pull_penalty,total_data_fetch_penalty,function_cache_hit_rate,image_cache_hit_rate,data_cache_hit_rate
-edge_cache_aware,15,14,15,14,0.36293333333333333,5.444,2.4,0.0,0.1,0.9333333333333333,1.0,0.9333333333333333
-edge_round_robin,15,3,4,4,2.0212,30.317999999999998,15.9,7.55,3.85,0.2,0.26666666666666666,0.26666666666666666
+﻿policy_name,request_count,function_cache_hits,function_cache_misses,image_cache_hits,data_cache_hits,avg_estimated_latency,total_estimated_latency,total_cold_start_penalty,total_image_pull_penalty,total_data_fetch_penalty,function_cache_hit_rate,image_cache_hit_rate,data_cache_hit_rate
+edge_cache_aware,15,14,1,15,14,0.36293333333333333,5.444,2.4,0.0,0.1,0.9333333333333333,1.0,0.9333333333333333
+edge_round_robin,15,3,12,4,4,2.0212,30.317999999999998,15.9,7.55,3.85,0.2,0.26666666666666666,0.26666666666666666
