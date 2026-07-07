@@ -1,5 +1,5 @@
 ﻿topology,description,explicit_node_count,explicit_link_count,graph_node_count,graph_edge_count,route_records
-minimal,最小二节点拓扑：一个边缘节点通过一条链路连接一个云端节点。,2,1,3,0,1
-edge_cloud_star,多个边缘节点经接入链路汇聚到云端，适合观察云边骨干链路共享。,5,6,11,0,4
-bottleneck,两个边缘节点共享一条低带宽瓶颈链路连接云端。,3,4,7,0,2
-urban_sensing,官方 UrbanSensingScenario 拓扑，包含较多边缘节点和网络连接。,0,0,0,0,0
+minimal,最小二节点拓扑：一个边缘节点通过一条链路连接一个云端节点。,2,1,3,4,1
+edge_cloud_star,多个边缘节点经接入链路汇聚到云端，适合观察云边骨干链路共享。,5,6,13,24,4
+bottleneck,两个边缘节点共享一条低带宽瓶颈链路连接云端。,3,4,9,16,2
+urban_sensing,官方 UrbanSensingScenario 拓扑，包含较多边缘节点和网络连接。,0,0,117,224,4
