@@ -1,4 +1,4 @@
-﻿policy_name,reason,eviction_count,avg_score
-fifo,oldest_inserted,25,4.288
-lru,least_recently_used,25,4.4
-utility_aware,lowest_utility,19,1.2719298245614035
+﻿policy_name,reason,eviction_count,avg_score,avg_evicted_memory_units
+fifo,oldest_inserted,25,4.288,1.68
+lru,least_recently_used,25,4.4,1.68
+utility_aware,lowest_utility,19,1.2719298245614035,1.894736842105263
