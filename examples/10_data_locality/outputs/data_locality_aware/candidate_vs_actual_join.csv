@@ -1,0 +1,4 @@
+﻿scenario,candidate_node,selected_node,is_selected,estimated_download_time,best_bandwidth_mbps,storage_node,actual_download_duration,estimated_vs_actual_diff,match_tolerance_5pct
+data_locality_aware,edge_near,edge_near,True,2.56,200.0,storage_near,2.654175257731959,0.09417525773195878,True
+data_locality_aware,edge_mid,edge_near,False,8.533333333333333,60.0,storage_near,,,
+data_locality_aware,edge_far,edge_near,False,51.2,10.0,storage_near,,,

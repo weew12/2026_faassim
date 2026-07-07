@@ -93,30 +93,35 @@ class InstrumentedDataLocalityScheduler(Scheduler):
 
         for node in feasible_nodes:
             best_storage = None
-            best_bandwidth = None
+            best_bandwidth_mbps = None
             estimated_download_time = None
 
             for storage_node in storage_nodes:
                 if storage_node == node.name:
                     best_storage = storage_node
-                    best_bandwidth = None
+                    best_bandwidth_mbps = None
                     estimated_download_time = 0
                     break
 
                 bandwidth = self.cluster_context.get_dl_bandwidth(storage_node, node.name)
-                if best_bandwidth is None or bandwidth > best_bandwidth:
-                    best_bandwidth = bandwidth
+                # cluster_context.get_dl_bandwidth 返回的是 link.bandwidth（Mbps 为单位）
+                # Skippy 内部 storage_node 标签查找和 faas-sim 的 Link(bandwidth=200, ...) 是同一数值。
+                # 选取 max bandwidth 链路作为最快路径。
+                if best_bandwidth_mbps is None or bandwidth > best_bandwidth_mbps:
+                    best_bandwidth_mbps = bandwidth
                     best_storage = storage_node
 
             data_item = self.cluster_context.storage_index.stat(*data_path.split("/"))
-            if data_item is not None and best_bandwidth:
-                estimated_download_time = data_item.size / best_bandwidth
+            if data_item is not None and best_bandwidth_mbps:
+                # bandwidth 单位：Mbps；1 Mbps = 1e6 bits/s = 1.25e5 bytes/s
+                bandwidth_bytes_per_s = best_bandwidth_mbps * 1.25e5
+                estimated_download_time = data_item.size / bandwidth_bytes_per_s
 
             env.metrics.log(
                 "data_locality_candidate",
                 {
                     "estimated_download_time": estimated_download_time,
-                    "best_bandwidth_bytes_per_s": best_bandwidth,
+                    "best_bandwidth_mbps": best_bandwidth_mbps,
                 },
                 scheduler="data_locality_aware",
                 pod_name=pod.name,

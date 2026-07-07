@@ -198,6 +198,18 @@ def main():
     if comparison_df is not None and len(comparison_df) > 0:
         logger.info("data locality comparison:\\n%s", comparison_df.to_string(index=False))
 
+    # 论文 demo 关键摘要：aware vs forced 的下载时长和理论值
+    highlight_path = output_dir / "data_locality_paper_highlight.csv"
+    if highlight_path.exists():
+        import pandas as _pd
+        hl = _pd.read_csv(highlight_path)
+        speedup_row = hl[hl.metric == "speedup_ratio_forced_over_aware"]
+        if not speedup_row.empty:
+            logger.info(
+                "paper highlight: forced_remote / data_locality_aware speedup = %.1fx",
+                float(speedup_row["value"].iloc[0]),
+            )
+
     logger.info("outputs saved to %s", output_dir)
 
 

@@ -1,0 +1,8 @@
+﻿metric,value
+aware_download_seconds,2.654175257731959
+forced_download_seconds,52.879505154639176
+speedup_ratio_forced_over_aware,19.923139966207685
+aware_theoretical_seconds,2.44140625
+forced_theoretical_seconds,48.828125
+aware_actual_vs_theoretical_diff,0.21276900773195884
+forced_actual_vs_theoretical_diff,4.051380154639176

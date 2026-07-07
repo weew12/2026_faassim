@@ -1,3 +1,3 @@
-﻿scenario,selected_node,download_events,total_download_duration,avg_download_duration,data_flow_events,total_data_flow_duration,total_data_flow_bytes
-data_locality_aware,edge_near,1,2.654175257731959,2.654175257731959,1,2.654175257731959,64000000
-forced_remote,edge_far,1,52.879505154639176,52.879505154639176,1,52.879505154639176,64000000
+﻿scenario,selected_node,download_events,total_download_duration,avg_download_duration,data_flow_events,total_data_flow_duration,total_data_flow_bytes,theoretical_download_duration,theoretical_vs_actual_diff
+data_locality_aware,edge_near,1,2.654175257731959,2.654175257731959,1,2.654175257731959,64000000,2.44140625,0.21276900773195884
+forced_remote,edge_far,1,52.879505154639176,52.879505154639176,1,52.879505154639176,64000000,48.828125,4.051380154639176

@@ -1,5 +1,5 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-06 22:43:24.135516,deploy,data-locality-python-pi,edge_far,1866316927120
-2026-07-06 22:43:24.135876,startup,data-locality-python-pi,edge_far,1866316927120
-2026-07-06 22:43:24.135931,setup,data-locality-python-pi,edge_far,1866316927120
-2026-07-06 22:43:24.136475,finish,data-locality-python-pi,edge_far,1866316927120
+2026-07-07 14:58:57.873107,deploy,data-locality-python-pi,edge_far,1743895974032
+2026-07-07 14:58:57.873479,startup,data-locality-python-pi,edge_far,1743895974032
+2026-07-07 14:58:57.873532,setup,data-locality-python-pi,edge_far,1743895974032
+2026-07-07 14:58:57.874034,finish,data-locality-python-pi,edge_far,1743895974032

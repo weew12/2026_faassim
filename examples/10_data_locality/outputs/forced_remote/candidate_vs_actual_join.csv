@@ -1,0 +1,2 @@
+﻿scenario,candidate_node,selected_node,is_selected,estimated_download_time,best_bandwidth_mbps,storage_node,actual_download_duration,estimated_vs_actual_diff,match_tolerance_5pct,note
+forced_remote,edge_far,edge_far,True,,,storage_near,52.879505154639176,,,forced_remote scenario: candidate records not logged
