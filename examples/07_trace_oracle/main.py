@@ -65,6 +65,28 @@ def example_topology() -> Topology:
     return topology
 
 
+def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
+    """
+    轮询 env.metrics.records 直到 invocations 记录数达到 expected_count，
+    或等到 max_wait simtime 秒后退出（避免死等）。
+
+    faas-sim 的 function_trigger(max_requests=N) 只保证 N 个请求被触发（queued），
+    不等待 N 次 invoke 全部跑完。原来的实现用 `env.timeout(2.0)` 硬等待，
+    当 trace 的 duration 变大时容易丢请求；这里改成"看到 N 条 invocations 记录"。
+
+    返回：实际等待的 simtime 秒数。
+    """
+    start = env.now
+    while env.now - start < max_wait:
+        count = sum(
+            1 for r in env.metrics.records if r.measurement == "invocations"
+        )
+        if count >= expected_count:
+            return env.now - start
+        yield env.timeout(poll_interval)
+    return env.now - start
+
+
 class TraceOracleBenchmark(Benchmark):
     """
     trace-driven 执行时间实验 Benchmark。
@@ -134,8 +156,14 @@ class TraceOracleBenchmark(Benchmark):
 
         # 等所有 invoke 进程完成。
         # function_trigger(max_requests=N) 只保证触发 N 个请求就返回，
-        # 不等待 N 次 invoke 全部跑完。留 2s 缓冲让 16+12=28 个 invoke 全部落盘。
-        yield env.timeout(2.0)
+        # 不等待 N 次 invoke 全部跑完。这里轮询 sim.env.metrics.records 直到
+        # invocations 数达到 16+12=28，或最多等 30 simtime 秒，避免 trace 变慢时丢请求。
+        expected_total = 16 + 12
+        waited = yield from wait_for_invocations(env, expected_total, max_wait=30.0)
+        logger.info(
+            "waited %.2f simtime seconds for %d invocations to finish",
+            waited, expected_total,
+        )
 
         logger.info("trace oracle workload finished")
 
@@ -208,6 +236,18 @@ def main():
     trace_sample_summary_df = dfs.get("trace_sample_summary")
     if trace_sample_summary_df is not None and len(trace_sample_summary_df) > 0:
         logger.info("trace sample summary:\\n%s", trace_sample_summary_df.to_string(index=False))
+
+    trace_cycle_df = dfs.get("trace_cycle_summary")
+    if trace_cycle_df is not None and len(trace_cycle_df) > 0:
+        logger.info("trace cycle summary:\\n%s", trace_cycle_df.to_string(index=False))
+
+    trace_join_df = dfs.get("trace_invoke_sample_join")
+    if trace_join_df is not None and len(trace_join_df) > 0:
+        all_match = bool(trace_join_df["duration_match"].all())
+        logger.info(
+            "trace invoke sample join: %d rows, all duration_match=%s",
+            len(trace_join_df), all_match,
+        )
 
     invocation_summary_df = dfs.get("trace_invocation_summary")
     if invocation_summary_df is not None and len(invocation_summary_df) > 0:

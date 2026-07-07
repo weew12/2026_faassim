@@ -1,0 +1,3 @@
+﻿function_name,input_samples,actual_samples,cycles_used,full_cycles,last_sample_id
+trace-fast-python-pi,12,16,2,1,4
+trace-slow-python-pi,12,12,1,1,12
