@@ -1,0 +1,2 @@
+﻿probe_count,base_duration,alpha,max_abs_diff,pass_tolerance
+40,0.4,0.35,0.0,True

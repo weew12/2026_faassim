@@ -67,6 +67,28 @@ def example_topology() -> Topology:
     return topology
 
 
+def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
+    """
+    轮询 env.metrics.records 直到 invocations 记录数达到 expected_count，
+    或等到 max_wait simtime 秒后退出（避免死等）。
+
+    faas-sim 的 function_trigger(max_requests=N) 只保证 N 个请求被触发（queued），
+    不等待 N 次 invoke 全部跑完。原来的实现用 `env.timeout(3)` 硬等待，
+    当并发峰值高、final_duration 放大后容易丢请求；这里改成"看到 N 条 invocations 记录"。
+
+    返回：实际等待的 simtime 秒数。
+    """
+    start = env.now
+    while env.now - start < max_wait:
+        count = sum(
+            1 for r in env.metrics.records if r.measurement == "invocations"
+        )
+        if count >= expected_count:
+            return env.now - start
+        yield env.timeout(poll_interval)
+    return env.now - start
+
+
 class DegradationBenchmark(Benchmark):
     """
     性能退化实验 Benchmark。
@@ -117,7 +139,15 @@ class DegradationBenchmark(Benchmark):
         )
 
         # 等待尾部请求完成，确保资源释放和调用指标完整。
-        yield env.timeout(3)
+        # 原来用 env.timeout(3) 硬等待，但并发峰值时 final_duration 可达 4.46s，
+        # 容易丢请求。这里轮询 env.metrics.records 直到 invocations 数达到 40，
+        # 或最多等 30 simtime 秒。
+        expected_total = 40
+        waited = yield from wait_for_invocations(env, expected_total, max_wait=30.0)
+        logger.info(
+            "waited %.2f simtime seconds for %d invocations to finish",
+            waited, expected_total,
+        )
 
         logger.info("degradation workload finished")
 
@@ -185,6 +215,18 @@ def main():
     concurrency_distribution_df = dfs.get("degradation_concurrency_distribution")
     if concurrency_distribution_df is not None and len(concurrency_distribution_df) > 0:
         logger.info("degradation concurrency distribution:\\n%s", concurrency_distribution_df.to_string(index=False))
+
+    model_consistency_df = dfs.get("degradation_model_consistency")
+    if model_consistency_df is not None and len(model_consistency_df) > 0:
+        logger.info("degradation model consistency:\\n%s", model_consistency_df.to_string(index=False))
+
+    invoke_join_df = dfs.get("degradation_invoke_join")
+    if invoke_join_df is not None and len(invoke_join_df) > 0:
+        all_match = bool(invoke_join_df["duration_match"].all())
+        logger.info(
+            "degradation invoke join: %d rows, all duration_match=%s",
+            len(invoke_join_df), all_match,
+        )
 
     logger.info("outputs saved to %s", output_dir)
 

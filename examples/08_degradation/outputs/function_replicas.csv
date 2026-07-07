@@ -1,4 +1,4 @@
 ﻿time,name,pod,image,replica_id
-2026-07-06 22:43:20.321663,degradation-python-pi,pod-degradation-python-pi-1,degradation-python-pi-cpu,2542885144960
-2026-07-06 22:43:20.321708,degradation-python-pi,pod-degradation-python-pi-2,degradation-python-pi-cpu,2542884851856
-2026-07-06 22:43:20.322164,degradation-python-pi,pod-degradation-python-pi-3,degradation-python-pi-cpu,2542884855696
+2026-07-07 14:18:36.321778,degradation-python-pi,pod-degradation-python-pi-1,degradation-python-pi-cpu,2590678451936
+2026-07-07 14:18:36.321823,degradation-python-pi,pod-degradation-python-pi-2,degradation-python-pi-cpu,2590678143120
+2026-07-07 14:18:36.322141,degradation-python-pi,pod-degradation-python-pi-3,degradation-python-pi-cpu,2590678146960
