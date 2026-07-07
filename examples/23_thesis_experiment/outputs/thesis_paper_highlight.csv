@@ -1,0 +1,47 @@
+﻿metric,value
+warm_hit_rate__cache_aware_joint,0.5714285714285714
+image_cache_hit_rate__cache_aware_joint,0.8571428571428571
+data_cache_hit_rate__cache_aware_joint,0.8571428571428571
+avg_latency__cache_aware_joint,0.8547428571428571
+p95_latency__cache_aware_joint,3.165599999999997
+total_cold_start_penalty__cache_aware_joint,17.55
+avg_r_cache__cache_aware_joint,0.9714285714285714
+avg_r_load__cache_aware_joint,1.0
+avg_r_desired__cache_aware_joint,1.0
+eviction_count__cache_aware_joint,12
+warm_hit_rate__faascache,0.5428571428571428
+image_cache_hit_rate__faascache,0.37142857142857144
+data_cache_hit_rate__faascache,0.37142857142857144
+avg_latency__faascache,1.4409714285714286
+p95_latency__faascache,5.1624
+total_cold_start_penalty__faascache,19.45
+avg_r_cache__faascache,0.9714285714285714
+avg_r_load__faascache,0.0
+avg_r_desired__faascache,0.9714285714285714
+eviction_count__faascache,13
+warm_hit_rate__load_only,0.2
+image_cache_hit_rate__load_only,0.37142857142857144
+data_cache_hit_rate__load_only,0.37142857142857144
+avg_latency__load_only,1.9095428571428572
+p95_latency__load_only,5.1624
+total_cold_start_penalty__load_only,35.85
+avg_r_cache__load_only,0.0
+avg_r_load__load_only,1.0
+avg_r_desired__load_only,1.0
+eviction_count__load_only,27
+avg_latency_reduction__cache_aware_joint_vs_load_only,0.5523835173713979
+cold_start_penalty_reduction__cache_aware_joint_vs_load_only,0.5104602510460251
+image_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565
+data_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565
+avg_latency_reduction__cache_aware_joint_vs_faascache,0.40682872665265496
+image_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565
+data_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565
+r_dominant_summary__cache_aware_joint,"r_cache=0.971, r_load=1.000, r_desired=1.000; max=1.000"
+r_dominant_summary__load_only,"r_cache=0.000, r_load=1.000, r_desired=1.000; max=1.000"
+r_dominant_summary__faascache,"r_cache=0.971, r_load=0.000, r_desired=0.971; max=0.971"
+result_candidate_consistency,1.0
+result_candidate_matched,105
+result_candidate_total,105
+request_decision_consistency,1.0
+request_decision_matched,105
+request_decision_total,105
