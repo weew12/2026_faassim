@@ -1,4 +1,0 @@
-function_name,value,node_name,successful
-batch-exp-python-pi,queue,,
-batch-exp-python-pi,start,,
-batch-exp-python-pi,finish,server_0,True

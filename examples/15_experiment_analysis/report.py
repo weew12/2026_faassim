@@ -33,6 +33,7 @@ def generate_report(
     run_metrics_df: pd.DataFrame,
     summary_df: pd.DataFrame,
     comparison_df: pd.DataFrame,
+    paper_highlight_df: pd.DataFrame = None,
 ):
     """
     生成 Markdown 报告。
@@ -56,14 +57,18 @@ def generate_report(
         "",
         dataframe_to_markdown(summary_df),
         "",
-        "## 4. 策略对比结果",
+        "## 4. 策略对比结果（其他 policy vs default_skippy 基线）",
         "",
         dataframe_to_markdown(comparison_df),
         "",
-        "## 5. 说明",
+        "## 5. 论文 demo 关键摘要",
         "",
-        "本报告由 `examples/experiment_analysis/main.py` 自动生成。"
-        "默认情况下，脚本优先读取 `examples/batch_experiment/outputs/`，"
+        dataframe_to_markdown(paper_highlight_df if paper_highlight_df is not None else pd.DataFrame()),
+        "",
+        "## 6. 说明",
+        "",
+        "本报告由 `examples/15_experiment_analysis/main.py` 自动生成。"
+        "默认情况下，脚本优先读取 `examples/14_batch_experiment/outputs/`，"
         "如果该目录不存在，则读取本样例自带的 `sample_results/`。",
         "",
     ]

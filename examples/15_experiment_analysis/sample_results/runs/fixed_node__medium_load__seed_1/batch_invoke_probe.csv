@@ -1,5 +1,0 @@
-case_id,policy,workload,function_name,node_name,request_id,base_duration,jitter,duration,seed,rps
-fixed_node__medium_load__seed_1,fixed_node,medium_load,batch-exp-python-pi,server_0,1,0.18,0.08000000000000002,0.26,1,8
-fixed_node__medium_load__seed_1,fixed_node,medium_load,batch-exp-python-pi,server_0,2,0.18,0.12,0.3,1,8
-fixed_node__medium_load__seed_1,fixed_node,medium_load,batch-exp-python-pi,server_0,3,0.18,0.16999999999999998,0.35,1,8
-fixed_node__medium_load__seed_1,fixed_node,medium_load,batch-exp-python-pi,server_0,4,0.18,0.15000000000000002,0.33,1,8

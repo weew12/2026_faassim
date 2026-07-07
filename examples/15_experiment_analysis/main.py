@@ -21,12 +21,14 @@ import pandas as pd
 
 from aggregation import (
     aggregate_by_policy_workload,
+    build_paper_highlight,
     build_policy_comparison,
 )
 from config import build_config
 from loaders import load_all_runs
 from metrics import build_run_metrics
 from report import generate_report
+from self_check import log_self_check, self_check
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,12 @@ def main():
     comparison_df.to_csv(comparison_path, index=False, encoding="utf-8-sig")
     logger.info("saved %s", comparison_path)
 
+    # 论文 demo 关键摘要（与 14 的 batch_paper_highlight 风格一致）
+    paper_highlight_df = build_paper_highlight(run_metrics_df, summary_df, comparison_df)
+    paper_highlight_path = config.output_dir / "experiment_paper_highlight.csv"
+    paper_highlight_df.to_csv(paper_highlight_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", paper_highlight_path)
+
     report_path = generate_report(
         output_dir=config.output_dir,
         source_name=config.source_name,
@@ -104,11 +112,18 @@ def main():
         run_metrics_df=run_metrics_df,
         summary_df=summary_df,
         comparison_df=comparison_df,
+        paper_highlight_df=paper_highlight_df,
     )
     logger.info("saved %s", report_path)
 
-    logger.info("experiment run metrics:\\n%s", run_metrics_df.to_string(index=False))
-    logger.info("experiment summary:\\n%s", summary_df.to_string(index=False))
+    # 数据自洽段（与 14 的 self_check_batch_results 风格一致）
+    self_check_result = self_check(
+        run_metrics_df, summary_df, comparison_df, paper_highlight_df,
+    )
+    log_self_check(self_check_result)
+
+    logger.info("experiment run metrics:\n%s", run_metrics_df.to_string(index=False))
+    logger.info("experiment summary:\n%s", summary_df.to_string(index=False))
     logger.info("outputs saved to %s", config.output_dir)
 
 

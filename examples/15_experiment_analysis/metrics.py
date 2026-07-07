@@ -41,6 +41,9 @@ def build_run_metrics(run: RunData) -> Dict[str, Any]:
         "seed": first_value(case_df, "seed", infer_seed_from_run_id(run.run_id)),
         "rps": first_value(case_df, "rps", None),
         "max_requests": first_value(case_df, "max_requests", None),
+        # 从 case_result.csv 取 scheduled_node（14 已经预聚合为单值字符串）
+        # 用于 paper highlight 的 high_capacity_hit_ratio 统计
+        "scheduled_node": first_value(case_df, "scheduled_node", None),
     }
 
     row.update(compute_probe_metrics(probe_df))

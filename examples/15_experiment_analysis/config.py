@@ -31,8 +31,8 @@ def resolve_default_input_dir(current_file: Path) -> tuple[Path, str]:
     """
     解析默认输入目录。
 
-    优先读取上一节 batch_experiment 的输出目录：
-    examples/batch_experiment/outputs/
+    优先读取上一节 14_batch_experiment 的输出目录：
+    examples/14_batch_experiment/outputs/
 
     如果该目录不存在或没有 runs 子目录，则回退到本样例自带的 sample_results。
     这样可以保证 experiment_analysis 样例在没有先运行 batch_experiment 时也能执行。
@@ -40,7 +40,7 @@ def resolve_default_input_dir(current_file: Path) -> tuple[Path, str]:
     example_dir = current_file.resolve().parent
     examples_root = example_dir.parent
 
-    batch_output_dir = examples_root / "batch_experiment" / "outputs"
+    batch_output_dir = examples_root / "14_batch_experiment" / "outputs"
     if (batch_output_dir / "runs").exists():
         return batch_output_dir, "batch_experiment_outputs"
 
