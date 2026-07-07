@@ -148,6 +148,64 @@ def build_warm_cold_compare(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     )
 
 
+def build_probe_invocation_join(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    把 cold_start_probe（first_invoke / warm_invoke 阶段）和 invocations 按 (replica_id, t_start) 对齐。
+
+    probe.first_invoke.phase_duration 应该 == invocations.t_exec
+    probe.warm_invoke.phase_duration 应该 == invocations.t_exec
+
+    论文 demo 关键证据：simulator 派发的执行时长和 faas-sim 记录的实际执行时长完全一致。
+    """
+    probe_df = dfs.get("cold_start_probe", pd.DataFrame()).copy()
+    inv_df = dfs.get("invocations", pd.DataFrame()).copy()
+
+    if probe_df.empty or inv_df.empty:
+        return pd.DataFrame([{
+            "join_rows": 0,
+            "message": "missing cold_start_probe or invocations",
+        }])
+
+    if "t_exec" in inv_df.columns:
+        inv_df["t_exec"] = pd.to_numeric(inv_df["t_exec"], errors="coerce")
+    if "t_start" in inv_df.columns:
+        inv_df["t_start"] = pd.to_numeric(inv_df["t_start"], errors="coerce")
+
+    invoke_phase_df = probe_df[probe_df["phase"].isin(["first_invoke", "warm_invoke"])].copy()
+    if invoke_phase_df.empty:
+        return pd.DataFrame([{
+            "join_rows": 0,
+            "message": "no first_invoke/warm_invoke phases in probe",
+        }])
+
+    # 按 (replica_id, phase_start 顺序) 对齐 invocations（按 t_start 顺序）
+    rows = []
+    for replica_id, probe_grp in invoke_phase_df.groupby("replica_id"):
+        probe_sorted = probe_grp.sort_values("phase_start").reset_index(drop=True)
+        inv_sorted = inv_df[inv_df["replica_id"] == replica_id].sort_values("t_start").reset_index(drop=True)
+        n = min(len(probe_sorted), len(inv_sorted))
+        for i in range(n):
+            p = probe_sorted.iloc[i]
+            inv = inv_sorted.iloc[i]
+            duration_match = (
+                pd.notna(inv["t_exec"])
+                and abs(float(p["phase_duration"]) - float(inv["t_exec"])) < 1e-6
+            )
+            rows.append({
+                "replica_id": replica_id,
+                "phase": p.get("phase"),
+                "request_id": p.get("request_id"),
+                "probe_phase_start": float(p["phase_start"]),
+                "probe_phase_finish": float(p["phase_finish"]),
+                "probe_phase_duration": float(p["phase_duration"]),
+                "inv_t_start": float(inv["t_start"]) if pd.notna(inv["t_start"]) else None,
+                "inv_t_exec": float(inv["t_exec"]) if pd.notna(inv["t_exec"]) else None,
+                "duration_match": duration_match,
+            })
+
+    return pd.DataFrame(rows)
+
+
 def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     """
     导出仿真输出指标。
@@ -176,8 +234,15 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     warm_cold_df.to_csv(warm_cold_path, index=False, encoding="utf-8-sig")
     logger.info("saved %s", warm_cold_path)
 
+    # probe × invocations 关联验证
+    probe_inv_join_df = build_probe_invocation_join(dfs)
+    probe_inv_join_path = output_dir / "cold_start_probe_invocation_join.csv"
+    probe_inv_join_df.to_csv(probe_inv_join_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", probe_inv_join_path)
+
     dfs["cold_start_phase_summary"] = phase_summary_df
     dfs["cold_start_replica_path_summary"] = replica_path_df
     dfs["cold_start_warm_cold_compare"] = warm_cold_df
+    dfs["cold_start_probe_invocation_join"] = probe_inv_join_df
 
     return dfs

@@ -63,6 +63,29 @@ def example_topology() -> Topology:
     return topology
 
 
+def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
+    """
+    轮询 env.metrics.records 直到 invocations 记录数达到 expected_count，
+    或等到 max_wait simtime 秒后退出（避免死等）。
+
+    faas-sim 的 function_trigger(max_requests=N) 只保证 N 个请求被触发（queued），
+    不等待 N 次 invoke 全部跑完。原来的实现用 `env.timeout(2)` 硬等待，
+    当 first_invoke_duration 变大或后续接入 scale-from-zero 时容易丢请求；
+    这里改成"看到 N 条 invocations 记录"。
+
+    返回：实际等待的 simtime 秒数。
+    """
+    start = env.now
+    while env.now - start < max_wait:
+        count = sum(
+            1 for r in env.metrics.records if r.measurement == "invocations"
+        )
+        if count >= expected_count:
+            return env.now - start
+        yield env.timeout(poll_interval)
+    return env.now - start
+
+
 class ColdStartBenchmark(Benchmark):
     """
     冷启动实验 Benchmark。
@@ -115,7 +138,14 @@ class ColdStartBenchmark(Benchmark):
         )
 
         # 等待尾部请求完成，保证调用指标完整写入。
-        yield env.timeout(2)
+        # 原来用 env.timeout(2) 硬等待，这里轮询 env.metrics.records
+        # 直到 invocations 数达到 3，或最多等 10 simtime 秒。
+        expected_total = 3
+        waited = yield from wait_for_invocations(env, expected_total, max_wait=10.0)
+        logger.info(
+            "waited %.2f simtime seconds for %d invocations to finish",
+            waited, expected_total,
+        )
 
         logger.info("cold start workload finished")
 
@@ -184,6 +214,14 @@ def main():
     warm_cold_df = dfs.get("cold_start_warm_cold_compare")
     if warm_cold_df is not None and len(warm_cold_df) > 0:
         logger.info("cold start warm/cold compare:\\n%s", warm_cold_df.to_string(index=False))
+
+    probe_inv_df = dfs.get("cold_start_probe_invocation_join")
+    if probe_inv_df is not None and "duration_match" in probe_inv_df.columns:
+        all_match = bool(probe_inv_df["duration_match"].all())
+        logger.info(
+            "probe × invocation join: %d rows, all duration_match=%s",
+            len(probe_inv_df), all_match,
+        )
 
     logger.info("outputs saved to %s", output_dir)
 

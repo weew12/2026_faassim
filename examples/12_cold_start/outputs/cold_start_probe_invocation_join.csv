@@ -1,0 +1,4 @@
+﻿replica_id,phase,request_id,probe_phase_start,probe_phase_finish,probe_phase_duration,inv_t_start,inv_t_exec,duration_match
+2202299386576,first_invoke,1.0,3.0,3.3,0.2999999999999998,3.0,0.2999999999999998,True
+2202299386576,warm_invoke,2.0,3.5,3.58,0.08000000000000007,3.5,0.08000000000000007,True
+2202299386576,warm_invoke,3.0,4.0,4.08,0.08000000000000007,4.0,0.08000000000000007,True
