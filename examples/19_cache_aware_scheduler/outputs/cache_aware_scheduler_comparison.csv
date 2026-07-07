@@ -1,3 +1,3 @@
 ﻿scenario,request_events,cache_hit_count,cache_hit_rate,avg_final_duration,total_cold_start_penalty,schedule_events,selected_nodes
 cache_blind,10,0,0.0,1.15,10.500000000000002,4,server_0;server_1;server_2;server_3
-cache_aware,10,0,0.0,1.15,10.500000000000002,4,server_10
+cache_aware,10,10,1.0,0.1,0.0,4,server_0;server_1;server_2

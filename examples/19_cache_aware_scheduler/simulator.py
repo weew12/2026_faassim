@@ -106,6 +106,9 @@ class CacheAwareFunctionSimulator(FunctionSimulator):
         env.metrics.log(
             "cache_aware_request_probe",
             {
+                # simtime 字段：让 probe 跟 invocations 的 t_start 能直接 join
+                # （sim.metrics 默认用 wall-clock 记录 `time` 列，simtime 只能手动塞）
+                "simtime": float(env.now),
                 "cache_hit": cache_hit,
                 "warm_duration": self.warm_duration,
                 "cold_start_penalty": cold_start_penalty,

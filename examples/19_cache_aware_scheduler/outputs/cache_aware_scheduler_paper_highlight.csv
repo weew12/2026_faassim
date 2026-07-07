@@ -1,0 +1,16 @@
+﻿metric,value
+cache_hit_rate__cache_blind,0.0
+cache_hit_count__cache_blind,0.0
+avg_final_duration__cache_blind,1.15
+total_cold_start_penalty__cache_blind,10.500000000000002
+cache_hit_rate__cache_aware,1.0
+cache_hit_count__cache_aware,10.0
+avg_final_duration__cache_aware,0.1
+total_cold_start_penalty__cache_aware,0.0
+cache_hit_rate_improvement__cache_aware_over_cache_blind,1.0
+cold_start_penalty_reduction__cache_aware_over_cache_blind,1.0
+avg_duration_reduction__cache_aware_over_cache_blind,0.9130434782608695
+probe_invocation_duration_match__cache_blind,1.0
+probe_invocation_simtime_match__cache_blind,0.4
+probe_invocation_duration_match__cache_aware,1.0
+probe_invocation_simtime_match__cache_aware,0.4

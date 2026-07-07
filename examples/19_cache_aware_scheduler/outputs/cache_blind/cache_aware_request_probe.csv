@@ -1,11 +1,11 @@
-﻿time,cache_hit,warm_duration,cold_start_penalty,final_duration,avg_cold_start,scenario,function_name,request_id,node_name,replica_id
-2026-07-06 22:43:38.922611,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,1,server_1,1792703023056
-2026-07-06 22:43:38.922737,False,0.1,1.4,1.5,1.4,cache_blind,fft,2,server_0,1792702992400
-2026-07-06 22:43:38.922963,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,3,server_1,1792703023056
-2026-07-06 22:43:38.923097,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,4,server_3,1792703168896
-2026-07-06 22:43:38.923494,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,5,server_2,1792703028176
-2026-07-06 22:43:38.923569,False,0.1,1.4,1.5,1.4,cache_blind,fft,6,server_0,1792702992400
-2026-07-06 22:43:38.923753,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,7,server_1,1792703023056
-2026-07-06 22:43:38.923888,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,8,server_3,1792703168896
-2026-07-06 22:43:38.924067,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,9,server_2,1792703028176
-2026-07-06 22:43:38.924137,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,10,server_1,1792703023056
+﻿time,simtime,cache_hit,warm_duration,cold_start_penalty,final_duration,avg_cold_start,scenario,function_name,request_id,node_name,replica_id
+2026-07-07 17:27:28.562851,12.0,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,1,server_1,2004302399120
+2026-07-07 17:27:28.562951,12.9,False,0.1,1.4,1.5,1.4,cache_blind,fft,2,server_0,2004302417264
+2026-07-07 17:27:28.563130,14.4,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,3,server_1,2004302399120
+2026-07-07 17:27:28.563242,15.3,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,4,server_3,2004301790432
+2026-07-07 17:27:28.563406,17.3,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,5,server_2,2004302404240
+2026-07-07 17:27:28.563476,17.75,False,0.1,1.4,1.5,1.4,cache_blind,fft,6,server_0,2004302417264
+2026-07-07 17:27:28.563673,19.25,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,7,server_1,2004302399120
+2026-07-07 17:27:28.563877,20.15,False,0.1,1.9,2.0,1.9,cache_blind,ml-infer,8,server_3,2004301790432
+2026-07-07 17:27:28.564144,22.15,False,0.1,0.35,0.44999999999999996,0.35,cache_blind,json-parse,9,server_2,2004302404240
+2026-07-07 17:27:28.564260,22.599999999999998,False,0.1,0.8,0.9,0.8,cache_blind,img-resize,10,server_1,2004302399120

@@ -1,0 +1,11 @@
+﻿function_name,node_name,request_id,scenario,probe_simtime,probe_final_duration,inv_t_start,inv_t_exec,duration_match,simtime_match
+fft,server_1,2,cache_aware,12.1,0.1,12.1,0.09999999999999964,True,True
+fft,server_1,6,cache_aware,12.499999999999998,0.1,12.1,0.09999999999999964,True,False
+img-resize,server_0,1,cache_aware,12.0,0.1,12.0,0.09999999999999964,True,True
+img-resize,server_0,3,cache_aware,12.2,0.1,12.0,0.09999999999999964,True,False
+img-resize,server_0,7,cache_aware,12.599999999999998,0.1,12.0,0.09999999999999964,True,False
+img-resize,server_0,10,cache_aware,12.899999999999997,0.1,12.0,0.09999999999999964,True,False
+json-parse,server_0,5,cache_aware,12.399999999999999,0.1,12.399999999999999,0.09999999999999964,True,True
+json-parse,server_0,9,cache_aware,12.799999999999997,0.1,12.399999999999999,0.09999999999999964,True,False
+ml-infer,server_2,4,cache_aware,12.299999999999999,0.1,12.299999999999999,0.09999999999999964,True,True
+ml-infer,server_2,8,cache_aware,12.699999999999998,0.1,12.299999999999999,0.09999999999999964,True,False

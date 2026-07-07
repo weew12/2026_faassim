@@ -1,13 +1,13 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-06 22:43:38.915564,queue,fft,fft-cache-aware-cpu,1792702992400,,
-2026-07-06 22:43:38.915670,start,fft,fft-cache-aware-cpu,1792702992400,,
-2026-07-06 22:43:38.916573,finish,fft,fft-cache-aware-cpu,1792702992400,server_0,True
-2026-07-06 22:43:38.920333,queue,img-resize,img-resize-cache-aware-cpu,1792703023056,,
-2026-07-06 22:43:38.920402,start,img-resize,img-resize-cache-aware-cpu,1792703023056,,
-2026-07-06 22:43:38.920513,finish,img-resize,img-resize-cache-aware-cpu,1792703023056,server_1,True
-2026-07-06 22:43:38.921280,queue,json-parse,json-parse-cache-aware-cpu,1792703028176,,
-2026-07-06 22:43:38.921318,start,json-parse,json-parse-cache-aware-cpu,1792703028176,,
-2026-07-06 22:43:38.921392,finish,json-parse,json-parse-cache-aware-cpu,1792703028176,server_2,True
-2026-07-06 22:43:38.921898,queue,ml-infer,ml-infer-cache-aware-cpu,1792703168896,,
-2026-07-06 22:43:38.921932,start,ml-infer,ml-infer-cache-aware-cpu,1792703168896,,
-2026-07-06 22:43:38.921998,finish,ml-infer,ml-infer-cache-aware-cpu,1792703168896,server_3,True
+2026-07-07 17:27:28.560025,queue,fft,fft-cache-aware-cpu,2004302417264,,
+2026-07-07 17:27:28.560095,start,fft,fft-cache-aware-cpu,2004302417264,,
+2026-07-07 17:27:28.560283,finish,fft,fft-cache-aware-cpu,2004302417264,server_0,True
+2026-07-07 17:27:28.561324,queue,img-resize,img-resize-cache-aware-cpu,2004302399120,,
+2026-07-07 17:27:28.561375,start,img-resize,img-resize-cache-aware-cpu,2004302399120,,
+2026-07-07 17:27:28.561457,finish,img-resize,img-resize-cache-aware-cpu,2004302399120,server_1,True
+2026-07-07 17:27:28.561842,queue,json-parse,json-parse-cache-aware-cpu,2004302404240,,
+2026-07-07 17:27:28.561879,start,json-parse,json-parse-cache-aware-cpu,2004302404240,,
+2026-07-07 17:27:28.561944,finish,json-parse,json-parse-cache-aware-cpu,2004302404240,server_2,True
+2026-07-07 17:27:28.562281,queue,ml-infer,ml-infer-cache-aware-cpu,2004301790432,,
+2026-07-07 17:27:28.562333,start,ml-infer,ml-infer-cache-aware-cpu,2004301790432,,
+2026-07-07 17:27:28.562426,finish,ml-infer,ml-infer-cache-aware-cpu,2004301790432,server_3,True

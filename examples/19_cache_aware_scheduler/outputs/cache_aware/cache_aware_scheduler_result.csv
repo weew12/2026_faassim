@@ -1,5 +1,5 @@
 ﻿time,cache_hit,selected_score,needed_images_count,function_name,pod_name,selected_node,scheduler,needed_images
-2026-07-06 22:43:38.961555,False,0.2,1,fft,pod-fft-2,server_10,cache_aware,fft-cache-aware-cpu:latest
-2026-07-06 22:43:38.962239,False,0.2,1,img-resize,pod-img-resize-2,server_10,cache_aware,img-resize-cache-aware-cpu:latest
-2026-07-06 22:43:38.962825,False,0.2,1,json-parse,pod-json-parse-2,server_10,cache_aware,json-parse-cache-aware-cpu:latest
-2026-07-06 22:43:38.963403,False,0.2,1,ml-infer,pod-ml-infer-2,server_10,cache_aware,ml-infer-cache-aware-cpu:latest
+2026-07-07 17:27:28.636939,True,10.825,1,fft,pod-fft-2,server_1,cache_aware,fft-cache-aware-cpu:latest
+2026-07-07 17:27:28.637675,True,10.96923076923077,1,img-resize,pod-img-resize-2,server_0,cache_aware,img-resize-cache-aware-cpu:latest
+2026-07-07 17:27:28.638245,True,10.7,1,json-parse,pod-json-parse-2,server_0,cache_aware,json-parse-cache-aware-cpu:latest
+2026-07-07 17:27:28.638851,True,10.914285714285713,1,ml-infer,pod-ml-infer-2,server_2,cache_aware,ml-infer-cache-aware-cpu:latest
