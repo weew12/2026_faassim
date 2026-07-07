@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -57,16 +57,45 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 的内部状态污染
+# （13_image_cache / 14 / 19 已经踩过这个坑 —— 连续两次 UrbanSensingScenario() 产生不同节点集）
+# 01 只跑一次 sim，目前未踩坑，但为了与其他样例保持一致，统一改用最小 4-server 拓扑。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建自动伸缩样例使用的拓扑。
+    创建自动伸缩样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，保持与官方示例风格一致。
+    为什么不复用 UrbanSensingScenario：
+    ether.scenarios.urbansensing 在连续构造时会返回不同的节点集
+    （server_0..9、server_10..19、...、server_70..79），可能导致后续扩展
+    时把同一份 topology 跑两次出现节点不匹配。这里用 ether.core 直接
+    构造 4 个 server 节点 + Docker Registry，构造一次复用。
+
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        # 镜像拉取链路：DockerRegistry -- internet_link -- switch -- link_server_X -- server_X
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 class AutoscalingBenchmark(Benchmark):
@@ -203,11 +232,28 @@ def main():
     sim.run()
 
     output_dir = Path(__file__).resolve().parent / "outputs"
-    dfs = export_outputs(sim, output_dir)
+    dfs = export_outputs(sim, output_dir, expected_max_requests=2000)
 
     summary_df = dfs.get("autoscaling_summary")
     if summary_df is not None:
         logger.info("autoscaling summary:\n%s", summary_df.to_string(index=False))
+
+    paper_highlight_df = dfs.get("autoscaling_paper_highlight")
+    if paper_highlight_df is not None and len(paper_highlight_df) > 0:
+        # 论文 demo 关键：扩容触发、scale_up_factor、probe 一致性
+        for _, row in paper_highlight_df.iterrows():
+            metric = row["metric"]
+            value = row["value"]
+            if metric in ("scale_events", "scale_up_events", "scale_down_events",
+                          "max_replicas", "min_replicas", "invocation_events"):
+                logger.info("paper highlight: %s = %s", metric, value)
+            elif metric in ("scale_up_factor", "avg_rps_overall", "peak_rps",
+                            "scale_up_response_time", "probe_invocation_t_exec_match",
+                            "probe_invocation_simtime_match"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
+            elif metric in ("total_simtime", "avg_exec_time", "final_replicas",
+                            "peak_rps_simtime", "first_reach_max_replicas_simtime"):
+                logger.info("paper highlight: %s = %s", metric, value)
 
     logger.info("outputs saved to %s", output_dir)
 

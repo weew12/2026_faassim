@@ -1,9 +1,9 @@
 ﻿time,value,name,image,function_id,node
-2026-07-06 23:38:16.835187,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.838792,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.839742,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.840605,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.841410,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.842225,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.843236,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
-2026-07-06 23:38:16.844543,deploy,autoscale-python-pi,autoscale-python-pi-cpu,2406860864352,server_0
+2026-07-07 18:04:11.090201,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.091630,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.091824,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.092004,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.092183,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.092358,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.092533,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0
+2026-07-07 18:04:11.092711,deploy,autoscale-python-pi,autoscale-python-pi-cpu,1688316555488,server_0

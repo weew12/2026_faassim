@@ -1,2 +1,2 @@
 ﻿scale_events,scale_up_events,scale_down_events,max_replicas,min_replicas,invocation_events,avg_exec_time,schedule_events,replica_deployment_events,total_simtime
-2,2,0,8,1,2000,0.20000000000000073,24,32,50.406096547047014
+2,2,0,8,1,2000,0.20000000000000084,24,32,53.76001659740187

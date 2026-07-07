@@ -85,11 +85,12 @@ class AutoscalingFunctionSimulator(FunctionSimulator):
         模拟一次函数调用。
 
         业务流程：
-        1. 登记 CPU 占用；
-        2. 将请求加入节点当前请求集合；
-        3. 等待固定执行时间；
-        4. 释放 CPU 占用；
-        5. 从节点当前请求集合移除请求。
+        1. 记录 autoscaling_invoke_probe（含 simtime 字段，用于跟 invocations.csv 关联）；
+        2. 登记 CPU 占用；
+        3. 将请求加入节点当前请求集合；
+        4. 等待固定执行时间；
+        5. 释放 CPU 占用；
+        6. 从节点当前请求集合移除请求。
         """
         logger.debug(
             "[simtime=%.2f] invoke request=%s function=%s node=%s",
@@ -97,6 +98,20 @@ class AutoscalingFunctionSimulator(FunctionSimulator):
             request,
             replica.function.name,
             replica.node.name,
+        )
+
+        # 记录 invoke probe（论文 demo 关键证据：simulator 派发的 t_exec 跟 invocations.csv 的 t_exec 关联）
+        env.metrics.log(
+            "autoscaling_invoke_probe",
+            {
+                # simtime 字段：让 probe 跟 invocations 的 t_start 能直接 join
+                "simtime": float(env.now),
+                "t_exec": 0.2,
+            },
+            function_name=replica.function.name,
+            request_id=request.request_id,
+            node_name=replica.node.name,
+            replica_id=id(replica),
         )
 
         cpu_millis = replica.node.capacity.cpu_millis * 0.15
