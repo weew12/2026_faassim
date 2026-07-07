@@ -1,0 +1,8 @@
+﻿function_name,decision,hint_decision,hint_action,safe_to_execute,match,detail
+report-gen,keep_warm,keep_warm,protect_current_replica,True,True,ok
+img-resize,keep_warm,keep_warm,protect_current_replica,True,True,ok
+fft,prewarm_candidate,prewarm_candidate,scale_to_one_if_selected,False,True,ok
+ml-infer,prewarm_candidate,prewarm_candidate,scale_to_one_if_selected,False,True,ok
+json-parse,keep_warm,keep_warm,protect_current_replica,True,True,ok
+video-transcode,observe,observe,observe,True,True,ok
+thumbnail,eviction_candidate,eviction_candidate,scale_to_zero_candidate,True,True,ok

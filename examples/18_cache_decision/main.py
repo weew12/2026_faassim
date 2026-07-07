@@ -59,19 +59,32 @@ def main():
     decisions = advisor.evaluate(profiles)
     hints = advisor.build_control_hints(decisions)
 
-    outputs = export_outputs(decisions, hints, output_dir)
+    outputs = export_outputs(decisions, hints, output_dir, config=config)
 
     detail_df = outputs.get("cache_decision_detail")
     if detail_df is not None and len(detail_df) > 0:
-        logger.info("cache decision detail:\\n%s", detail_df.to_string(index=False))
+        logger.info("cache decision detail:\n%s", detail_df.to_string(index=False))
 
     summary_df = outputs.get("cache_decision_summary")
     if summary_df is not None and len(summary_df) > 0:
-        logger.info("cache decision summary:\\n%s", summary_df.to_string(index=False))
+        logger.info("cache decision summary:\n%s", summary_df.to_string(index=False))
 
     rank_df = outputs.get("cache_decision_rank")
     if rank_df is not None and len(rank_df) > 0:
-        logger.info("cache decision rank:\\n%s", rank_df.to_string(index=False))
+        logger.info("cache decision rank:\n%s", rank_df.to_string(index=False))
+
+    paper_highlight_df = outputs.get("cache_decision_paper_highlight")
+    if paper_highlight_df is not None and len(paper_highlight_df) > 0:
+        # 论文 demo 关键：决策分布 + utility top-3 + capacity budget 利用
+        for _, row in paper_highlight_df.iterrows():
+            metric = row["metric"]
+            value = row["value"]
+            if metric.startswith("decision_count__") or metric.startswith("top_utility"):
+                logger.info("paper highlight: %s = %s", metric, value)
+            elif metric.startswith("capacity_budget"):
+                logger.info("paper highlight: %s = %s", metric, value)
+            elif metric.startswith("decision_hint_consistency"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
 
     logger.info("outputs saved to %s", output_dir)
 
