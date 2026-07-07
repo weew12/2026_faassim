@@ -67,6 +67,28 @@ def example_topology() -> Topology:
     return topology
 
 
+def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
+    """
+    轮询 env.metrics.records 直到 invocations 记录数达到 expected_count，
+    或等到 max_wait simtime 秒后退出（避免死等）。
+
+    faas-sim 的 function_trigger(max_requests=N) 只保证 N 个请求被触发（queued），
+    不等待 N 次 invoke 全部跑完。原来的实现用 `env.timeout(4)` 硬等待，
+    当故障模型放大执行时间时容易丢请求；这里改成"看到 N 条 invocations 记录"。
+
+    返回：实际等待的 simtime 秒数。
+    """
+    start = env.now
+    while env.now - start < max_wait:
+        count = sum(
+            1 for r in env.metrics.records if r.measurement == "invocations"
+        )
+        if count >= expected_count:
+            return env.now - start
+        yield env.timeout(poll_interval)
+    return env.now - start
+
+
 class FaultModelBenchmark(Benchmark):
     """
     故障模型实验 Benchmark。
@@ -125,7 +147,14 @@ class FaultModelBenchmark(Benchmark):
         )
 
         # 等待尾部请求和故障时间线写入完成。
-        yield env.timeout(4)
+        # 原来用 env.timeout(4) 硬等待，但故障模型放大执行时间时可能不够。
+        # 这里轮询 env.metrics.records 直到 invocations 数达到 30，或最多等 30 simtime 秒。
+        expected_total = 30
+        waited = yield from wait_for_invocations(env, expected_total, max_wait=30.0)
+        logger.info(
+            "waited %.2f simtime seconds for %d invocations to finish",
+            waited, expected_total,
+        )
 
         logger.info("fault model workload finished")
 
@@ -195,6 +224,23 @@ def main():
     fault_reason_df = dfs.get("fault_reason_distribution")
     if fault_reason_df is not None and len(fault_reason_df) > 0:
         logger.info("fault reason distribution:\\n%s", fault_reason_df.to_string(index=False))
+
+    window_check_df = dfs.get("probe_fault_window_check")
+    if window_check_df is not None and "window_match" in window_check_df.columns:
+        valid = window_check_df["window_match"].dropna()
+        if len(valid) > 0:
+            logger.info(
+                "probe fault window match: %d/%d = %.1f%%",
+                int(valid.sum()), len(valid), float(valid.mean()) * 100,
+            )
+
+    probe_inv_df = dfs.get("probe_invocation_join")
+    if probe_inv_df is not None and "duration_match" in probe_inv_df.columns:
+        all_match = bool(probe_inv_df["duration_match"].all())
+        logger.info(
+            "probe × invocation join: %d rows, all duration_match=%s",
+            len(probe_inv_df), all_match,
+        )
 
     logger.info("outputs saved to %s", output_dir)
 

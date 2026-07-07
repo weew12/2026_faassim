@@ -1,3 +1,3 @@
 ﻿time,name,pod,image,replica_id
-2026-07-06 22:43:26.082059,fault-prone-python-pi,pod-fault-prone-python-pi-1,fault-prone-python-pi-cpu,2301489123008
-2026-07-06 22:43:26.082110,fault-prone-python-pi,pod-fault-prone-python-pi-2,fault-prone-python-pi-cpu,2301488829840
+2026-07-07 15:34:51.309143,fault-prone-python-pi,pod-fault-prone-python-pi-1,fault-prone-python-pi-cpu,2089470873280
+2026-07-07 15:34:51.309188,fault-prone-python-pi,pod-fault-prone-python-pi-2,fault-prone-python-pi-cpu,2089470727568
