@@ -1,0 +1,9 @@
+﻿metric,value
+scheduled_nodes__default_skippy,server_1
+high_capacity_hit_ratio__default_skippy,1.0
+scheduled_nodes__fixed_node,server_0
+high_capacity_hit_ratio__fixed_node,0.0
+default_skippy__avg_probe_seconds__low_load,0.22107858990457857
+fixed_node__avg_probe_seconds__low_load,0.22107858990457857
+default_skippy__avg_probe_seconds__medium_load,0.2197393019288626
+fixed_node__avg_probe_seconds__medium_load,0.2197393019288626

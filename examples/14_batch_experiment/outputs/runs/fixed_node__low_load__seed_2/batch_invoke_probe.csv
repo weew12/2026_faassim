@@ -1,13 +1,13 @@
 ﻿time,base_duration,jitter,duration,seed,rps,case_id,policy,workload,function_name,node_name,request_id
-2026-07-06 22:43:32.425611,0.18,0.07648274175113995,0.25648274175113994,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,85
-2026-07-06 22:43:32.425766,0.18,0.07582619896474795,0.25582619896474795,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,86
-2026-07-06 22:43:32.425811,0.18,0.004524109418144695,0.18452410941814468,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,87
-2026-07-06 22:43:32.425853,0.18,0.006789759612713731,0.1867897596127137,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,88
-2026-07-06 22:43:32.425951,0.18,0.06683991025035596,0.24683991025035595,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,89
-2026-07-06 22:43:32.425993,0.18,0.058877599125481864,0.23887759912548184,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,90
-2026-07-06 22:43:32.426030,0.18,0.05357843211521767,0.23357843211521767,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,91
-2026-07-06 22:43:32.426118,0.18,0.024650916607131538,0.20465091660713153,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,92
-2026-07-06 22:43:32.426159,0.18,0.048475533254276996,0.228475533254277,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,93
-2026-07-06 22:43:32.426771,0.18,0.04854413869126703,0.22854413869126702,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,94
-2026-07-06 22:43:32.426887,0.18,0.04649632136896025,0.22649632136896025,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,95
-2026-07-06 22:43:32.426933,0.18,0.012670629620384446,0.19267062962038445,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_50,96
+2026-07-07 16:45:57.463453,0.18,0.07648274175113995,0.25648274175113994,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,85
+2026-07-07 16:45:57.463515,0.18,0.07582619896474795,0.25582619896474795,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,86
+2026-07-07 16:45:57.463543,0.18,0.004524109418144695,0.18452410941814468,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,87
+2026-07-07 16:45:57.463568,0.18,0.006789759612713731,0.1867897596127137,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,88
+2026-07-07 16:45:57.463635,0.18,0.06683991025035596,0.24683991025035595,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,89
+2026-07-07 16:45:57.463677,0.18,0.058877599125481864,0.23887759912548184,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,90
+2026-07-07 16:45:57.463704,0.18,0.05357843211521767,0.23357843211521767,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,91
+2026-07-07 16:45:57.463766,0.18,0.024650916607131538,0.20465091660713153,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,92
+2026-07-07 16:45:57.463793,0.18,0.048475533254276996,0.228475533254277,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,93
+2026-07-07 16:45:57.463819,0.18,0.04854413869126703,0.22854413869126702,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,94
+2026-07-07 16:45:57.463881,0.18,0.04649632136896025,0.22649632136896025,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,95
+2026-07-07 16:45:57.463915,0.18,0.012670629620384446,0.19267062962038445,2,3,fixed_node__low_load__seed_2,fixed_node,low_load,batch-exp-python-pi,server_0,96

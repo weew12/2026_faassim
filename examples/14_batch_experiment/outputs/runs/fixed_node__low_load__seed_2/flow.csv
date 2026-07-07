@@ -1,2 +1,2 @@
 ﻿time,bytes,duration,source,sink,action_type
-2026-07-06 22:43:32.425502,48000000,0.4006057531080562,registry,server_50,docker_pull
+2026-07-07 16:45:57.463603,48000000,2.0183814432989693,registry,server_0,docker_pull

@@ -15,7 +15,7 @@ import logging
 import sys
 from pathlib import Path
 
-from analysis import export_batch_results
+from analysis import export_batch_results, self_check_batch_results, log_self_check
 from experiment_config import (
     default_batch_config,
     build_experiment_cases,
@@ -59,14 +59,29 @@ def main():
         case_results.append(dfs["case_result"])
 
     outputs = export_batch_results(output_dir, case_results)
+    self_check = self_check_batch_results(
+        case_results, output_dir, outputs["batch_results"],
+    )
+    log_self_check(self_check)
 
     batch_results_df = outputs.get("batch_results")
     if batch_results_df is not None and len(batch_results_df) > 0:
-        logger.info("batch results:\\n%s", batch_results_df.to_string(index=False))
+        logger.info("batch results:\n%s", batch_results_df.to_string(index=False))
 
     batch_summary_df = outputs.get("batch_summary")
     if batch_summary_df is not None and len(batch_summary_df) > 0:
-        logger.info("batch summary:\\n%s", batch_summary_df.to_string(index=False))
+        logger.info("batch summary:\n%s", batch_summary_df.to_string(index=False))
+
+    paper_highlight_df = outputs.get("batch_paper_highlight")
+    if paper_highlight_df is not None and len(paper_highlight_df) > 0:
+        # 论文 demo 关键：策略实际选到的节点 + 高 capacity 命中率
+        for _, row in paper_highlight_df.iterrows():
+            metric = row["metric"]
+            value = row["value"]
+            if metric.startswith("high_capacity_hit_ratio"):
+                logger.info("paper highlight: %s = %.3f", metric, float(value))
+            else:
+                logger.info("paper highlight: %s = %s", metric, value)
 
     logger.info("outputs saved to %s", output_dir)
 

@@ -1,2 +1,2 @@
-﻿case_id,policy,scheduler,workload,rps,max_requests,seed,probe_events,invocation_events,schedule_events,flow_events,avg_probe_duration,max_probe_duration,p95_probe_duration,scheduled_node_count,flow_total_bytes
-fixed_node__low_load__seed_1,fixed_node,fixed_node,low_load,3,12,1,12,12,6,1,0.21851082224417193,0.2477946989549786,0.24728127910221465,1,48000000
+﻿case_id,policy,scheduler,workload,rps,max_requests,seed,probe_events,invocation_events,schedule_events,flow_events,scheduled_node,scheduled_node_count,avg_probe_duration,max_probe_duration,p95_probe_duration,flow_total_bytes
+fixed_node__low_load__seed_1,fixed_node,fixed_node,low_load,3,12,1,12,12,6,1,server_0,1,0.21851082224417193,0.2477946989549786,0.24728127910221465,48000000
