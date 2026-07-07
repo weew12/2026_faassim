@@ -74,19 +74,32 @@ def main():
     decisions = autoscaler.evaluate(states)
     control_plans = autoscaler.build_control_plans(decisions)
 
-    outputs = export_outputs(decisions, control_plans, output_dir)
+    outputs = export_outputs(decisions, control_plans, output_dir, config=config)
 
     decision_df = outputs.get("cache_aware_autoscaling_decision")
     if decision_df is not None and len(decision_df) > 0:
-        logger.info("cache aware autoscaling decisions:\\n%s", decision_df.to_string(index=False))
+        logger.info("cache aware autoscaling decisions:\n%s", decision_df.to_string(index=False))
 
     action_summary_df = outputs.get("cache_aware_autoscaling_action_summary")
     if action_summary_df is not None and len(action_summary_df) > 0:
-        logger.info("cache aware autoscaling action summary:\\n%s", action_summary_df.to_string(index=False))
+        logger.info("cache aware autoscaling action summary:\n%s", action_summary_df.to_string(index=False))
 
     time_summary_df = outputs.get("cache_aware_autoscaling_time_summary")
     if time_summary_df is not None and len(time_summary_df) > 0:
-        logger.info("cache aware autoscaling time summary:\\n%s", time_summary_df.to_string(index=False))
+        logger.info("cache aware autoscaling time summary:\n%s", time_summary_df.to_string(index=False))
+
+    paper_highlight_df = outputs.get("cache_aware_autoscaling_paper_highlight")
+    if paper_highlight_df is not None and len(paper_highlight_df) > 0:
+        # 论文 demo 关键：R_cache vs R_load 主导 + 容量预算利用
+        for _, row in paper_highlight_df.iterrows():
+            metric = row["metric"]
+            value = row["value"]
+            if metric.startswith("r_load_dominant_ratio") or metric.startswith("cache_budget_utilization"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
+            elif metric.startswith("action_count__") or metric.startswith("r_load_dominant_events"):
+                logger.info("paper highlight: %s = %s", metric, value)
+            elif metric.startswith("decision_plan_consistency"):
+                logger.info("paper highlight: %s = %.4f", metric, float(value))
 
     logger.info("outputs saved to %s", output_dir)
 
