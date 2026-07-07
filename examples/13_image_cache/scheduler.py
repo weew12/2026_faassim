@@ -71,7 +71,10 @@ class SequenceNodeScheduler:
         selected = self._find_node(nodes, target_name)
 
         if selected is None:
-            selected = self._fallback_node(nodes)
+            raise RuntimeError(
+                f"target_node {target_name!r} not found in cluster nodes "
+                f"(available server nodes: {[n.name for n in nodes if n.name.startswith('server')]})"
+            )
 
         needed_images = self._needed_images(pod, selected)
 

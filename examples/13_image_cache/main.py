@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import List, Callable
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -55,15 +55,53 @@ def configure_logging():
     )
 
 
-def example_topology() -> Topology:
+def build_minimal_cache_topology() -> Topology:
     """
-    创建 image_cache 样例使用的拓扑。
+    构造 image_cache 样例使用的最小拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry。
+    拓扑结构：
+
+    ```text
+    DockerRegistry -- internet_link -- switch -- link_server_0 -- server_0
+                                          |
+                                          -- link_server_1 -- server_1
+    ```
+
+    只包含 2 个 server 节点 + 1 个 switch + DockerRegistry，
+    方便 SequenceNodeScheduler 在不同场景中可靠地选择 server_0 / server_1。
+
+    **为什么不复用 UrbanSensingScenario**：
+    ether.scenarios.urbansensing 在连续两次 `UrbanSensingScenario()` 调用时
+    会产生不同的节点集（内部状态污染），导致本样例第二次场景的
+    SequenceNodeScheduler.find_node("server_0") 失败、退回到 server_10，
+    两个场景的 cache 行为完全一样。
+    这里用 ether.core 直接构造最小拓扑，避免这个问题。
     """
     topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
+
+    capacity = Capacity(cpu_millis=2000, memory=2 * 1024 * 1024 * 1024)
+
+    server_0 = Node("server_0", capacity=capacity, arch="x86")
+    server_1 = Node("server_1", capacity=capacity, arch="x86")
+
+    registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+    link_0 = Link(bandwidth=200, tags={"name": "link_server_0", "type": "node_access"})
+    link_1 = Link(bandwidth=200, tags={"name": "link_server_1", "type": "node_access"})
+
+    switch = "switch"
+    internet = "internet"
+
+    topology.add_connection(Connection(internet, registry_link, latency=5))
+    topology.add_connection(Connection(registry_link, switch, latency=5))
+
+    topology.add_connection(Connection(server_0, link_0, latency=2))
+    topology.add_connection(Connection(link_0, switch, latency=1))
+
+    topology.add_connection(Connection(server_1, link_1, latency=2))
+    topology.add_connection(Connection(link_1, switch, latency=1))
+
     topology.init_docker_registry()
+
     return topology
 
 
@@ -155,18 +193,18 @@ class ImageCacheBenchmark(Benchmark):
 def run_scenario(
     scenario_name: str,
     scheduler_factory: Callable[[Environment], object],
+    topology: Topology,
     output_dir: Path,
 ):
     """
     运行一个镜像缓存场景。
 
-    每个场景使用独立 Simulation，避免不同场景之间的节点镜像缓存互相污染。
+    每个场景使用独立 Simulation，但复用同一份 topology，确保 server_0/server_1
+    在不同场景中节点身份一致（避开 ether.scenarios.urbansensing 的状态污染）。
     """
     logger.info("running image cache scenario: %s", scenario_name)
 
-    topology = example_topology()
     benchmark = ImageCacheBenchmark(scenario_name)
-
     sim = Simulation(topology, benchmark, name=scenario_name)
 
     sim.create_scheduler = scheduler_factory
@@ -187,11 +225,15 @@ def main():
     output_dir = Path(__file__).resolve().parent / "outputs"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # 复用同一份拓扑：避免连续构造场景带来的状态污染
+    topology = build_minimal_cache_topology()
+
     scenario_summaries = []
 
     same_node_dfs = run_scenario(
         scenario_name="same_node_cache_reuse",
         scheduler_factory=SequenceNodeScheduler.create_same_node,
+        topology=topology,
         output_dir=output_dir,
     )
     scenario_summaries.append(same_node_dfs["image_cache_summary"])
@@ -199,6 +241,7 @@ def main():
     different_node_dfs = run_scenario(
         scenario_name="different_node_cold_pull",
         scheduler_factory=SequenceNodeScheduler.create_different_node,
+        topology=topology,
         output_dir=output_dir,
     )
     scenario_summaries.append(different_node_dfs["image_cache_summary"])
@@ -206,7 +249,19 @@ def main():
     comparison_df = export_comparison(output_dir, scenario_summaries)
 
     if comparison_df is not None and len(comparison_df) > 0:
-        logger.info("image cache comparison:\\n%s", comparison_df.to_string(index=False))
+        logger.info("image cache comparison:\n%s", comparison_df.to_string(index=False))
+
+    # 论文 demo 关键摘要
+    highlight_path = output_dir / "image_cache_paper_highlight.csv"
+    if highlight_path.exists():
+        import pandas as _pd
+        hl = _pd.read_csv(highlight_path)
+        saved_row = hl[hl.metric == "saved_pull_seconds_by_cache"]
+        if not saved_row.empty:
+            logger.info(
+                "paper highlight: cache reuse saved %.2f simtime seconds of cold pull",
+                float(saved_row["value"].iloc[0]),
+            )
 
     logger.info("outputs saved to %s", output_dir)
 

@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-06 22:43:30.203204,deploy,image-cache-first,server_0,1850718062640
-2026-07-06 22:43:30.204219,startup,image-cache-first,server_0,1850718062640
-2026-07-06 22:43:30.204232,setup,image-cache-first,server_0,1850718062640
-2026-07-06 22:43:30.204239,finish,image-cache-first,server_0,1850718062640
-2026-07-06 22:43:30.204589,deploy,image-cache-second,server_0,1850717774672
-2026-07-06 22:43:30.204684,startup,image-cache-second,server_0,1850717774672
-2026-07-06 22:43:30.204694,setup,image-cache-second,server_0,1850717774672
-2026-07-06 22:43:30.204701,finish,image-cache-second,server_0,1850717774672
+2026-07-07 16:10:30.425775,deploy,image-cache-first,server_0,1771441814704
+2026-07-07 16:10:30.426565,startup,image-cache-first,server_0,1771441814704
+2026-07-07 16:10:30.426577,setup,image-cache-first,server_0,1771441814704
+2026-07-07 16:10:30.426584,finish,image-cache-first,server_0,1771441814704
+2026-07-07 16:10:30.427250,deploy,image-cache-second,server_0,1771441923536
+2026-07-07 16:10:30.427437,startup,image-cache-second,server_0,1771441923536
+2026-07-07 16:10:30.427474,setup,image-cache-second,server_0,1771441923536
+2026-07-07 16:10:30.427492,finish,image-cache-second,server_0,1771441923536

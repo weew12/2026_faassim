@@ -1,0 +1,8 @@
+﻿metric,value
+same_node_total_pull_seconds,5.317350515463917
+different_node_total_pull_seconds,10.634701030927834
+same_node_cold_pull_count,1.0
+different_node_cold_pull_count,2.0
+saved_pull_seconds_by_cache,5.317350515463917
+saved_bytes_by_cache,128000000.0
+speedup_ratio_cold_over_reuse,2.0
