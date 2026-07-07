@@ -175,11 +175,22 @@ def main():
 
     resource_summary_df = dfs.get("resource_monitor_summary")
     if resource_summary_df is not None and len(resource_summary_df) > 0:
-        logger.info("resource monitor summary:\\n%s", resource_summary_df.to_string(index=False))
+        logger.info("resource monitor summary:\n%s", resource_summary_df.to_string(index=False))
+
+    per_replica_df = dfs.get("resource_utilization_per_replica")
+    if per_replica_df is not None and len(per_replica_df) > 0:
+        logger.info("resource utilization per replica:\n%s", per_replica_df.to_string(index=False))
+
+    join_df = dfs.get("invocation_resource_join")
+    if join_df is not None and len(join_df) > 0:
+        logger.info(
+            "invocation × resource join (first 6 rows):\n%s",
+            join_df.head(6).to_string(index=False),
+        )
 
     invocation_summary_df = dfs.get("resource_monitor_invocation_summary")
     if invocation_summary_df is not None and len(invocation_summary_df) > 0:
-        logger.info("resource monitor invocation summary:\\n%s", invocation_summary_df.to_string(index=False))
+        logger.info("resource monitor invocation summary:\n%s", invocation_summary_df.to_string(index=False))
 
     logger.info("outputs saved to %s", output_dir)
 
