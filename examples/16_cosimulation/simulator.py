@@ -100,6 +100,9 @@ class CosimulationFunctionSimulator(FunctionSimulator):
         env.metrics.log(
             "cosim_invoke_probe",
             {
+                # simtime 字段：让 probe 跟 invocations 的 t_start 能直接 join
+                # （sim.metrics 默认用 wall-clock 记录 `time` 列，simtime 只能手动塞）
+                "simtime": float(env.now),
                 "base_duration": self.base_duration,
                 "runtime_factor": runtime_factor,
                 "network_delay": network_delay,
