@@ -101,8 +101,15 @@ def main():
                 logger.info("paper highlight: %s = %.4f", metric, float(value))
             elif metric.startswith("image_cache_hit_rate_improvement") or metric.startswith("data_cache_hit_rate_improvement"):
                 logger.info("paper highlight: %s = %.4f", metric, float(value))
-            elif metric.startswith("warm_hit_rate__") or metric.startswith("r_dominant_summary"):
+            elif metric.startswith("warm_hit_rate__") or metric.startswith("r_dominant_source"):
                 logger.info("paper highlight: %s = %s", metric, value)
+
+    # data self-check 一句话总结（沿用 02-21 模式）
+    self_check_result = outputs.get("self_check_result") or {}
+    n_pass = self_check_result.get("n_pass", 0)
+    n_fail = self_check_result.get("n_fail", 0)
+    n_total = n_pass + n_fail
+    logger.info("data self-check: %d / %d PASS", n_pass, n_total)
 
     logger.info("outputs saved to %s", output_dir)
 

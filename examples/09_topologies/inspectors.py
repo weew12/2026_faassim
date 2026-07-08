@@ -154,8 +154,17 @@ def collect_route_records(topology_case) -> pd.DataFrame:
 
     sources = []
     if not use_graph_fallback:
+        # 手写拓扑优先把 cloud 节点作为 sink，避免由字典插入顺序决定路由方向。
         sink_name, sink_node = node_items[-1]
-        for source_name, source_node in node_items[:-1]:
+        for candidate_name, candidate_node in node_items:
+            readable_name = safe_name(candidate_node).lower()
+            if "cloud" in candidate_name.lower() or "cloud" in readable_name:
+                sink_name, sink_node = candidate_name, candidate_node
+                break
+
+        for source_name, source_node in node_items:
+            if source_node is sink_node:
+                continue
             sources.append((source_name, source_node))
 
     # 2) Fallback：对于 urban_sensing，从 graph 里挑名字像 server_xxx / switch_lan_xx 等

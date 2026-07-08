@@ -186,7 +186,7 @@ def build_paper_highlight(
     config: Any,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（含 note 列，沿用 02-19 模式）。
 
     cache_aware_autoscaling 样例的论文 demo 关注的是：
     1. R_cache vs R_load 主导关系：什么时候 R_load 主导（scale_out）vs R_cache 主导（prewarm）
@@ -197,7 +197,7 @@ def build_paper_highlight(
     rows: List[Dict[str, Any]] = []
 
     if decision_df.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     # 1. 决策分布
     for action in ["scale_out", "scale_in", "protect", "prewarm", "observe"]:
@@ -205,6 +205,7 @@ def build_paper_highlight(
         rows.append({
             "metric": f"action_count__{action}",
             "value": n,
+            "note": f"{action} 动作的 state 数（论文 demo 关键分布指标）",
         })
 
     # 2. R_cache vs R_load 主导分析
@@ -223,40 +224,58 @@ def build_paper_highlight(
         rows.append({
             "metric": "r_load_dominant_events",
             "value": n_load_dominant,
+            "note": "R_load > R_cache 主导的 events（R_load 触发扩容）",
         })
         rows.append({
             "metric": "r_cache_only_events",
             "value": n_cache_dominant,
+            "note": "R_cache > 0 且 R_load == 0 的 events（仅靠 cache 保护）",
         })
         rows.append({
             "metric": "r_both_active_events",
             "value": n_both,
+            "note": "R_cache > 0 且 R_load > 0 的 events（cache + load 同时保护）",
         })
         rows.append({
             "metric": "r_neither_active_events",
             "value": n_neither,
+            "note": "R_cache == 0 且 R_load == 0 的 events（idle 状态）",
         })
         rows.append({
             "metric": "r_load_dominant_ratio",
             "value": float(n_load_dominant / n_total) if n_total > 0 else 0.0,
+            "note": "R_load 主导占比（论文 demo 关键数字）",
         })
 
     # 3. 容量预算利用
     if "selected_by_cache_budget" in decision_df.columns:
         selected = decision_df[decision_df["selected_by_cache_budget"] == True]  # noqa: E712
-        selected_mem = int(selected["memory_units"].sum())
+        selected_mem_total = int(selected["memory_units"].sum())
+        per_time_selected = (
+            selected.groupby("time")["memory_units"].sum()
+            if not selected.empty and "time" in selected.columns else pd.Series(dtype=float)
+        )
+        max_selected_mem_per_time = int(per_time_selected.max()) if not per_time_selected.empty else 0
         rows.append({
             "metric": "cache_budget_used",
-            "value": selected_mem,
+            "value": selected_mem_total,
+            "note": "被 cache budget 实际选中的 memory_units 跨 time 累加总和（不是单轮利用率）",
+        })
+        rows.append({
+            "metric": "cache_budget_max_used_per_time",
+            "value": max_selected_mem_per_time,
+            "note": "单个 time 内被 cache budget 选中的最大 memory_units（用于计算利用率）",
         })
         rows.append({
             "metric": "cache_budget_total",
             "value": int(config.cache_capacity_budget_units),
+            "note": "总 cache budget（= 5 unit）",
         })
         rows.append({
             "metric": "cache_budget_utilization",
-            "value": float(selected_mem / config.cache_capacity_budget_units)
+            "value": float(max_selected_mem_per_time / config.cache_capacity_budget_units)
             if config.cache_capacity_budget_units > 0 else 0.0,
+            "note": "单一 time 最大 cache budget 利用率（= max per-time selected memory / budget）",
         })
         # R_cache 被 budget 拒绝的次数
         rejected = int(
@@ -265,6 +284,7 @@ def build_paper_highlight(
         rows.append({
             "metric": "r_cache_rejected_by_budget",
             "value": rejected,
+            "note": "R_cache > 0 但被 budget 拒绝的 events（被限缩为 0）",
         })
 
     # 4. decision×plan 一致性
@@ -274,14 +294,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "decision_plan_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "decision × control_plan join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "decision_plan_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "decision_plan_total",
             "value": n,
+            "note": "decision×plan join 总行数（应 == decision 数）",
         })
 
     # 5. 时间序列上 R_cache vs R_load 总和
@@ -301,17 +324,20 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"per_time_total_r_cache__{t}",
                 "value": int(trow["total_r_cache"]),
+                "note": f"time={t} 所有函数 R_cache 总和（per-time 时间序列）",
             })
             rows.append({
                 "metric": f"per_time_total_r_load__{t}",
                 "value": int(trow["total_r_load"]),
+                "note": f"time={t} 所有函数 R_load 总和（per-time 时间序列）",
             })
             rows.append({
                 "metric": f"per_time_total_r_desired__{t}",
                 "value": int(trow["total_r_desired"]),
+                "note": f"time={t} 所有函数 R_desired 总和（per-time 时间序列）",
             })
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["metric", "value", "note"])
 
 
 def self_check(
@@ -322,7 +348,7 @@ def self_check(
     config: Any,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（cache_aware_autoscaling 10 个不变量）。
+    数据自洽段（cache_aware_autoscaling 13 个不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -376,6 +402,12 @@ def self_check(
         })
 
     # 5. decision×plan join 100% match
+    n_join = len(decision_plan_join_df)
+    checks.append({
+        "name": "decision_plan_join_row_count",
+        "status": "PASS" if n_join == n_decisions else "FAIL",
+        "detail": f"join rows={n_join}, decisions={n_decisions}",
+    })
     if not decision_plan_join_df.empty and "match" in decision_plan_join_df.columns:
         n = len(decision_plan_join_df)
         matched = int(decision_plan_join_df["match"].sum())
@@ -432,13 +464,57 @@ def self_check(
                 "detail": f"decision_plan_consistency={v:.4f}",
             })
 
-    # 10. paper highlight 里 r_load_dominant_ratio + r_cache_only_ratio + r_both_ratio + r_neither_ratio == 1.0
+    # 10. paper highlight 里的 cache_budget_utilization 应等于每个 time 最大选中 memory / budget
     if not paper_highlight_df.empty:
-        n_total = n_decisions
-        # r_load_dominant + r_cache_only + r_both + r_neither = n_total
-        # 但 r_load_dominant 包含 r_both_active（因为 r_load > r_cache 时 r_cache 也可能 > 0）
-        # 实际上这些 metric 是从 paper highlight 拿
-        pass
+        hl_rows = paper_highlight_df[
+            paper_highlight_df.metric == "cache_budget_utilization"
+        ]
+        if not hl_rows.empty and "selected_by_cache_budget" in decision_df.columns:
+            selected = decision_df[decision_df["selected_by_cache_budget"] == True]  # noqa: E712
+            if selected.empty:
+                expected_v = 0.0
+            else:
+                max_mem = float(selected.groupby("time")["memory_units"].sum().max())
+                expected_v = max_mem / float(config.cache_capacity_budget_units)
+            hl_v = float(hl_rows["value"].iloc[0])
+            checks.append({
+                "name": "paper_highlight_cache_budget_utilization",
+                "status": "PASS" if abs(hl_v - expected_v) < 1e-6 else "FAIL",
+                "detail": f"highlight={hl_v:.6f}, expected={expected_v:.6f}",
+            })
+
+    # 11. plan 安全语义：scale_in 且 in_flight>0 时不能 safe_to_execute
+    if not decision_plan_join_df.empty:
+        bad = decision_plan_join_df[
+            (decision_plan_join_df["action"] == "scale_in")
+            & (decision_plan_join_df["in_flight_requests"] > 0)
+            & (decision_plan_join_df["safe_to_execute"] == True)  # noqa: E712
+        ]
+        checks.append({
+            "name": "scale_in_in_flight_not_safe",
+            "status": "PASS" if bad.empty else "FAIL",
+            "detail": f"unsafe scale_in rows with in_flight>0: {len(bad)}",
+        })
+
+    # 12. 导出的表结构不应包含 pandas 默认索引列
+    frames_to_check = {
+        "decision": decision_df,
+        "plan": plan_df,
+        "decision_plan_join": decision_plan_join_df,
+        "paper_highlight": paper_highlight_df,
+    }
+    bad_columns = []
+    for name, df in frames_to_check.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -501,6 +577,12 @@ def export_outputs(
     )
     log_self_check(self_check_result)
 
+    # 导出 self_check 结果到 csv（沿用 02-19 模式）
+    self_check_path = output_dir / "cache_aware_autoscaling_self_check.csv"
+    self_check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    self_check_df.to_csv(self_check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", self_check_path)
+
     outputs = {
         "cache_aware_autoscaling_decision": decision_df,
         "cache_aware_autoscaling_control_plan": plan_df,
@@ -516,4 +598,6 @@ def export_outputs(
         df.to_csv(path, index=False, encoding="utf-8-sig")
         logger.info("saved %s", path)
 
+    outputs["cache_aware_autoscaling_self_check"] = self_check_df
+    outputs["self_check_result"] = self_check_result
     return outputs

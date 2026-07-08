@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_total_resource_samples_at_least_10,True
+02_monitored_replicas_is_2,True
+03_overall_max_cpu_util_above_0.5,True
+04_invocations_count_is_12,True
+05_join_rows_equals_invocations,True
+06_resource_join_has_samples,True
+07_per_replica_rows_is_2,True
+08_per_replica_samples_sum_matches,True
+09_invoke_dispatch_probe_events_is_12,True
+10_invoke_probe_join_consistent,True

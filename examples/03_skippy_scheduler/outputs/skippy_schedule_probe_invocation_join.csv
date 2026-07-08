@@ -1,0 +1,2 @@
+﻿total_schedule_probe_after,total_schedule_results,total_dispatch_probes,total_invocation_events,pods_with_probe,functions_with_invocations,invoke_probe_join_rows,invoke_probe_join_all_match,probe_invocation_consistent
+5,5,40,40,5,3,40,True,True

@@ -1,0 +1,24 @@
+﻿name,status,detail
+request_result_row_count,PASS,"requests=105, expected=105 (3 cases × 35 requests)"
+candidate_score_count,PASS,"candidates=630, requests=105"
+candidate_count_per_request_consistent,PASS,"candidate groups=105, candidates per request=6"
+policy_summary_row_count,PASS,"summary rows=3, expected=3"
+case_request_count__cache_aware_joint,PASS,"request_count=35, expected=35"
+case_request_count__faascache,PASS,"request_count=35, expected=35"
+case_request_count__load_only,PASS,"request_count=35, expected=35"
+baseline_comparison_row_count,PASS,"baseline rows=3, expected=3"
+baseline_comparison_has_load_only,PASS,"case_ids=['cache_aware_joint', 'faascache', 'load_only']"
+result_candidate_join_row_count,PASS,"join rows=105, requests=105"
+result_candidate_join_match,PASS,matched=105/105
+cache_aware_joint_candidate_max_score,PASS,cache_aware_joint matched=35/35 (must be max-score)
+request_decision_join_row_count,PASS,"join rows=105, requests=105"
+request_decision_join_match,PASS,matched=105/105
+paper_highlight_metric_count,PASS,"paper_highlight metrics=49, expected=49"
+paper_highlight_warm_hit_rate__cache_aware_joint,PASS,"summary=0.571429, highlight=0.571429"
+paper_highlight_warm_hit_rate__faascache,PASS,"summary=0.542857, highlight=0.542857"
+paper_highlight_warm_hit_rate__load_only,PASS,"summary=0.200000, highlight=0.200000"
+paper_highlight_image_cache_improvement,PASS,"highlight=0.485714, expected=0.485714"
+cache_aware_joint_ge_faascache_ge_load_only,PASS,"ca=0.5714, fc=0.5429, lo=0.2000 (ca >= fc >= lo 期望)"
+paper_highlight_result_candidate_consistency,PASS,result_candidate_consistency=1.0000
+paper_highlight_request_decision_consistency,PASS,request_decision_consistency=1.0000
+export_tables_have_no_index_column,PASS,no pandas index columns

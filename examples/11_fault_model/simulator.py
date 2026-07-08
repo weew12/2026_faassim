@@ -84,19 +84,29 @@ class FaultModelFunctionSimulator(FunctionSimulator):
         注意：
         默认 DefaultFaasSystem 会在 invoke 返回后继续记录 invocations。
         因此本样例使用 fault_model_probe 作为请求成败的主要判断来源。
+
+        关键探针（沿用 02-10 的 invoke_dispatch_probe 模式）：
+        入口 simtime + replica_id + request_id + expected_t_exec（按
+        decision.final_duration 真实派发值），用于 probe×invocation join
+        自洽检查；故障判定仍走 fault_model_probe 单独记录。
         """
         node = replica.node
         decision = self.fault_model.decide(env.now, request.request_id, node.name)
 
-        logger.info(
-            "[simtime=%.2f] fault decision request=%s function=%s node=%s success=%s reason=%s duration=%.3f",
-            env.now,
-            request.request_id,
-            replica.function.name,
-            node.name,
-            decision.success,
-            decision.reason,
-            decision.final_duration,
+        # 派发探针（沿用 02-10 模式）：先把 simtime + replica_id 写进去，
+        # 再让 fault_model 决定 final_duration 写进 expected_t_exec。
+        # 这样后续 probe×invocation join 可以验证 simulator 派发的
+        # final_duration 与 invocations.t_exec 完全一致。
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "expected_t_exec": float(decision.final_duration),
+            },
+            function_name=replica.function.name,
+            node=node.name,
         )
 
         env.metrics.log(
@@ -114,6 +124,17 @@ class FaultModelFunctionSimulator(FunctionSimulator):
             replica_id=id(replica),
             reason=decision.reason,
             active_fault=decision.active_fault,
+        )
+
+        logger.info(
+            "[simtime=%.2f] fault decision request=%s function=%s node=%s success=%s reason=%s duration=%.3f",
+            env.now,
+            request.request_id,
+            replica.function.name,
+            node.name,
+            decision.success,
+            decision.reason,
+            decision.final_duration,
         )
 
         if not decision.success:

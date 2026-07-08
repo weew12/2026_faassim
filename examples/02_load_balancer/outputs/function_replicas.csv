@@ -1,4 +1,4 @@
 ﻿time,name,pod,image,replica_id
-2026-07-06 23:43:42.602493,load-balanced-python-pi,pod-load-balanced-python-pi-1,load-balanced-python-pi-cpu,2195847957200
-2026-07-06 23:43:42.602539,load-balanced-python-pi,pod-load-balanced-python-pi-2,load-balanced-python-pi-cpu,2195847745360
-2026-07-06 23:43:42.612818,load-balanced-python-pi,pod-load-balanced-python-pi-3,load-balanced-python-pi-cpu,2195847749520
+2026-07-07 18:31:36.066970,load-balanced-python-pi,pod-load-balanced-python-pi-1,load-balanced-python-pi-cpu,1923387507104
+2026-07-07 18:31:36.067016,load-balanced-python-pi,pod-load-balanced-python-pi-2,load-balanced-python-pi-cpu,1923387413264
+2026-07-07 18:31:36.068640,load-balanced-python-pi,pod-load-balanced-python-pi-3,load-balanced-python-pi-cpu,1923387417424

@@ -106,7 +106,20 @@ class ImagePullFunctionSimulator(FunctionSimulator):
         模拟一次函数调用。
 
         本样例重点是镜像拉取，调用阶段只保留极小固定耗时。
+        同时向 metrics 写 invoke_dispatch_probe（仿 02/03 模式），
+        便于后续做 probe×invocation join 验证。
         """
+        # 派发 probe：simtime + replica_id 关键标识
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
+
         yield env.timeout(0.05)
 
     def teardown(self, env: Environment, replica: FunctionReplica):

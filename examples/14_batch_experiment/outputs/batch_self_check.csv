@@ -1,0 +1,12 @@
+﻿name,status,detail,passed
+probe_invocation_join_match__default_skippy__low_load__seed_1,PASS,"duration_match=12/12, probe_rows=12, invocation_rows=12",True
+probe_invocation_join_match__default_skippy__low_load__seed_2,PASS,"duration_match=12/12, probe_rows=12, invocation_rows=12",True
+probe_invocation_join_match__default_skippy__medium_load__seed_1,PASS,"duration_match=24/24, probe_rows=24, invocation_rows=24",True
+probe_invocation_join_match__default_skippy__medium_load__seed_2,PASS,"duration_match=24/24, probe_rows=24, invocation_rows=24",True
+probe_invocation_join_match__fixed_node__low_load__seed_1,PASS,"duration_match=12/12, probe_rows=12, invocation_rows=12",True
+probe_invocation_join_match__fixed_node__low_load__seed_2,PASS,"duration_match=12/12, probe_rows=12, invocation_rows=12",True
+probe_invocation_join_match__fixed_node__medium_load__seed_1,PASS,"duration_match=24/24, probe_rows=24, invocation_rows=24",True
+probe_invocation_join_match__fixed_node__medium_load__seed_2,PASS,"duration_match=24/24, probe_rows=24, invocation_rows=24",True
+batch_results_row_count,PASS,"batch_results rows=8, ran cases=8",True
+high_capacity_hit_ratio__default_skippy,PASS,"hit 4/4 = 1.00, expected=1.00",True
+high_capacity_hit_ratio__fixed_node,PASS,"hit 0/4 = 0.00, expected=0.00",True

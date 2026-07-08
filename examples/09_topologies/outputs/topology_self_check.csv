@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_total_topologies_is_4,True
+02_all_nodes_positive,True
+03_all_edges_positive,True
+04_edges_total_matches_summary,True
+05_routes_total_matches_summary,True
+06_urban_sensing_has_routes,True
+07_all_topology_has_routes,True
+08_nodes_total_matches_summary,True
+09_routes_has_required_columns,True
+10_paper_self_consistent,True

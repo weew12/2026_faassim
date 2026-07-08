@@ -1,2 +1,2 @@
 ﻿total_resource_samples,monitored_replicas,monitored_nodes,overall_avg_cpu_util,overall_max_cpu_util,overall_avg_mem_util,overall_max_mem_util,overall_avg_cpu_millis,overall_max_cpu_millis,overall_avg_mem_bytes,overall_max_mem_bytes
-13,2,1,0.4307692307692307,0.7,0.0008786757970540098,0.001427848170212766,37907.6923076923,61599.99999999999,165191049.84615386,268435456.0
+12,2,1,0.5833333333333333,1.05,0.10416666666666667,0.1875,2333.3333333333335,4200.0,223696213.33333334,402653184.0

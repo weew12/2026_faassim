@@ -119,8 +119,18 @@ def main():
     # 数据自洽段（与 14 的 self_check_batch_results 风格一致）
     self_check_result = self_check(
         run_metrics_df, summary_df, comparison_df, paper_highlight_df,
+        output_dir=config.output_dir,
     )
     log_self_check(self_check_result)
+
+    # data self-check 汇总（仿 02-14 模式）
+    n_pass = self_check_result.get("n_pass", 0)
+    n_total = n_pass + self_check_result.get("n_fail", 0)
+    logger.info("data self-check: %d / %d PASS", n_pass, n_total)
+    if self_check_result.get("n_fail", 0) > 0:
+        for c in self_check_result.get("checks") or []:
+            if c["status"] != "PASS":
+                logger.warning("  FAILED: %s", c["name"])
 
     logger.info("experiment run metrics:\n%s", run_metrics_df.to_string(index=False))
     logger.info("experiment summary:\n%s", summary_df.to_string(index=False))

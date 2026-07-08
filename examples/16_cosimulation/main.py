@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -89,16 +89,45 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 的内部状态污染
+# 16 之前直接用 UrbanSensingScenario；为了和 02-15 统一，改用最小 4-server 拓扑
+# 构造一次复用。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建 cosimulation 样例使用的拓扑。
+    创建 cosimulation 样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry。
+    为什么不复用 UrbanSensingScenario：
+    ether.scenarios.urbansensing 在连续构造时会返回不同的节点集
+    （server_0..9、server_10..19、...、server_70..79），可能让 cosim 控制器
+    观察到的节点状态不一致。这里用 ether.core 直接构造 4 个 server 节点 +
+    Docker Registry，构造一次复用。
+
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        # 镜像拉取链路：DockerRegistry -- internet_link -- switch -- link_server_X -- server_X
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 class CosimulationBenchmark(Benchmark):
@@ -296,6 +325,29 @@ def main():
                 logger.info("paper highlight: %s = %.3fx", metric, float(value))
             elif metric.startswith("avg_final_duration") or metric.startswith("invoke_events"):
                 logger.info("paper highlight: %s = %s", metric, value)
+
+    # data self-check 汇总（仿 02-15 模式）
+    self_check_df = dfs.get("self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        if "passed" in self_check_df.columns:
+            n_pass = int(self_check_df["passed"].sum())
+        else:
+            n_pass = 0
+        if "warned" in self_check_df.columns:
+            n_warn = int(self_check_df["warned"].sum())
+        else:
+            n_warn = 0
+        if "status" in self_check_df.columns:
+            n_fail = int((self_check_df["status"] == "FAIL").sum())
+        else:
+            n_fail = 0
+        n_total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", n_pass, n_total)
+        if n_warn > 0:
+            logger.info("data self-check: %d / %d WARN", n_warn, n_total)
+        if n_fail > 0:
+            for _, row in self_check_df[self_check_df.get("status") == "FAIL"].iterrows():
+                logger.warning("  FAILED: %s", row.get("name", ""))
 
     logger.info("outputs saved to %s", output_dir)
 

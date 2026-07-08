@@ -208,6 +208,12 @@ def main():
     )
     log_self_check(self_check_result)
 
+    # 导出 self_check 结果到 csv（沿用 02-18 模式）
+    self_check_path = output_dir / "cache_aware_scheduler_self_check.csv"
+    self_check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    self_check_df.to_csv(self_check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", self_check_path)
+
     # 论文 demo 关键 log
     if len(paper_highlight_df) > 0:
         for _, row in paper_highlight_df.iterrows():
@@ -219,6 +225,13 @@ def main():
                 logger.info("paper highlight: %s = %.4f", metric, float(value))
             elif metric.startswith("cache_hit_rate__"):
                 logger.info("paper highlight: %s = %s", metric, value)
+
+    # data self-check 一句话总结（沿用 02-18 模式）
+    n_pass = self_check_result.get("n_pass", 0)
+    n_warn = self_check_result.get("n_warn", 0)
+    n_fail = self_check_result.get("n_fail", 0)
+    n_total = n_pass + n_warn + n_fail
+    logger.info("data self-check: %d / %d PASS", n_pass, n_total)
 
     logger.info("outputs saved to %s", output_dir)
 

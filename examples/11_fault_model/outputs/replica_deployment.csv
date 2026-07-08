@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-07 15:34:51.309715,deploy,fault-prone-python-pi,server_0,2089470873280
-2026-07-07 15:34:51.310505,deploy,fault-prone-python-pi,server_0,2089470727568
-2026-07-07 15:34:51.310516,startup,fault-prone-python-pi,server_0,2089470727568
-2026-07-07 15:34:51.310603,setup,fault-prone-python-pi,server_0,2089470727568
-2026-07-07 15:34:51.310612,finish,fault-prone-python-pi,server_0,2089470727568
-2026-07-07 15:34:51.310690,startup,fault-prone-python-pi,server_0,2089470873280
-2026-07-07 15:34:51.310820,setup,fault-prone-python-pi,server_0,2089470873280
-2026-07-07 15:34:51.310828,finish,fault-prone-python-pi,server_0,2089470873280
+2026-07-07 23:26:18.961036,deploy,fault-prone-python-pi,server_0,2031569175616
+2026-07-07 23:26:18.961698,deploy,fault-prone-python-pi,server_0,2031568934608
+2026-07-07 23:26:18.961710,startup,fault-prone-python-pi,server_0,2031568934608
+2026-07-07 23:26:18.961797,setup,fault-prone-python-pi,server_0,2031568934608
+2026-07-07 23:26:18.961806,finish,fault-prone-python-pi,server_0,2031568934608
+2026-07-07 23:26:18.963037,startup,fault-prone-python-pi,server_0,2031569175616
+2026-07-07 23:26:18.963175,setup,fault-prone-python-pi,server_0,2031569175616
+2026-07-07 23:26:18.963182,finish,fault-prone-python-pi,server_0,2031569175616

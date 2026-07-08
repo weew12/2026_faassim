@@ -19,6 +19,7 @@ METRIC_NAMES = [
     "cosim_phase",
     "cosim_workload_phase",
     "cosim_invoke_probe",
+    "invoke_dispatch_probe",
     "invocations",
     "schedule",
     "function_deployments",
@@ -115,7 +116,7 @@ def build_probe_invocation_join(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     probe × invocations 关联（论文 demo 关键证据）。
 
     cosim_invoke_probe 里的 simtime 字段 = invocations 的 t_start。
-    按 (function_name, replica_id, simtime) 关联，验证：
+    按 (function_name, replica_id) 分组，并按 probe.simtime / inv.t_start 顺序对齐，验证：
     - probe.final_duration == inv.t_exec
     - probe.simtime == inv.t_start
     """
@@ -165,12 +166,13 @@ def build_paper_highlight(
     external_trace_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（沿用 02-15 的 metric/value/note 三列模式）。
 
     cosim 样例跟 14/15 不一样：它只跑一个 trace，没有"policy 对比"。
     论文 demo 关注的是：**外部阶段切换如何在 faas-sim 里产生可量化的影响**。
 
     输出：
+    - 跨阶段聚合 metric（total_phases / total_invocations / total_exchange_events）
     - per-phase invoke_events（probe 记录的实际 invoke 数）
     - per-phase avg_final_duration（外部因子 + 网络延迟的最终耗时）
     - per-phase impact_relative_to_normal（相对于 normal phase 的耗时倍数）
@@ -178,6 +180,43 @@ def build_paper_highlight(
     - phase timeline（每个阶段的 start/duration/rps/runtime_factor/network_delay）
     """
     rows: List[Dict[str, Any]] = []
+
+    # 0. 跨阶段聚合 metric
+    total_phases = 0
+    if not external_trace_df.empty and "phase_name" in external_trace_df.columns:
+        total_phases = int(external_trace_df["phase_name"].nunique())
+    rows.append({
+        "metric": "total_phases",
+        "value": total_phases,
+        "note": "外部 trace 的 phase 数（normal / edge_pressure / network_slowdown / cooldown）",
+    })
+
+    if not phase_invoke_summary_df.empty and "invoke_events" in phase_invoke_summary_df.columns:
+        total_invocations = int(phase_invoke_summary_df["invoke_events"].sum())
+        rows.append({
+            "metric": "total_invocations",
+            "value": total_invocations,
+            "note": "所有 phase 的 invoke 总数（应 == trace 总 request 数）",
+        })
+
+    if not exchange_summary_df.empty and "exchange_events" in exchange_summary_df.columns:
+        total_exchange = int(exchange_summary_df["exchange_events"].sum())
+        rows.append({
+            "metric": "total_exchange_events",
+            "value": total_exchange,
+            "note": "外部控制器与 faas-sim 的总状态交换数（每 0.5s 一次 × trace duration）",
+        })
+
+    rows.append({
+        "metric": "phase_summary_count",
+        "value": int(len(phase_invoke_summary_df)) if not phase_invoke_summary_df.empty else 0,
+        "note": "cosim_phase_invoke_summary.csv 的行数（应 == 不同 (phase, action) 组合数）",
+    })
+    rows.append({
+        "metric": "exchange_summary_count",
+        "value": int(len(exchange_summary_df)) if not exchange_summary_df.empty else 0,
+        "note": "cosim_exchange_summary.csv 的行数（应 == 不同 (phase, action) 组合数）",
+    })
 
     if not phase_invoke_summary_df.empty and "phase_name" in phase_invoke_summary_df.columns:
         # 取 normal phase 作为 baseline
@@ -198,15 +237,19 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"invoke_events__{phase}__{action}",
                 "value": inv_events,
+                "note": f"{phase} phase 的 probe 记录 invoke 数（= trigger 量，受 phase 边界 lag 影响）",
             })
             rows.append({
                 "metric": f"avg_final_duration__{phase}__{action}",
                 "value": avg_dur,
+                "note": f"{phase} phase 的 avg_final_duration = base_duration × runtime_factor + network_delay",
             })
             if baseline_dur and baseline_dur > 0 and phase != "normal":
+                impact = float(avg_dur / baseline_dur)
                 rows.append({
                     "metric": f"impact_relative_to_normal__{phase}__{action}",
-                    "value": float(avg_dur / baseline_dur),
+                    "value": impact,
+                    "note": f"{phase} phase 相对 normal baseline 的耗时倍数（论文 demo 关键数字）",
                 })
 
     if not exchange_summary_df.empty and "phase_name" in exchange_summary_df.columns:
@@ -217,6 +260,7 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"exchange_events__{phase}__{action}",
                 "value": events,
+                "note": f"{phase} phase 内外部控制器状态交换次数（控制循环 0.5s 一次）",
             })
 
     if not external_trace_df.empty and "phase_name" in external_trace_df.columns:
@@ -225,14 +269,17 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"trace_rps__{phase}",
                 "value": float(trow["rps"]),
+                "note": f"{phase} phase 的 trace 设定 RPS（外部环境负载）",
             })
             rows.append({
                 "metric": f"trace_runtime_factor__{phase}",
                 "value": float(trow["runtime_factor"]),
+                "note": f"{phase} phase 的 trace 设定 runtime_factor（= 1.0 表示无 CPU 放大）",
             })
             rows.append({
                 "metric": f"trace_network_delay__{phase}",
                 "value": float(trow["network_delay"]),
+                "note": f"{phase} phase 的 trace 设定 network_delay（额外的网络延迟）",
             })
 
     return pd.DataFrame(rows)
@@ -247,7 +294,7 @@ def self_check(
     expected_total_requests: int,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（cosim 11 个不变量）。
+    数据自洽段（cosim 不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -301,13 +348,22 @@ def self_check(
             "detail": "simtime column missing",
         })
 
-    # 6. probe×invocation join duration_match 100%
+    # 6. probe×invocation join 行数必须同时覆盖 probe 和 invocations
+    n_join = len(probe_join_df)
+    checks.append({
+        "name": "probe_invocation_join_row_count",
+        "status": "PASS" if n_join == n_probe == n_inv == expected_total_requests else "FAIL",
+        "detail": f"join rows={n_join}, probe rows={n_probe}, "
+                  f"inv rows={n_inv}, expected={expected_total_requests}",
+    })
+
+    # 7. probe×invocation join duration_match 100%
     if not probe_join_df.empty and "duration_match" in probe_join_df.columns:
         n = len(probe_join_df)
         matched = int(probe_join_df["duration_match"].sum())
         checks.append({
             "name": "probe_invocation_duration_match",
-            "status": "PASS" if matched == n else "FAIL",
+            "status": "PASS" if n > 0 and matched == n else "FAIL",
             "detail": f"duration_match={matched}/{n}",
         })
     else:
@@ -317,17 +373,17 @@ def self_check(
             "detail": "probe_join empty or missing duration_match column",
         })
 
-    # 7. probe×invocation join simtime_match 100%
+    # 8. probe×invocation join simtime_match 100%
     if not probe_join_df.empty and "simtime_match" in probe_join_df.columns:
         n = len(probe_join_df)
         matched = int(probe_join_df["simtime_match"].sum())
         checks.append({
             "name": "probe_invocation_simtime_match",
-            "status": "PASS" if matched == n else "FAIL",
+            "status": "PASS" if n > 0 and matched == n else "FAIL",
             "detail": f"simtime_match={matched}/{n}",
         })
 
-    # 8. per-phase invoke_events 跟 trace rps*duration 接近
+    # 9. per-phase invoke_events 跟 trace rps*duration 接近
     # 注意：phase 边界 lag 会让"前一 phase 触发的 invoke"被 probe 记到前一 phase
     # （probe 在 invoke 开始时记 phase_name，但 invoke 可能跨过 phase 边界完成）。
     # 所以每 phase 实际计数 ∈ [trace_max/2, trace_max * 2] 范围都算合理。
@@ -355,7 +411,7 @@ def self_check(
                               f"(phase 边界 lag 可能让 ±100% 范围内都算合理)",
                 })
 
-    # 9. paper highlight 里每 phase invoke_events 跟 phase_invoke_summary 一致
+    # 10. paper highlight 里每 phase invoke_events 跟 phase_invoke_summary 一致
     if not paper_highlight_df.empty and not phase_invoke_summary_df.empty:
         for _, srow in phase_invoke_summary_df.iterrows():
             phase = srow["phase_name"]
@@ -373,7 +429,7 @@ def self_check(
                 "detail": f"phase_summary={expected}, paper_highlight={hl_v}",
             })
 
-    # 10. cosim_invoke_probe 必须跟 controller 的 cosim_exchange 同样包含 normal phase
+    # 11. cosim_invoke_probe 必须跟 controller 的 cosim_exchange 同样包含 normal phase
     if not probe_df.empty and "phase_name" in probe_df.columns:
         probe_phases = set(probe_df["phase_name"].dropna().unique())
         exch_df = dfs.get("cosim_exchange", pd.DataFrame())
@@ -387,7 +443,7 @@ def self_check(
                           f"exchange phases={sorted(exch_phases)}, missing={sorted(missing)}",
             })
 
-    # 11. cosim_invoke_probe 必须包含 controller action 字段
+    # 12. cosim_invoke_probe 必须包含 controller action 字段
     if not probe_df.empty and "controller_action" in probe_df.columns:
         n_with_action = int(probe_df["controller_action"].notna().sum())
         checks.append({
@@ -479,6 +535,14 @@ def export_outputs(sim, output_dir: Path, external_trace) -> Dict[str, pd.DataFr
     )
     log_self_check(self_check_result)
 
-    dfs["self_check"] = pd.DataFrame(self_check_result.get("checks") or [])
+    # 把 self_check 写到 self_check.csv（仿 02-15 模式）
+    check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    if "status" in check_df.columns:
+        check_df["passed"] = check_df["status"] == "PASS"
+        check_df["warned"] = check_df["status"] == "WARN"
+    check_path = output_dir / "self_check.csv"
+    check_df.to_csv(check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", check_path)
+    dfs["self_check"] = check_df
 
     return dfs

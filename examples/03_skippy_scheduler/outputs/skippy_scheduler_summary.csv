@@ -1,2 +1,2 @@
-﻿total_pods_scheduled,schedule_result_events,schedule_metric_events,candidate_snapshot_events,selected_node_count,max_feasible_nodes,min_feasible_nodes,pods_with_needed_images,pods_with_cached_image,avg_feasible_nodes_full
-4,4,12,120,1,49,49,2,2,49.0
+﻿total_pods_scheduled,schedule_result_events,schedule_metric_events,candidate_snapshot_events,selected_node_count,all_nodes,max_feasible_nodes,min_feasible_nodes,pods_with_filtered_nodes,filtered_candidate_nodes,pods_with_needed_images,pods_with_cached_image,avg_feasible_nodes_full
+5,5,15,20,4,4,4,1,3,8,4,1,2.4

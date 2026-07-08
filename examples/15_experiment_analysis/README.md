@@ -1,220 +1,202 @@
-# 15_experiment_analysis：faas-sim 实验结果分析样例
+# 15_experiment_analysis — 批量实验结果聚合分析
 
-本样例用于演示如何统一读取 faas-sim 实验输出 CSV，并生成标准化 summary 指标、策略对比表、论文 demo 关键摘要和数据自洽段。它**接在 `examples/14_batch_experiment/` 后面使用**（`main.py` 优先读 14 的 outputs）。
+> **目标**：从 14_batch_experiment 的 outputs 统一读取多 run 的 CSV，
+> 生成 run-level 单行指标、按 (policy, workload) 聚合摘要、策略对比表、
+> 论文 demo 关键摘要（含 speedup_ratio 和 relative change）和数据自检段，
+> 自动生成 Markdown 分析报告。
 
-## 运行方式
-
-将 `15_experiment_analysis/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+## 1. 复现步骤
 
 ```bash
+# 1) 跑 14 的批量实验（必须先有 outputs/runs/<case_id>/）
+python -u examples/14_batch_experiment/main.py
+
+# 2) 跑 15 的聚合分析（自动读 14 的 outputs）
 python -u examples/15_experiment_analysis/main.py
+
+# 3) 跑绘图（4 张图：per-run 散点 + policy comparison + hit ratio + 论文摘要）
+python -u examples/15_experiment_analysis/plot.py
 ```
 
-默认情况下，脚本会优先读取：
-
-```text
-examples/14_batch_experiment/outputs/
-```
-
-也可以手动指定输入输出目录：
-
+也可以指定输入输出目录：
 ```bash
 python -u examples/15_experiment_analysis/main.py --input-dir examples/14_batch_experiment/outputs
-```
-
-```bash
 python -u examples/15_experiment_analysis/main.py --output-dir examples/15_experiment_analysis/outputs
 ```
 
-## 样例目标
+输出：
+- `outputs/`：5 个 CSV + 1 个 Markdown 报告 + **self_check.csv**
+- `figures/`：4 张图（png + pdf 同时输出）
 
-该样例主要回答以下问题：
+## 2. 实验设计
 
-1. 如何自动发现多个 run 目录（同时支持 `runs/<case_id>/` 结构和扁平 `<case_id>/` 结构）；
-2. 如何统一读取 `case_result.csv`、`batch_invoke_probe.csv`、`invocations.csv`、`schedule.csv`、`flow.csv` 等文件（缺失文件安全跳过）；
-3. 如何为每个 run 生成标准化指标（含 `scheduled_node` 提取供论文摘要用）；
-4. 如何按 `policy` 和 `workload` 聚合结果；
-5. 如何以 `default_skippy` 为基线生成策略对比表（baseline 自身被跳过）；
-6. 如何生成论文 demo 关键摘要（`high_capacity_hit_ratio` + `speedup_ratio` + per-workload relative change）；
-7. 如何做数据自洽段（9 个不变量）；
-8. 如何生成 Markdown 分析报告。
+### 2.1 14 → 15 工作流
 
-## 输出文件
-
-运行结束后，结果会保存到：
+15 不是单独的仿真样例，而是 14 的**聚合分析器**。15 默认从 14 的 outputs/ 读，缺省回退到 sample_results：
 
 ```text
-examples/15_experiment_analysis/outputs/
+14_batch_experiment 跑 8 个 case
+        ↓
+   outputs/runs/<case_id>/{batch_invoke_probe, invocations, schedule, flow, ...}.csv
+        ↓
+15_experiment_analysis 统一读 + 聚合
+        ↓
+   experiment_run_metrics.csv           # 每 case 单行
+   experiment_summary.csv               # 按 (policy, workload) 聚合
+   experiment_policy_comparison.csv     # 其他 policy vs default_skippy baseline
+   experiment_paper_highlight.csv       # 论文 demo 关键摘要
+   experiment_analysis_report.md        # Markdown 报告
+   self_check.csv                       # 11 项数据自检
 ```
 
-主要文件：
+### 2.2 模块化设计
 
-```text
-experiment_run_metrics.csv            # run-level 单行结果（每 case 一行）
-experiment_summary.csv                # 按 (policy, workload) 聚合
-experiment_policy_comparison.csv      # 其他 policy vs default_skippy baseline
-experiment_paper_highlight.csv        # 论文 demo 关键摘要
-experiment_analysis_report.md         # Markdown 分析报告
+| 文件 | 职责 |
+|------|------|
+| `config.py` | 输入/输出目录解析、source_name 标签 |
+| `loaders.py` | 自动发现 run 目录（支持 `runs/<case_id>/` 和扁平 `<case_id>/` 两种结构）、安全读 CSV |
+| `metrics.py` | 单 run → 单行指标（case_id / policy / workload / seed / scheduled_node / probe_avg_duration / ...） |
+| `aggregation.py` | run_metrics → summary → policy_comparison → paper_highlight |
+| `self_check.py` | 11 项数据自洽检查 + 写 self_check.csv |
+| `report.py` | 生成 Markdown 分析报告（6 节） |
+| `main.py` | 入口：调 loaders → metrics → aggregation → self_check → report |
+
+### 2.3 关键检查
+
+15 的 self_check（11 项）覆盖：
+- run_metrics 行数、probe/invocation 总数一致性、每 run probe/invocation 行数一致性、summary 行数、comparison 行数
+- paper highlight 的 high_capacity_hit_ratio 跟 run_metrics 一致
+- summary 跟 paper highlight 的 avg_probe_seconds 完全一致（4 个 cell）
+
+## 3. 数据自检（11 项 PASS）
+
+```
+data self-check: 11 / 11 PASS
 ```
 
-### 1. `experiment_paper_highlight.csv` —— 论文 demo 核心
+| # | check_id | 含义 |
+|---|---------|------|
+| 01 | `run_metrics_min_rows` | run_metrics 行数 >= 2（应 == 8） |
+| 02 | `total_probe_equals_total_invocation` | total_probes == total_invocations（144 == 144） |
+| 03 | `per_run_probe_equals_invocation` | 每个 run 的 probe_events == invocation_events |
+| 04 | `summary_row_count` | summary 行数 == policies × workloads（2×2=4） |
+| 05 | `comparison_row_count` | comparison 行数 == (policies-1) × workloads（baseline 自身被跳过，1×2=2） |
+| 06 | `high_capacity_hit_ratio__default_skippy` | paper highlight 值 == 实际 run_metrics 计算，且符合预期（4/4=1.00） |
+| 07 | `high_capacity_hit_ratio__fixed_node` | 同上，且符合预期（0/4=0.00） |
+| 08-11 | `avg_probe_seconds_consistency__{policy}__{workload}` | 4 个 cell 的 summary vs highlight 完全一致 |
 
-```text
-metric                                                                value
-scheduled_nodes__default_skippy                                       server_1
-high_capacity_hit_ratio__default_skippy                               1.000
-scheduled_nodes__fixed_node                                           server_0
-high_capacity_hit_ratio__fixed_node                                   0.000
-default_skippy__avg_probe_seconds__low_load                           0.221
-fixed_node__avg_probe_seconds__low_load                               0.221
-default_skippy__avg_probe_seconds__medium_load                        0.220
-fixed_node__avg_probe_seconds__medium_load                            0.220
-speedup_ratio_fixed_over_default_skippy__low_load                     1.000
-speedup_ratio_fixed_over_default_skippy__medium_load                  1.000
-fixed_node_vs_default_skippy__probe_avg_duration_relative__low_load  0.000
-fixed_node_vs_default_skippy__probe_avg_duration_relative__medium_load 0.000
+**关键设计**：15 的 self_check 比 14 多了"summary vs highlight 一致性"检查。
+这种**跨表一致性检查**是聚合分析样例的核心——保证 paper highlight 里的数字
+跟聚合摘要的源数据完全一致，避免论文里出现"两个表对不上"的低级错误。
+
+## 4. 论文 demo 关键摘要（19 条）
+
+`outputs/experiment_paper_highlight.csv` 包含（沿用 02-14 的 metric/value/note 三列模式）：
+
+| metric | 期望/示例 | 含义 |
+|--------|----------|------|
+| `total_runs` | 8 | 分析的 run 总数 |
+| `total_policies` | 2 | 策略数 |
+| `total_workloads` | 2 | 负载数 |
+| `total_seeds` | 2 | 随机种子数 |
+| `total_invocations` | 144 | 跨所有 run 的总 invoke 次数 |
+| `total_probes` | 144 | 跨所有 run 的总 probe 次数（应 == total_invocations） |
+| `comparison_row_count` | 2 | experiment_policy_comparison.csv 行数 |
+| `scheduled_nodes__default_skippy` | server_1 | default_skippy 实际选过的节点集合 |
+| `high_capacity_hit_ratio__default_skippy` | 1.00 | default_skippy 选中 server_1 的比例 |
+| `scheduled_nodes__fixed_node` | server_0 | fixed_node 实际选过的节点集合 |
+| `high_capacity_hit_ratio__fixed_node` | 0.00 | fixed_node 选中 server_1 的比例 |
+| `{policy}__avg_probe_seconds__{workload}` | ~0.22s | 每 policy × workload 下的 mean_probe_avg_duration |
+| `speedup_ratio_fixed_over_default_skippy__{workload}` | 1.0x | **论文 demo 关键数字**：fixed_node / default_skippy 比值 |
+| `{policy}_vs_default_skippy__probe_avg_duration_relative__{workload}` | 0.0 | 相对 baseline 的相对变化 |
+
+**关键诚实性事实**：跟 14 一致——`avg_probe_duration` 在两种 policy 下几乎一致（~0.22s），
+`speedup_ratio = 1.0`，`relative change = 0.0`。sim 模型的 t_exec 等于 base_duration，
+节点 capacity 不会改变 single-invoke duration。
+
+## 5. 4 张图说明
+
+### fig01 — Per-run probe_avg_duration
+- 散点图：x = run_id，y = probe_avg_duration
+- 颜色按 policy（绿=default_skippy，红=fixed_node），形状按 workload
+- **论文价值**：跟 14 的 fig02 几乎一样（同样的 8 个 run 同样数据），但强调**"经过 15 聚合**"得到。
+
+### fig02 — Policy comparison per workload（论文 demo 关键图）
+- 柱状图：x = workload (low/medium)，y = mean_probe_avg_duration
+- 每个 workload 两条柱：default_skippy (绿) vs fixed_node (红)
+- 数字标注每条柱
+- **论文价值**：视觉证明"两个 workload 下两种 policy 表现一致"——sim 模型的诚实性。
+
+### fig03 — Policy high_capacity_node hit ratio
+- 柱状图：default_skippy = 1.00, fixed_node = 0.00
+- **论文价值**：跟 14 的 fig01 一样的核心数字（异构 capacity 拓扑下策略选择差异）。
+
+### fig04 — Paper Highlight Metrics
+- 双子图横向条形图：左侧是 count 指标，右侧是 policy/comparison 指标
+- **论文价值**：避免 `total_probes=144` 和 `total_invocations=144` 把 0~1 的命中率、speedup、relative change 压扁，同时保留所有 demo 数字。
+
+## 6. 与 02-14 的 demo 价值对比
+
+| 维度 | 02 LB | 11 fault | 12 cold | 13 image | 14 batch | **15 analysis** |
+|------|-------|---------|---------|----------|----------|-----------------|
+| 验证目标 | 路由均衡 | 故障判定 | 冷启动路径 | 镜像缓存 | 批量实验框架 | **批量结果聚合** |
+| 输入 | 仿真生成 | 仿真生成 | 仿真生成 | 仿真生成 | 仿真生成 | **14 的 outputs/** |
+| 输出 | 1 份 csv | 1 份 csv | 1 份 csv | 2 场景 | 8 case 目录 | **5 份 csv + 1 份 md** |
+| 探针 | dispatch | dispatch | dispatch | dispatch | dispatch+batch | **读 14 的 batch_invoke_probe** |
+| 关键 join | route×probe | probe×fault | probe×inv | probe×flow | probe×inv (per case) | **summary vs paper_highlight** |
+| 核心数字 | balance_std=0 | failure_rate=0.23 | first/warm=3.75x | cache=2.0x | hit_ratio=1.0/0.0 | **11/11 self_check PASS** |
+| 论文 chart | 阶梯图 | 窗口散点 | Gantt | 双柱+散点 | 柱+散点+条 | **散点+双柱+柱+条** |
+
+**15 的独特价值**：15 是 02-14 中**唯一一个"消费其他样例的输出"的样例**。
+其他样例都是"端到端跑一个仿真 → 写论文"，15 是"读 14 的 CSV → 汇总 → 二次分析 → 写论文"。
+15 还能扩展到读其他样例（02/05/06/08/11/12/13）的输出，做**跨样例的策略比较**。
+
+## 7. 输出文件清单
+
+```
+examples/15_experiment_analysis/
+├── main.py                                # 入口：loaders → metrics → aggregation → self_check → report
+├── config.py                              # 输入/输出目录解析
+├── loaders.py                             # 自动发现 run 目录 + 安全读 CSV
+├── metrics.py                             # 单 run → 单行指标
+├── aggregation.py                         # 聚合 + 策略对比 + paper_highlight
+├── self_check.py                          # 11 项数据自检 + self_check.csv 输出
+├── report.py                              # Markdown 报告生成
+├── plot.py                                # 4 张图（png + pdf）
+├── README.md                              # 本文件
+├── outputs/
+│   ├── experiment_run_metrics.csv         # 每 case 单行
+│   ├── experiment_summary.csv             # 按 (policy, workload) 聚合
+│   ├── experiment_policy_comparison.csv   # 其他 policy vs default_skippy baseline
+│   ├── experiment_paper_highlight.csv     # 论文 demo 关键摘要（19 metric + note）
+│   ├── experiment_analysis_report.md      # Markdown 分析报告
+│   └── self_check.csv                     # 11 项数据自检
+└── figures/
+    ├── fig01_per_run_probe_avg_duration.png/pdf
+    ├── fig02_policy_comparison_per_workload.png/pdf
+    ├── fig03_policy_high_capacity_hit_ratio.png/pdf
+    └── fig04_paper_highlight_metrics.png/pdf
 ```
 
-**关键发现**：
-- `default_skippy` 100% 命中 capacity 最大的 server_1（8 cpu）。
-- `fixed_node` 100% 选 server_0（1 cpu）。
-- `avg_probe_seconds` 两边一致 —— 跟 14 的 paper highlight 保持一致。
+## 8. 设计取舍
 
-### 2. `experiment_policy_comparison.csv` —— 其他 policy vs baseline
-
-由于 `default_skippy` 是 baseline，`fixed_node` 是唯一非 baseline，所以只有 2 行（2 workloads）。
-
-```text
-workload    baseline_policy  policy        mean_probe_avg_duration_relative  ...
-low_load    default_skippy   fixed_node    0.000
-medium_load default_skippy   fixed_node    0.000
-```
-
-### 3. `experiment_analysis_report.md` —— Markdown 报告
-
-包含 6 节：输入信息、Run-level 预览、聚合摘要、策略对比、论文 demo 关键摘要、说明。
-
-## 数据自洽验证
-
-跑完 `main.py` 后，**9 个核心不变量**应同时满足（9/9 PASS）：
-
-| # | 不变量 | 验证方式 |
-|---|---|---|
-| 1 | `run_metrics` 行数 >= 2 | self-check |
-| 2 | `summary` 行数 = policies × workloads（2×2=4） | self-check |
-| 3 | `comparison` 行数 = (policies-1) × workloads（1×2=2，baseline 跳过） | self-check |
-| 4 | paper highlight 的 `high_capacity_hit_ratio__default_skippy == 1.0` | self-check |
-| 5 | paper highlight 的 `high_capacity_hit_ratio__fixed_node == 0.0` | self-check |
-| 6-9 | paper highlight 的 `avg_probe_seconds__<workload>` 跟 summary 完全一致（4 个 cell） | self-check |
-
-自洽段 log 在 main 末尾：
-
-```text
-INFO:self_check:=== experiment_analysis self-check ===
-INFO:self_check:  [PASS] run_metrics_min_rows : run_metrics rows=8
-INFO:self_check:  [PASS] summary_row_count : summary rows=4, expected=4 (policies=2 × workloads=2)
-INFO:self_check:  [PASS] comparison_row_count : comparison rows=2, expected=2 ((policies-1=1) × workloads=2)
-INFO:self_check:  [PASS] high_capacity_hit_ratio__default_skippy : hit 4/4 = 1.00, highlight=1.00
-INFO:self_check:  [PASS] high_capacity_hit_ratio__fixed_node : hit 0/4 = 0.00, highlight=0.00
-INFO:self_check:  [PASS] avg_probe_seconds_consistency__default_skippy__low_load : summary=0.221079, highlight=0.221079
-INFO:self_check:  [PASS] avg_probe_seconds_consistency__default_skippy__medium_load : summary=0.219739, highlight=0.219739
-INFO:self_check:  [PASS] avg_probe_seconds_consistency__fixed_node__low_load : summary=0.221079, highlight=0.221079
-INFO:self_check:  [PASS] avg_probe_seconds_consistency__fixed_node__medium_load : summary=0.219739, highlight=0.219739
-INFO:self_check:=== 9 passed, 0 failed ===
-```
-
-## 与 batch_experiment 的关系
-
-`batch_experiment` 负责运行多组仿真实验并产生原始 CSV；`experiment_analysis` 负责读取这些 CSV 并生成统计摘要 + 论文 demo 关键摘要 + 数据自洽段。两者组合后形成一个**最小实验自动化闭环**：
-
-```text
-batch_experiment 运行实验 → outputs/runs/<case_id>/*.csv
-                          ↓
-experiment_analysis 汇总结果 → experiment_run_metrics.csv
-                            → experiment_summary.csv
-                            → experiment_policy_comparison.csv
-                            → experiment_paper_highlight.csv
-                            → experiment_analysis_report.md
-                            + 数据自洽段（9 个不变量）
-```
-
-## 目录结构
-
-```text
-15_experiment_analysis/
-├── outputs/                              # 运行输出（5 个 csv + 1 个 md）
-├── __init__.py
-├── aggregation.py                        # 聚合 + 策略对比 + paper highlight
-├── config.py                             # 默认输入路径（14_batch_experiment/outputs/）
-├── loaders.py                            # 通用 CSV 加载器
-├── main.py                               # 入口（含 self-check 段）
-├── metrics.py                            # run-level 单行指标
-├── report.py                             # Markdown 报告生成
-└── self_check.py                         # 9 个不变量自洽段
-```
-
-## 文件说明
-
-### `main.py`
-
-样例主入口。
-
-职责包括：
-
-1. 解析命令行参数（`--input-dir` / `--output-dir`）；
-2. 定位输入目录（默认 14 的 outputs）；
-3. 读取所有 run；
-4. 构建 run-level 指标 + summary + comparison + paper highlight；
-5. 生成 Markdown 报告；
-6. 跑数据自洽段（9 个不变量）；
-7. log paper highlight（高 capacity 命中率）。
-
-### `config.py`
-
-分析配置文件。
-
-集中定义输入目录、输出目录、来源名称（`batch_experiment_outputs` 或 `sample_results`）。
-
-### `loaders.py`
-
-CSV 加载文件。
-
-- `discover_run_dirs`：同时支持 `input_dir/runs/<case_id>` 结构和扁平 `input_dir/<case_id>` 结构。
-- `read_csv_safe`：文件不存在或读取失败时返回空 DataFrame，保证分析流程不中断。
-
-### `metrics.py`
-
-单次实验指标计算文件。
-
-- 从 `case_result.csv` 取 `case_id` / `policy` / `workload` / `seed` / `rps` / `max_requests` / **`scheduled_node`**（14 已预聚合）。
-- 从 `batch_invoke_probe.csv` 算 `probe_avg_duration` / `probe_p95_duration`。
-- 从 `invocations.csv` 算 `invocation_avg_duration`。
-- 从 `schedule.csv` 算 `scheduled_node_count` / `scheduled_nodes`。
-- 从 `flow.csv` 算 `flow_total_bytes` / `flow_total_duration`。
-- 从 `replica_deployment.csv` 算 `replica_deployment_events`。
-
-### `aggregation.py`
-
-批量聚合 + 策略对比 + 论文 demo 关键摘要文件。
-
-- `aggregate_by_policy_workload`：按 policy × workload 分组聚合。
-- `build_policy_comparison`：以 `default_skippy` 为 baseline 计算相对变化（baseline 自身被跳过）。
-- `build_paper_highlight`：与 14 的 `batch_paper_highlight` 风格一致 —— 包含 `scheduled_nodes` / `high_capacity_hit_ratio` / `avg_probe_seconds__<workload>` / `speedup_ratio` / per-workload relative change。
-
-### `report.py`
-
-报告生成文件。
-
-6 节 Markdown 报告：输入信息、Run-level 预览、聚合摘要、策略对比、论文 demo 关键摘要、说明。
-
-### `self_check.py`
-
-数据自洽段文件。
-
-9 个不变量：run_metrics 行数、summary 行数、comparison 行数、2 个 high_capacity_hit_ratio、4 个 avg_probe_seconds_consistency。
-
-### `outputs/`
-
-分析结果输出目录。
-
-包含 4 个 CSV + 1 个 Markdown 报告。
+- **跨表一致性 self_check**：15 多了"summary vs paper_highlight 一致性"检查（4 个 cell），
+  这是聚合分析样例的核心——保证 paper highlight 里的数字跟聚合摘要的源数据完全一致，
+  避免论文里"两个表对不上"的低级错误。
+- **强检查但保持简洁**：15 不只检查文件能生成，还强检查 total_probes == total_invocations、
+  每个 run 的 probe_events == invocation_events、default_skippy == 1.0、fixed_node == 0.0。
+  同时保留 4 个 summary vs highlight 一致性检查，这是聚合分析特有的检查。
+- **Markdown 报告而非 HTML/JSON**：15 输出 Markdown 报告（6 节：输入信息 / Run-level 预览 /
+  聚合摘要 / 策略对比 / 论文 demo / 说明），方便论文写作时直接 copy-paste 章节。
+  没用 HTML/JSON 是为了最小化外部依赖（只需要 tabulate，没装就 fallback CSV 文本块）。
+- **支持两种 run 目录结构**：`loaders.discover_run_dirs` 同时支持 `runs/<case_id>/`
+  （14 的输出结构）和扁平 `<case_id>/` 结构（自包含的 run 目录），让 15 能消费
+  其他样例的输出。
+- **sample_results fallback**：14 的 outputs 不存在时，15 退到本样例自带的 sample_results，
+  保证 `main.py` 在没有先跑 14 的情况下也能执行（demo 友好性）。但 15 仍然**优先读 14**，
+  因为那才是"真实论文 demo 数据"的来源。
+- **policy_comparison baseline 自身被跳过**：`build_policy_comparison` 跳过 baseline_policy
+  自身，避免生成 `delta=0, relative=0` 的无意义行；self_check 验证"comparison 行数 == (policies-1) × workloads"，
+  把这种跳过逻辑变成可验证的不变量。
+- **诚实承认 sim 模型限制**：15 跟 14 一样，paper_highlight 显式指出"capacity 不改 single-invoke duration"，
+  `speedup_ratio = 1.0` 和 `relative_change = 0.0` 是不变量而非意外结果。

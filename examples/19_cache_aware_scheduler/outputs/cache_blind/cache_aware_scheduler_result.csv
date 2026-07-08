@@ -1,5 +1,5 @@
-﻿time,cache_hit,selected_score,needed_images_count,function_name,pod_name,selected_node,scheduler,needed_images
-2026-07-07 17:27:28.560271,False,0.0,1,fft,pod-fft-1,server_0,cache_blind,fft-cache-aware-cpu:latest
-2026-07-07 17:27:28.561448,False,0.0,1,img-resize,pod-img-resize-1,server_1,cache_blind,img-resize-cache-aware-cpu:latest
-2026-07-07 17:27:28.561937,False,0.0,1,json-parse,pod-json-parse-1,server_2,cache_blind,json-parse-cache-aware-cpu:latest
-2026-07-07 17:27:28.562415,False,0.0,1,ml-infer,pod-ml-infer-1,server_3,cache_blind,ml-infer-cache-aware-cpu:latest
+﻿cache_hit,selected_score,needed_images_count,function_name,pod_name,selected_node,scheduler,needed_images
+False,0.0,1,fft,pod-fft-1,server_0,cache_blind,fft-cache-aware-cpu:latest
+False,0.0,1,img-resize,pod-img-resize-1,server_1,cache_blind,img-resize-cache-aware-cpu:latest
+False,0.0,1,json-parse,pod-json-parse-1,server_2,cache_blind,json-parse-cache-aware-cpu:latest
+False,0.0,1,ml-infer,pod-ml-infer-1,server_3,cache_blind,ml-infer-cache-aware-cpu:latest

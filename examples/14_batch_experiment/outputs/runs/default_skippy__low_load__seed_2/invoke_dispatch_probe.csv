@@ -1,0 +1,13 @@
+﻿time,simtime,replica_id,request_id,expected_t_exec,case_id,policy,workload,function_name,node
+2026-07-08 00:36:54.989380,0.8333333333333333,1911724699296,13,0.25648274175113994,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989454,1.1666666666666665,1911724699296,14,0.25582619896474795,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989487,1.4999999999999998,1911724699296,15,0.18452410941814468,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989518,1.833333333333333,1911724699296,16,0.1867897596127137,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989597,2.1666666666666665,1911724699296,17,0.24683991025035595,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989646,2.5,1911725582736,18,0.23887759912548184,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989680,2.8333333333333335,1911724699296,19,0.23357843211521767,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989748,3.166666666666667,1911725582736,20,0.20465091660713153,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989779,3.5000000000000004,1911724699296,21,0.228475533254277,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989811,3.833333333333334,1911725582736,22,0.22854413869126702,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989877,4.166666666666667,1911724699296,23,0.22649632136896025,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:54.989921,4.5,1911725582736,24,0.19267062962038445,default_skippy__low_load__seed_2,default_skippy,low_load,batch-exp-python-pi,server_1

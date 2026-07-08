@@ -1,5 +1,5 @@
-﻿time,name,type
-2026-07-07 17:27:28.559931,fft,deploy
-2026-07-07 17:27:28.561243,img-resize,deploy
-2026-07-07 17:27:28.561782,json-parse,deploy
-2026-07-07 17:27:28.562204,ml-infer,deploy
+﻿name,type
+fft,deploy
+img-resize,deploy
+json-parse,deploy
+ml-infer,deploy

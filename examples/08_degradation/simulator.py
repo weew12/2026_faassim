@@ -124,6 +124,21 @@ class DegradationFunctionSimulator(FunctionSimulator):
             replica_id=id(replica),
         )
 
+        # 派发 probe：simtime + replica_id 关键标识（仿 02-07 模式）
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "active_requests_before": int(sample.active_requests_before),
+                "degradation_factor": float(sample.degradation_factor),
+                "final_duration": float(sample.final_duration),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
+
         env.resource_state.put_resource(replica, "cpu", cpu_millis)
         env.resource_state.put_resource(replica, "memory", memory_bytes)
         node.current_requests.add(request)

@@ -6,8 +6,6 @@
 """
 
 import logging
-from collections import defaultdict
-
 import sim.docker as docker
 from sim.core import Environment
 from sim.faas import (
@@ -53,14 +51,12 @@ class ColdStartFunctionSimulator(FunctionSimulator):
     - 每个阶段都写入 cold_start_probe，便于汇总冷启动路径。
     """
 
-    # 记录每个副本是否已经处理过首次请求。
-    first_invoke_seen = defaultdict(bool)
-
     def __init__(self, model: ColdStartModel):
         """
         初始化函数模拟器。
         """
         self.model = model
+        self.first_invoke_seen = set()
 
     def _log_phase(self, env: Environment, replica: FunctionReplica, phase: str, started: float, finished: float, **extra):
         """
@@ -175,17 +171,39 @@ class ColdStartFunctionSimulator(FunctionSimulator):
         对同一副本：
         - 第一次 invoke 记为 first_invoke；
         - 后续 invoke 记为 warm_invoke。
+
+        关键探针（沿用 02-11 的 invoke_dispatch_probe 模式）：
+        入口 simtime + replica_id + request_id + expected_t_exec（按 first/warm
+        阶段时长真实派发），用于 probe×invocation join 自洽检查；
+        冷启动阶段事件仍走 cold_start_probe 单独记录。
         """
         config = self.model.get_config(replica.function.name)
         replica_key = id(replica)
 
-        if not self.first_invoke_seen[replica_key]:
+        if replica_key not in self.first_invoke_seen:
             phase = "first_invoke"
             duration = config.first_invoke_duration
-            self.first_invoke_seen[replica_key] = True
+            self.first_invoke_seen.add(replica_key)
         else:
             phase = "warm_invoke"
             duration = config.warm_invoke_duration
+
+        # 派发探针（沿用 02-11 模式）：simtime + replica_id + request_id +
+        # expected_t_exec（按 first/warm 阶段时长真实派发），
+        # 后续 probe×invocation join 可以验证 simulator 派发的执行时长与
+        # invocations.t_exec 完全一致。
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "expected_t_exec": float(duration),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+            phase=phase,
+        )
 
         started = env.now
 

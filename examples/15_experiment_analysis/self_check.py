@@ -6,6 +6,7 @@
 """
 
 import logging
+from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
@@ -18,16 +19,24 @@ def self_check(
     summary_df: pd.DataFrame,
     comparison_df: pd.DataFrame,
     paper_highlight_df: pd.DataFrame,
+    output_dir=None,
 ) -> Dict[str, Any]:
     """
     数据自洽段。
 
     校验：
     1. run_metrics 行数 >= 2（至少 2 个 case）
-    2. summary 行数 = policy × workload 笛卡尔积
-    3. comparison 行数 = (policy-1) × workload（baseline 自身被跳过）
-    4. paper highlight 里 high_capacity_hit_ratio 与 run_metrics 一致
-    5. summary 跟 paper highlight 里 avg_probe_seconds__<workload> 一致
+    2. probe_events 总数 = invocation_events 总数
+    3. 每个 run 的 probe_events = invocation_events
+    4. summary 行数 = policy × workload 笛卡尔积
+    5. comparison 行数 = (policy-1) × workload（baseline 自身被跳过）
+    6. paper highlight 里 high_capacity_hit_ratio 与 run_metrics 一致且符合 14 的策略设计
+    7. summary 跟 paper highlight 里 avg_probe_seconds__<workload> 一致
+
+    返回 dict 包含：
+    - checks：list[dict]（name/status/detail）
+    - n_pass / n_fail：统计
+    - output_path：self_check.csv 路径（如果传了 output_dir）
     """
     checks: List[Dict[str, str]] = []
 
@@ -37,6 +46,23 @@ def self_check(
         "status": "PASS" if n_runs >= 2 else "FAIL",
         "detail": f"run_metrics rows={n_runs}",
     })
+
+    if {"probe_events", "invocation_events"}.issubset(run_metrics_df.columns):
+        total_probes = int(run_metrics_df["probe_events"].sum())
+        total_invocations = int(run_metrics_df["invocation_events"].sum())
+        checks.append({
+            "name": "total_probe_equals_total_invocation",
+            "status": "PASS" if total_probes == total_invocations else "FAIL",
+            "detail": f"total_probes={total_probes}, total_invocations={total_invocations}",
+        })
+
+        per_run_match = bool((run_metrics_df["probe_events"] == run_metrics_df["invocation_events"]).all())
+        mismatch_count = int((run_metrics_df["probe_events"] != run_metrics_df["invocation_events"]).sum())
+        checks.append({
+            "name": "per_run_probe_equals_invocation",
+            "status": "PASS" if per_run_match else "FAIL",
+            "detail": f"mismatch_runs={mismatch_count}/{len(run_metrics_df)}",
+        })
 
     # summary 行列数自洽
     if not summary_df.empty and {"policy", "workload"}.issubset(summary_df.columns):
@@ -72,6 +98,10 @@ def self_check(
             })
 
     # paper highlight 命中率 vs run_metrics
+    expected_high_capacity_ratio = {
+        "default_skippy": 1.0,
+        "fixed_node": 0.0,
+    }
     if not paper_highlight_df.empty and "scheduled_node" in run_metrics_df.columns:
         for policy in run_metrics_df["policy"].dropna().unique():
             sub = run_metrics_df[run_metrics_df.policy == policy]
@@ -89,11 +119,14 @@ def self_check(
                 })
                 continue
             hl_value = float(hl_rows["value"].iloc[0])
-            match = abs(hl_value - ratio) < 1e-6
+            expected_ratio = expected_high_capacity_ratio.get(policy)
+            expected_ok = True if expected_ratio is None else abs(ratio - expected_ratio) < 1e-9
+            match = abs(hl_value - ratio) < 1e-6 and expected_ok
+            expected_text = "not fixed" if expected_ratio is None else f"{expected_ratio:.2f}"
             checks.append({
                 "name": f"high_capacity_hit_ratio__{policy}",
                 "status": "PASS" if match else "FAIL",
-                "detail": f"hit {high}/{total} = {ratio:.2f}, highlight={hl_value:.2f}",
+                "detail": f"hit {high}/{total} = {ratio:.2f}, highlight={hl_value:.2f}, expected={expected_text}",
             })
 
     # summary 跟 paper highlight 里 avg_probe_seconds 一致
@@ -121,7 +154,23 @@ def self_check(
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
-    return {"checks": checks, "n_pass": n_pass, "n_fail": n_fail}
+
+    # 写到 self_check.csv（仿 14 batch_self_check.csv）
+    output_path = None
+    if output_dir is not None:
+        check_df = pd.DataFrame(checks)
+        if "status" in check_df.columns:
+            check_df["passed"] = check_df["status"] == "PASS"
+        output_path = Path(output_dir) / "self_check.csv"
+        check_df.to_csv(output_path, index=False, encoding="utf-8-sig")
+        logger.info("saved %s", output_path)
+
+    return {
+        "checks": checks,
+        "n_pass": n_pass,
+        "n_fail": n_fail,
+        "output_path": output_path,
+    }
 
 
 def log_self_check(self_check_result: Dict[str, Any]) -> None:

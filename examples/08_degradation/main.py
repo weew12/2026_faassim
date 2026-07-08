@@ -6,10 +6,12 @@
 - 部署多个函数副本；
 - 使用高并发请求制造资源竞争；
 - 根据 node.current_requests 计算退化后的执行时间；
-- 导出 degradation_probe 和调用结果指标。
+- 导出 degradation_probe 和调用结果指标；
+- 论文 demo 关键摘要 + 数据自检。
 
 运行方式：
     python -u examples/08_degradation/main.py
+    python -u examples/08_degradation/plot.py
 """
 
 import logging
@@ -17,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -55,16 +57,36 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 状态污染（与 02-07 一致风格）。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建 degradation 样例使用的拓扑。
+    创建 degradation 样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry。
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
@@ -210,15 +232,15 @@ def main():
 
     degradation_summary_df = dfs.get("degradation_summary")
     if degradation_summary_df is not None and len(degradation_summary_df) > 0:
-        logger.info("degradation summary:\\n%s", degradation_summary_df.to_string(index=False))
+        logger.info("degradation summary:\n%s", degradation_summary_df.to_string(index=False))
 
     concurrency_distribution_df = dfs.get("degradation_concurrency_distribution")
     if concurrency_distribution_df is not None and len(concurrency_distribution_df) > 0:
-        logger.info("degradation concurrency distribution:\\n%s", concurrency_distribution_df.to_string(index=False))
+        logger.info("degradation concurrency distribution:\n%s", concurrency_distribution_df.to_string(index=False))
 
     model_consistency_df = dfs.get("degradation_model_consistency")
     if model_consistency_df is not None and len(model_consistency_df) > 0:
-        logger.info("degradation model consistency:\\n%s", model_consistency_df.to_string(index=False))
+        logger.info("degradation model consistency:\n%s", model_consistency_df.to_string(index=False))
 
     invoke_join_df = dfs.get("degradation_invoke_join")
     if invoke_join_df is not None and len(invoke_join_df) > 0:
@@ -227,6 +249,19 @@ def main():
             "degradation invoke join: %d rows, all duration_match=%s",
             len(invoke_join_df), all_match,
         )
+
+    paper_df = dfs.get("degradation_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("degradation_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

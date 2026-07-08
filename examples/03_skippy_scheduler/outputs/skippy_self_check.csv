@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_total_pods_is_5,True
+02_invocation_events_is_40,True
+03_selected_node_at_least_1,True
+04_all_pods_have_feasible_nodes,True
+05_all_selected_node_recorded,True
+06_resource_filtering_observed,True
+07_needed_and_cached_images_observed,True
+08_feasible_per_pod_rows_match,True
+09_node_scheduling_stats_nonempty,True
+10_probe_invocation_consistent,True

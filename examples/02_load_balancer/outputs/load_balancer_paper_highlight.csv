@@ -1,0 +1,13 @@
+﻿metric,value,note
+route_events,30,路由决策事件总数（每次 next_replica 调用）
+invocation_events,30,实际函数调用事件总数（应 == route_events）
+selected_replica_count,3,被路由到的不同 FunctionReplica 数量（应 == 3 个 RUNNING 副本）
+selected_node_count,1,被路由到的不同 node 数量（faas-sim 默认调度器行为诚实记录）
+max_routed_requests,10,单副本最大请求数（轮询应为 10）
+min_routed_requests,10,单副本最小请求数（轮询应为 10）
+balance_std,0.0,副本请求数标准差，越小越均衡（轮询 = 0）
+balance_ratio_min_over_max,1.0,min/max 比率，越接近 1 越均衡（轮询 = 1.0）
+adjacent_switch_rate,1.0,相邻请求切换副本的比率（严格轮询 = 1.0）
+route_probe_invocation_total_match,True,route、probe、invocation 三张表的事件数是否一致
+route_probe_invocation_all_match,True,逐请求 route×probe×invocation 关联是否全部一致
+probe_invocation_t_exec_match_rate,1.0,simulator 预期 t_exec 与 invocations.t_exec 的匹配率

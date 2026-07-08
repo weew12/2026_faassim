@@ -1,0 +1,25 @@
+﻿time,simtime,replica_id,request_id,expected_t_exec,case_id,policy,workload,function_name,node
+2026-07-08 00:36:55.275823,0.625,1911725425104,121,0.25648274175113994,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.275874,0.75,1911725425104,122,0.25582619896474795,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.275927,0.875,1911725425104,123,0.18452410941814468,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276055,1.0,1911725425104,124,0.1867897596127137,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276147,1.125,1911725425104,125,0.24683991025035595,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276209,1.25,1911725425104,126,0.23887759912548184,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276277,1.375,1911725425104,127,0.23357843211521767,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276346,1.5,1911725425104,128,0.20465091660713153,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276403,1.625,1911725425104,129,0.228475533254277,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276456,1.75,1911725425104,130,0.22854413869126702,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276509,1.875,1911725425104,131,0.22649632136896025,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276605,2.0,1911725425104,132,0.19267062962038445,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276707,2.125,1911725425104,133,0.2144535712233015,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276792,2.25,1911726270080,134,0.2114825456164297,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276853,2.375,1911725425104,135,0.23784096649899727,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276907,2.5,1911726270080,136,0.2595855650359794,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.276968,2.625,1911725425104,137,0.2559516378474595,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277011,2.75,1911726270080,138,0.22353416379434565,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277073,2.875,1911725425104,139,0.2155883350980683,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277219,3.0,1911726270080,140,0.20145925933194625,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277280,3.125,1911725425104,141,0.1828739463514286,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277356,3.25,1911726270080,142,0.1821955885672655,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277420,3.375,1911725425104,143,0.21719150896778497,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.277510,3.5,1911726270080,144,0.20547721022829418,fixed_node__medium_load__seed_2,fixed_node,medium_load,batch-exp-python-pi,server_0

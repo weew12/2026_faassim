@@ -1,0 +1,14 @@
+﻿name,status,detail,passed
+decision_count,PASS,decision rows=7,True
+hint_count,PASS,"hint rows=7, decision rows=7",True
+decision_hint_join_row_count,PASS,"join rows=7, decision rows=7",True
+decision_hint_join_match,PASS,matched=7/7,True
+decision_values_valid,PASS,"observed decisions=['eviction_candidate', 'keep_warm', 'observe', 'prewarm_candidate'], invalid=[]",True
+capacity_budget_within_limit,PASS,"selected memory=4, capacity_budget=4",True
+keep_warm_all_selected_by_budget,PASS,all keep_warm selected_by_budget: True,True
+eviction_candidate_no_in_flight,PASS,eviction with in_flight>0: 0,True
+keep_warm_budget_greedy,PASS,"selected keep_warm memory=4, total keep_warm memory=4, capacity_budget=4",True
+hint_action_mapping_valid,PASS,all hint actions match decision mapping,True
+paper_highlight_decision_count_sum,PASS,"sum of decision_count metrics=7, profiles=7",True
+paper_highlight_decision_hint_consistency,PASS,decision_hint_consistency=1.0000,True
+export_tables_have_no_index_column,PASS,no pandas index columns,True

@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_route_equals_invocation,True
+02_three_replicas_routed,True
+03_per_replica_get_10_requests,True
+04_balance_ratio_is_one,True
+05_balance_std_is_zero,True
+06_max_routed_equals_10,True
+07_min_routed_equals_10,True
+08_strict_round_robin_switch,True
+09_route_probe_invocation_total_match,True
+10_route_probe_invocation_all_match,True

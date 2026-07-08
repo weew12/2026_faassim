@@ -13,6 +13,7 @@
 """
 
 import logging
+import random
 import sys
 from pathlib import Path
 from typing import List
@@ -41,6 +42,7 @@ from simulator import AutoscalingSimulatorFactory
 from system import create_autoscaling_faas_system
 
 logger = logging.getLogger(__name__)
+RANDOM_SEED = 20260707
 
 
 def configure_logging():
@@ -212,6 +214,8 @@ def main():
     自动伸缩样例入口。
     """
     configure_logging()
+    random.seed(RANDOM_SEED)
+    logger.info("using random seed %d", RANDOM_SEED)
 
     logger.info("creating autoscaling topology")
     topology = example_topology()

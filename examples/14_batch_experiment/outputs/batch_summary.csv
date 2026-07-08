@@ -1,5 +1,5 @@
-﻿policy,workload,runs,avg_probe_events,avg_invocation_events,mean_avg_probe_duration,mean_p95_probe_duration,distinct_scheduled_nodes,avg_flow_total_bytes
-default_skippy,low_load,2,12.0,12.0,0.22107858990457857,0.25170146116041947,1,48000000.0
-default_skippy,medium_load,2,24.0,24.0,0.2197393019288626,0.2555411743629322,1,48000000.0
-fixed_node,low_load,2,12.0,12.0,0.22107858990457857,0.25170146116041947,1,48000000.0
-fixed_node,medium_load,2,24.0,24.0,0.2197393019288626,0.2555411743629322,1,48000000.0
+﻿policy,workload,runs,avg_probe_events,avg_invocation_events,mean_avg_probe_duration,mean_p95_probe_duration,mean_avg_invocation_duration,distinct_scheduled_nodes,avg_flow_total_bytes
+default_skippy,low_load,2,12.0,12.0,0.22107858990457857,0.25170146116041947,0.2210785899045785,1,48000000.0
+default_skippy,medium_load,2,24.0,24.0,0.2197393019288626,0.2555411743629322,0.2197393019288626,1,48000000.0
+fixed_node,low_load,2,12.0,12.0,0.22107858990457857,0.25170146116041947,0.2210785899045785,1,48000000.0
+fixed_node,medium_load,2,24.0,24.0,0.2197393019288626,0.2555411743629322,0.2197393019288626,1,48000000.0

@@ -82,10 +82,20 @@ def compute_invocation_metrics(df: pd.DataFrame) -> Dict[str, Any]:
         "invocation_events": len(df),
     }
 
-    if not df.empty and "duration" in df.columns:
+    duration_col = None
+    if not df.empty:
+        if "t_exec" in df.columns:
+            duration_col = "t_exec"
+        elif "duration" in df.columns:
+            duration_col = "duration"
+
+    if duration_col is not None:
+        duration = pd.to_numeric(df[duration_col], errors="coerce")
         result.update({
-            "invocation_avg_duration": float(df["duration"].mean()),
-            "invocation_max_duration": float(df["duration"].max()),
+            "invocation_avg_duration": float(duration.mean()),
+            "invocation_min_duration": float(duration.min()),
+            "invocation_max_duration": float(duration.max()),
+            "invocation_p95_duration": float(duration.quantile(0.95)),
         })
 
     if not df.empty and "function_name" in df.columns:

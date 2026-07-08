@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-07 13:53:37.569650,deploy,trace-fast-python-pi,server_0,2033291479760
-2026-07-07 13:53:37.570371,deploy,trace-slow-python-pi,server_0,2033291124944
-2026-07-07 13:53:37.570699,startup,trace-fast-python-pi,server_0,2033291479760
-2026-07-07 13:53:37.570779,startup,trace-slow-python-pi,server_0,2033291124944
-2026-07-07 13:53:37.570830,setup,trace-fast-python-pi,server_0,2033291479760
-2026-07-07 13:53:37.570839,finish,trace-fast-python-pi,server_0,2033291479760
-2026-07-07 13:53:37.570849,setup,trace-slow-python-pi,server_0,2033291124944
-2026-07-07 13:53:37.570856,finish,trace-slow-python-pi,server_0,2033291124944
+2026-07-07 21:17:43.108136,deploy,trace-fast-python-pi,server_0,2154410164976
+2026-07-07 21:17:43.108399,deploy,trace-slow-python-pi,server_0,2154409943888
+2026-07-07 21:17:43.108637,startup,trace-fast-python-pi,server_0,2154410164976
+2026-07-07 21:17:43.108701,setup,trace-fast-python-pi,server_0,2154410164976
+2026-07-07 21:17:43.108710,finish,trace-fast-python-pi,server_0,2154410164976
+2026-07-07 21:17:43.108766,startup,trace-slow-python-pi,server_0,2154409943888
+2026-07-07 21:17:43.108819,setup,trace-slow-python-pi,server_0,2154409943888
+2026-07-07 21:17:43.108827,finish,trace-slow-python-pi,server_0,2154409943888

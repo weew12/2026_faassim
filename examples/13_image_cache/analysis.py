@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 METRIC_NAMES = [
     "image_cache_probe",
+    "invoke_dispatch_probe",
     "flow",
     "schedule",
     "function_deployments",
@@ -187,6 +188,7 @@ def build_probe_flow_join(scenario_name: str, dfs: Dict[str, pd.DataFrame]) -> p
         probe_df["pull_duration"] = pd.to_numeric(probe_df["pull_duration"], errors="coerce")
 
     rows: List[dict] = []
+    used_flow_indices = set()
     for _, p in probe_df.iterrows():
         is_cache_hit = bool(p.get("cache_hit_before"))
         # 找对应 flow：sink == probe.node_name
@@ -194,10 +196,14 @@ def build_probe_flow_join(scenario_name: str, dfs: Dict[str, pd.DataFrame]) -> p
         if is_cache_hit:
             match = docker_pull_df.iloc[0:0]  # empty
         else:
-            match = docker_pull_df[docker_pull_df["sink"] == p.get("node_name")]
+            match = docker_pull_df[
+                (docker_pull_df["sink"] == p.get("node_name"))
+                & (~docker_pull_df.index.isin(used_flow_indices))
+            ]
 
         if not match.empty:
             flow_row = match.iloc[0]
+            used_flow_indices.add(flow_row.name)
             flow_duration = float(flow_row["duration"]) if pd.notna(flow_row.get("duration")) else None
             flow_bytes = int(flow_row["bytes"]) if pd.notna(flow_row.get("bytes")) else None
             duration_match = (
@@ -229,9 +235,164 @@ def build_probe_flow_join(scenario_name: str, dfs: Dict[str, pd.DataFrame]) -> p
     return pd.DataFrame(rows)
 
 
-def export_comparison(output_dir: Path, scenario_summaries: List[pd.DataFrame]) -> pd.DataFrame:
+def build_paper_highlight(comparison_df: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
     """
-    导出跨场景对比摘要 + 论文 demo 关键摘要。
+    论文 demo 关键摘要：每条论文宣传语都对应一行 metric/value。
+
+    设计原则（沿用 02-12 的 paper_highlight 模式）：
+    1. metric 字段是论文能直接引用的实证数字；
+    2. value 字段是机器可读的具体数值；
+    3. note 字段是 paper-style 一句话结论。
+
+    跨两个场景：same_node_cache_reuse vs different_node_cold_pull。
+    """
+    if len(comparison_df) != 2:
+        return pd.DataFrame()
+
+    reuse = comparison_df[comparison_df.scenario == "same_node_cache_reuse"]
+    cold = comparison_df[comparison_df.scenario == "different_node_cold_pull"]
+    if reuse.empty or cold.empty:
+        return pd.DataFrame()
+
+    reuse_total = float(reuse["total_pull_duration"].iloc[0])
+    cold_total = float(cold["total_pull_duration"].iloc[0])
+    cold_pulls = int(cold["cold_pull_count"].iloc[0])
+    reuse_pulls = int(reuse["cold_pull_count"].iloc[0])
+
+    reuse_cache_hit = int(reuse["cache_hit_before_count"].iloc[0])
+    cold_cache_hit = int(cold["cache_hit_before_count"].iloc[0])
+
+    reuse_flow_events = int(reuse["docker_pull_flow_events"].iloc[0])
+    cold_flow_events = int(cold["docker_pull_flow_events"].iloc[0])
+
+    cold_bytes_saved = 0
+    try:
+        reuse_paper_row = pd.read_csv(output_dir / "same_node_cache_reuse" / "image_cache_summary.csv")
+        cold_paper_row = pd.read_csv(output_dir / "different_node_cold_pull" / "image_cache_summary.csv")
+        reuse_bytes = int(reuse_paper_row["docker_pull_total_bytes"].iloc[0])
+        cold_bytes = int(cold_paper_row["docker_pull_total_bytes"].iloc[0])
+        cold_bytes_saved = cold_bytes - reuse_bytes
+    except Exception:
+        pass
+
+    speedup = round(cold_total / reuse_total, 4) if reuse_total > 0 else 0.0
+
+    return pd.DataFrame([
+        {"metric": "same_node_total_pull_seconds", "value": round(reuse_total, 4),
+         "note": "same_node_cache_reuse 场景下的总 docker.pull 耗时（含一次 cold pull）"},
+        {"metric": "different_node_total_pull_seconds", "value": round(cold_total, 4),
+         "note": "different_node_cold_pull 场景下的总 docker.pull 耗时（含两次 cold pull）"},
+        {"metric": "same_node_cache_hit_before_count", "value": reuse_cache_hit,
+         "note": "same_node 场景下第二次部署的 cache 命中次数（应 == 1）"},
+        {"metric": "different_node_cache_hit_before_count", "value": cold_cache_hit,
+         "note": "different_node 场景下的 cache 命中次数（应 == 0，两节点均首次拉取）"},
+        {"metric": "same_node_cold_pull_count", "value": reuse_pulls,
+         "note": "same_node 场景下的 cold pull 次数（应 == 1）"},
+        {"metric": "different_node_cold_pull_count", "value": cold_pulls,
+         "note": "different_node 场景下的 cold pull 次数（应 == 2）"},
+        {"metric": "same_node_docker_pull_flow_events", "value": reuse_flow_events,
+         "note": "same_node 场景下 flow.csv 中 docker_pull 流数（应 == 1）"},
+        {"metric": "different_node_docker_pull_flow_events", "value": cold_flow_events,
+         "note": "different_node 场景下 flow.csv 中 docker_pull 流数（应 == 2）"},
+        {"metric": "saved_pull_seconds_by_cache", "value": round(cold_total - reuse_total, 4),
+         "note": "缓存命中节省的 docker.pull 耗时（cold - reuse，应 == 一次 cold pull 时长）"},
+        {"metric": "saved_bytes_by_cache", "value": cold_bytes_saved,
+         "note": "缓存命中节省的网络流量（cold - reuse bytes，应 == 镜像大小 128MB）"},
+        {"metric": "speedup_ratio_cold_over_reuse", "value": speedup,
+         "note": "不同节点 vs 同节点 cold pull 耗时比（应 == 2.0，论文 demo 关键数字）"},
+    ])
+
+
+def data_self_check(
+    comparison_df: pd.DataFrame,
+    output_dir: Path,
+    same_node_probe_flow_df: pd.DataFrame,
+    different_node_probe_flow_df: pd.DataFrame,
+) -> Dict[str, bool]:
+    """
+    image_cache 样例的数据自洽检查（沿用 02-12 的 self_check 模式）。
+
+    不变量（10 项）：
+    1. same_node_cache_hit_before_count == 1（第二次部署命中缓存）
+    2. same_node_cold_pull_count == 1（只有第一次 cold pull）
+    3. same_node_docker_pull_flow_events == 1（只有一次 docker_pull 网络流）
+    4. different_node_cache_hit_before_count == 0（两节点都首次拉取）
+    5. different_node_cold_pull_count == 2（两节点各 cold pull 一次）
+    6. different_node_docker_pull_flow_events == 2（两次 docker_pull 网络流）
+    7. different_total_pull = 2 × same_total_pull（恒等式）
+    8. speedup_ratio_cold_over_reuse == 2.0
+    9. saved_bytes_by_cache == image_size（128000000）
+    10. probe_flow_join duration_match_50ms 全部 True（两场景合并）
+
+    注意：13 故意不触发 invoke（main.py benchmark.run() 只部署不调用），
+    所以 invoke_dispatch_probe 行数 == invocations 行数 == 0 是预期行为，
+    self_check 跳过 dispatch_probe 检查（避免误报）。
+    """
+    if len(comparison_df) != 2:
+        return {"00_comparison_has_two_scenarios": False}
+
+    reuse = comparison_df[comparison_df.scenario == "same_node_cache_reuse"]
+    cold = comparison_df[comparison_df.scenario == "different_node_cold_pull"]
+    if reuse.empty or cold.empty:
+        return {"00_comparison_has_two_scenarios": False}
+
+    reuse_total = float(reuse["total_pull_duration"].iloc[0])
+    cold_total = float(cold["total_pull_duration"].iloc[0])
+    reuse_cache_hit = int(reuse["cache_hit_before_count"].iloc[0])
+    cold_cache_hit = int(cold["cache_hit_before_count"].iloc[0])
+    reuse_pulls = int(reuse["cold_pull_count"].iloc[0])
+    cold_pulls = int(cold["cold_pull_count"].iloc[0])
+    reuse_flow_events = int(reuse["docker_pull_flow_events"].iloc[0])
+    cold_flow_events = int(cold["docker_pull_flow_events"].iloc[0])
+
+    speedup = cold_total / reuse_total if reuse_total > 0 else 0.0
+
+    # saved_bytes_by_cache 从子目录读
+    saved_bytes = 0
+    try:
+        reuse_bytes = int(pd.read_csv(output_dir / "same_node_cache_reuse" / "image_cache_summary.csv")["docker_pull_total_bytes"].iloc[0])
+        cold_bytes = int(pd.read_csv(output_dir / "different_node_cold_pull" / "image_cache_summary.csv")["docker_pull_total_bytes"].iloc[0])
+        saved_bytes = cold_bytes - reuse_bytes
+    except Exception:
+        pass
+
+    # 跨两场景合并 probe_flow_join
+    all_probe_flow_df = pd.concat(
+        [same_node_probe_flow_df, different_node_probe_flow_df],
+        ignore_index=True,
+    )
+    if all_probe_flow_df.empty or "duration_match_50ms" not in all_probe_flow_df.columns:
+        all_match = False
+    else:
+        match_series = all_probe_flow_df["duration_match_50ms"]
+        all_match = bool(match_series.notna().all() and match_series.astype(bool).all())
+
+    checks = {
+        "01_same_node_cache_hit_equals_1": reuse_cache_hit == 1,
+        "02_same_node_cold_pull_equals_1": reuse_pulls == 1,
+        "03_same_node_flow_events_equals_1": reuse_flow_events == 1,
+        "04_different_node_cache_hit_equals_0": cold_cache_hit == 0,
+        "05_different_node_cold_pull_equals_2": cold_pulls == 2,
+        "06_different_node_flow_events_equals_2": cold_flow_events == 2,
+        "07_different_total_equals_2x_same": abs(cold_total - 2 * reuse_total) < 1e-6,
+        "08_speedup_ratio_equals_2": abs(speedup - 2.0) < 1e-3,
+        "09_saved_bytes_equals_image_size": saved_bytes == 128000000,
+        "10_probe_flow_join_all_match_50ms": all_match,
+    }
+
+    return checks
+
+
+def export_comparison(
+    output_dir: Path,
+    scenario_summaries: List[pd.DataFrame],
+    same_node_probe_flow_df: pd.DataFrame = None,
+    different_node_probe_flow_df: pd.DataFrame = None,
+) -> Dict[str, pd.DataFrame]:
+    """
+    导出跨场景对比摘要 + 论文 demo 关键摘要 + 数据自检。
+
+    返回 {"comparison": comparison_df, "paper_highlight": paper_df, "self_check": check_df}
     """
     if scenario_summaries:
         comparison_df = pd.concat(scenario_summaries, ignore_index=True)
@@ -243,37 +404,33 @@ def export_comparison(output_dir: Path, scenario_summaries: List[pd.DataFrame]) 
     logger.info("saved %s", comparison_path)
 
     # 论文 demo 关键摘要
-    if len(comparison_df) == 2:
-        reuse = comparison_df[comparison_df.scenario == "same_node_cache_reuse"]
-        cold = comparison_df[comparison_df.scenario == "different_node_cold_pull"]
-        if not reuse.empty and not cold.empty:
-            reuse_total = float(reuse["total_pull_duration"].iloc[0])
-            cold_total = float(cold["total_pull_duration"].iloc[0])
-            cold_pulls = int(cold["cold_pull_count"].iloc[0])
-            reuse_pulls = int(reuse["cold_pull_count"].iloc[0])
-            # 字节节省：cold 场景下未复制的字节数
-            cold_bytes_saved = 0
-            try:
-                reuse_paper_row = pd.read_csv(output_dir / "same_node_cache_reuse" / "image_cache_summary.csv")
-                cold_paper_row = pd.read_csv(output_dir / "different_node_cold_pull" / "image_cache_summary.csv")
-                reuse_bytes = int(reuse_paper_row["docker_pull_total_bytes"].iloc[0])
-                cold_bytes = int(cold_paper_row["docker_pull_total_bytes"].iloc[0])
-                cold_bytes_saved = cold_bytes - reuse_bytes
-            except Exception:
-                pass
+    paper_df = build_paper_highlight(comparison_df, output_dir)
+    if not paper_df.empty:
+        paper_path = output_dir / "image_cache_paper_highlight.csv"
+        paper_df.to_csv(paper_path, index=False, encoding="utf-8-sig")
+        logger.info("saved %s", paper_path)
 
-            highlight = pd.DataFrame([
-                {"metric": "same_node_total_pull_seconds", "value": reuse_total},
-                {"metric": "different_node_total_pull_seconds", "value": cold_total},
-                {"metric": "same_node_cold_pull_count", "value": reuse_pulls},
-                {"metric": "different_node_cold_pull_count", "value": cold_pulls},
-                {"metric": "saved_pull_seconds_by_cache", "value": cold_total - reuse_total},
-                {"metric": "saved_bytes_by_cache", "value": cold_bytes_saved},
-                {"metric": "speedup_ratio_cold_over_reuse",
-                 "value": cold_total / reuse_total if reuse_total > 0 else None},
-            ])
-            highlight_path = output_dir / "image_cache_paper_highlight.csv"
-            highlight.to_csv(highlight_path, index=False, encoding="utf-8-sig")
-            logger.info("saved %s", highlight_path)
+    # 数据自检
+    if same_node_probe_flow_df is None:
+        same_node_probe_flow_df = pd.DataFrame()
+    if different_node_probe_flow_df is None:
+        different_node_probe_flow_df = pd.DataFrame()
 
-    return comparison_df
+    checks = data_self_check(
+        comparison_df=comparison_df,
+        output_dir=output_dir,
+        same_node_probe_flow_df=same_node_probe_flow_df,
+        different_node_probe_flow_df=different_node_probe_flow_df,
+    )
+    check_df = pd.DataFrame([
+        {"check_id": k, "passed": v} for k, v in checks.items()
+    ])
+    check_path = output_dir / "image_cache_self_check.csv"
+    check_df.to_csv(check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", check_path)
+
+    return {
+        "comparison": comparison_df,
+        "paper_highlight": paper_df,
+        "self_check": check_df,
+    }

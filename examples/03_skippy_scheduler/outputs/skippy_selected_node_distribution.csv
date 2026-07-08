@@ -1,4 +1,6 @@
 ﻿selected_node,needed_images,scheduled_pods
-server_0,,2
-server_0,skippy-medium-cpu:latest,1
-server_0,skippy-small-cpu:latest,1
+server_0,skippy-large-cpu:latest,1
+server_1,skippy-medium-cpu:latest,1
+server_2,skippy-medium-cpu:latest,1
+server_3,,1
+server_3,skippy-small-cpu:latest,1

@@ -1,0 +1,4 @@
+﻿time,simtime,replica_id,request_id,expected_t_exec,function_name,node,phase
+2026-07-08 00:00:31.029340,6.0,1188143989152,1,0.3,cold-start-python-pi,server_0,first_invoke
+2026-07-08 00:00:31.029754,6.5,1188143989152,2,0.08,cold-start-python-pi,server_0,warm_invoke
+2026-07-08 00:00:31.030294,7.0,1188143989152,3,0.08,cold-start-python-pi,server_0,warm_invoke

@@ -1,9 +1,15 @@
-﻿metric,value
-scheduled_nodes__default_skippy,server_1
-high_capacity_hit_ratio__default_skippy,1.0
-scheduled_nodes__fixed_node,server_0
-high_capacity_hit_ratio__fixed_node,0.0
-default_skippy__avg_probe_seconds__low_load,0.22107858990457857
-fixed_node__avg_probe_seconds__low_load,0.22107858990457857
-default_skippy__avg_probe_seconds__medium_load,0.2197393019288626
-fixed_node__avg_probe_seconds__medium_load,0.2197393019288626
+﻿metric,value,note
+total_cases,8,批量实验总 case 数（= policies × workloads × seeds）
+total_policies,2,策略数
+total_workloads,2,负载数
+total_seeds,2,随机种子数
+total_invocations,144,跨所有 case 的总 invoke 次数
+avg_invocations_per_case,18.0,每个 case 平均 invoke 次数（= total_invocations / total_cases）
+scheduled_nodes__default_skippy,server_1,default_skippy 策略实际选过的节点集合
+high_capacity_hit_ratio__default_skippy,1.0,default_skippy 策略选中 capacity 最大的 server_1 的比例（应 = 1.0，表示 capacity-aware 策略全部选中 server_1）
+scheduled_nodes__fixed_node,server_0,fixed_node 策略实际选过的节点集合
+high_capacity_hit_ratio__fixed_node,0.0,fixed_node 策略选中 capacity 最大的 server_1 的比例（应 = 0.0，表示 fixed_node 策略不会选中 server_1）
+default_skippy__avg_probe_seconds__low_load,0.22107858990457857,default_skippy 策略在 low_load 下的 avg_probe_seconds（sim 模型诚实特性：capacity 不改 single-invoke duration）
+fixed_node__avg_probe_seconds__low_load,0.22107858990457857,fixed_node 策略在 low_load 下的 avg_probe_seconds（sim 模型诚实特性：capacity 不改 single-invoke duration）
+default_skippy__avg_probe_seconds__medium_load,0.2197393019288626,default_skippy 策略在 medium_load 下的 avg_probe_seconds（sim 模型诚实特性：capacity 不改 single-invoke duration）
+fixed_node__avg_probe_seconds__medium_load,0.2197393019288626,fixed_node 策略在 medium_load 下的 avg_probe_seconds（sim 模型诚实特性：capacity 不改 single-invoke duration）

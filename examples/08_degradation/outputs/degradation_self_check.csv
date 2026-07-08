@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_probe_count_is_40,True
+02_invocations_is_40,True
+03_join_rows_is_40,True
+04_all_duration_and_dispatch_match_true,True
+05_max_abs_diff_zero,True
+06_max_active_at_least_3,True
+07_max_final_greater_than_base,True
+08_concurrency_levels_at_least_5,True
+09_probe_equals_invocations,True
+10_paper_self_consistent,True

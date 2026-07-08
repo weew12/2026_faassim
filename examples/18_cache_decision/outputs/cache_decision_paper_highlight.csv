@@ -1,16 +1,19 @@
-﻿metric,value
-decision_count__keep_warm,3
-decision_count__prewarm_candidate,2
-decision_count__eviction_candidate,1
-decision_count__observe,1
-top_utility_rank_1__img-resize,57.86666666666667
-top_utility_rank_2__fft,25.433333333333334
-top_utility_rank_3__ml-infer,20.583333333333332
-lowest_utility__thumbnail,0.0
-capacity_budget_used,4
-capacity_budget_total,4
-capacity_budget_utilization,1.0
-decision_hint_consistency,1.0
-decision_hint_matched,7
-decision_hint_total,7
-eviction_reason__thumbnail,idle_warm_instance
+﻿metric,value,note
+total_functions,7,输入函数画像数（应 == profile snapshot 行数）
+total_decision_types_observed,4,出现的决策类型数（最多 4 类：keep_warm / prewarm_candidate / eviction_candidate / observe）
+total_selected_by_budget,3,被 capacity budget 选中的函数数（keep_warm + prewarm_candidate）
+decision_count__keep_warm,3,keep_warm 决策的函数数（论文 demo 关键数字：决策分布）
+decision_count__prewarm_candidate,2,prewarm_candidate 决策的函数数（论文 demo 关键数字：决策分布）
+decision_count__eviction_candidate,1,eviction_candidate 决策的函数数（论文 demo 关键数字：决策分布）
+decision_count__observe,1,observe 决策的函数数（论文 demo 关键数字：决策分布）
+top_utility_rank_1__img-resize,57.86666666666667,按 utility_score 排序第 1 名的函数（论文 demo 关键数字：cache 价值）
+top_utility_rank_2__fft,25.433333333333334,按 utility_score 排序第 2 名的函数（论文 demo 关键数字：cache 价值）
+top_utility_rank_3__ml-infer,20.583333333333332,按 utility_score 排序第 3 名的函数（论文 demo 关键数字：cache 价值）
+lowest_utility__thumbnail,0.0,utility_score 最低的函数（应 == eviction_candidate）
+capacity_budget_used,4,被 budget 选中的 keep_warm/prewarm 实际占用 memory_units
+capacity_budget_total,4,总 capacity budget 配置值
+capacity_budget_utilization,1.0,capacity budget 利用率（= used / total，应 = 1.0 for greedy 选满）
+decision_hint_consistency,1.0,decision × control_hint 关联 100% 一致的比例（论文 demo 关键数字：应 = 1.0）
+decision_hint_matched,7,matched 行数（= match 列求和）
+decision_hint_total,7,join 总行数（应 == profiles 行数）
+eviction_reason__thumbnail,idle_warm_instance,thumbnail 被判定为 eviction_candidate 的理由

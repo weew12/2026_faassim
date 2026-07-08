@@ -1,0 +1,12 @@
+﻿check_id,passed
+01_request_events_30,True
+02_node_outage_failures_gt_zero,True
+03_replica_error_candidates_classified,True
+04_replica_error_failures_at_least_3,True
+05_network_degradation_count_gt_zero,True
+06_failure_count_explains_node_replica,True
+07_node_outage_window_match_full,True
+08_network_degradation_window_match_full,True
+09_normal_window_outside_full,True
+10_probe_invocation_t_exec_match_full,True
+11_dispatch_probe_equals_invocations,True

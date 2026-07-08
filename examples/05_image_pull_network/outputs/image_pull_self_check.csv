@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_total_pulls_is_3,True
+02_small_cold_pull_positive,True
+03_small_warm_is_cache_hit,True
+04_large_cold_longer_than_small_cold,True
+05_cache_savings_seconds_close_to_cold,True
+06_cache_savings_ratio_near_one,True
+07_invocations_count_is_10,True
+08_docker_pull_flow_count_is_2,True
+09_paper_docker_pull_flow_count_is_2,True
+10_invoke_probe_invocation_join_consistent,True

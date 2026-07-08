@@ -1,14 +1,17 @@
 # 08_degradation：faas-sim 性能退化样例
 
-本样例用于演示函数执行过程中的性能退化建模。核心思想是：当同一节点上已有请求正在执行时，新到达请求会受到资源竞争影响，其执行时间被放大。
+本样例演示函数执行过程中的**性能退化建模**。核心思想是：当同一节点上已有请求正在执行时，新到达请求会受到资源竞争影响，其执行时间被放大。
 
 ## 运行方式
 
-将 `degradation/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+在项目根目录运行：
 
 ```bash
 python -u examples/08_degradation/main.py
+python -u examples/08_degradation/plot.py
 ```
+
+第一步产出 CSV 到 `outputs/`，第二步产出 png+pdf 到 `figures/`。
 
 ## 样例目标
 
@@ -28,222 +31,187 @@ python -u examples/08_degradation/main.py
 final_duration = base_duration * (1 + alpha * max(active_requests_before, 0))
 ```
 
-其中：
-
-```text
-base_duration           无竞争时的基础执行时间（默认 0.4 simtime 秒）
-active_requests_before  本请求加入 node.current_requests 之前节点上已有的并发请求数
-alpha                   每个并发请求带来的执行时间放大系数（默认 0.35）
-final_duration          退化后的本次请求执行时间
-```
+| 参数 | 默认值 | 含义 |
+|---|---|---|
+| base_duration | 0.4 simtime 秒 | 无竞争时的基础执行时间 |
+| active_requests_before | 0-29 | 本请求加入 node.current_requests 之前节点上已有的并发请求数 |
+| alpha | 0.35 | 每个并发请求带来的执行时间放大系数 |
+| final_duration | 0.40-4.46 | 退化后的本次请求执行时间 |
 
 > **关键设计点**：`active_requests_before` 在 `node.current_requests.add(request)` **之前** 读取，
 > 表示"该请求到达时节点上已有多少请求在跑"，不是"包含自己"。
 
+## 拓扑
+
+**最小 4-server 拓扑**（与 02-07 一致风格）：
+
+```
+internet ── registry_link(200Mbps) ── switch ── link_server_X(200Mbps) ── server_X (X=0..3)
+                    └── DockerRegistry
+```
+
+**FixedNodeScheduler 强制 3 个副本全部分配到 server_0**，稳定触发共节点并发。
+
 ## 实验设计
 
-样例部署一个函数：
-
-```text
-degradation-python-pi
-```
-
-配置：
-
-```text
-scale_min = 3          # 3 个副本
-scale_max = 3
-请求速率 rps = 18       # 触发请求重叠
-max_requests = 40      # 总请求数
-```
-
-同时使用 `FixedNodeScheduler` 把 3 个副本**强制部署到同一节点 `server_0`**，
-加上 18 rps 的高并发率，会产生大量 in-flight 请求（`active_requests_before` 最大可达 29），
-从而稳定展示性能退化现象。
+| 参数 | 值 |
+|---|---|
+| 函数 | degradation-python-pi |
+| cpu / mem | 150m / 128Mi |
+| 副本数 | 3 |
+| rps | 18（高并发率制造请求重叠） |
+| max_requests | 40 |
+| 峰值 active_requests_before | 29 |
+| 峰值 final_duration | 4.46s |
 
 ## 输出文件
 
-运行结束后，结果会保存到：
+运行结束后，结果会保存到 `outputs/`：
 
 ```text
-examples/08_degradation/outputs/
-```
-
-实际生成：
-
-```text
-degradation_probe.csv                   # 每次请求的退化采样（active_requests_before / degradation_factor / final_duration）
-degradation_summary.csv                 # 按 (function_name, node_name) 聚合的退化摘要
-degradation_concurrency_distribution.csv # 按 active_requests_before 分组的执行时间分布（论文 demo 关键图）
-degradation_invoke_join.csv             # 论文 demo 关键：probe × invocations 关联，duration_match 全部 True
-degradation_model_consistency.csv       # 退化公式一致性：max_abs_diff == 0
-invocations.csv                         # faas-sim 原生调用记录（40 行）
+# 11 个 faas-sim / probe 内置 metric 的 CSV
+degradation_probe.csv                  # 每次请求的退化采样（40 行）
+invocations.csv                        # 实际函数调用事件（40 行）
 schedule.csv
 function_deployments.csv
 function_deployment_lifecycle.csv
 function_replicas.csv
 replica_deployment.csv
 flow.csv
-function_utilization.csv                # ResourceMonitor 周期性采集（默认 reconcile_interval=1）
-node_utilization.csv                    # 节点级（本样例 UrbanSensing 拓扑下为 0 行）
+function_utilization.csv               # ResourceMonitor 周期性采集
+node_utilization.csv                   # 节点级（本样例 0 行）
+invoke_dispatch_probe.csv              # invoke 派发探针（仿 02-07 模式）
+
+# 论文 demo 关键导出
+degradation_summary.csv                # 按 (function_name, node_name) 聚合
+degradation_concurrency_distribution.csv # 按 active_requests_before 分组（论文 demo 关键图）
+degradation_invoke_join.csv            # 论文 demo 关键：degradation_probe × dispatch_probe × invocations 三表关联
+degradation_model_consistency.csv      # 退化公式数学一致性（max_abs_diff=0）
+degradation_paper_highlight.csv        # 论文 demo 关键摘要（13 条 metric/value）
+degradation_self_check.csv             # 数据自检（10 项 PASS/FAIL）
 ```
 
-> 旧 README 列出的 `resource.csv / resources.csv / resource_monitor.csv / resource_state.csv`
-> 这 4 个 CSV 在 faas-sim 当前版本中并不存在对应的 metric，
-> 已删除并替换为实际生成的 `function_utilization.csv` / `node_utilization.csv`。
+`invocations.csv` 本身不包含 `request_id`。因此 `degradation_invoke_join.csv` 以 `invoke_dispatch_probe.csv` 作为桥接表：先按 `request_id` 关联 `degradation_probe`，再按 `(function_name, replica_id, simtime/t_start)` 关联 `invocations.csv`。
 
-## 关键导出与图
-
-### 1. `degradation_model_consistency.csv` —— 退化公式数学一致性
+绘图脚本生成 4 张图到 `figures/`：
 
 ```text
-probe_count=40  base_duration=0.4  alpha=0.35  max_abs_diff=0.0  pass_tolerance=True
+fig01_concurrency_vs_duration.png/pdf   # 并发数 vs 执行时间（含理论曲线）
+fig02_concurrency_distribution.png/pdf # 每个并发级别出现次数柱状图
+fig03_per_request_degradation.png/pdf  # 每条请求的 active_before 和 final_duration 时序
+fig04_paper_highlight_metrics.png/pdf  # 论文 demo 关键摘要指标条形图
 ```
 
-`max_abs_diff == 0` 证明 simulator 实现的退化公式和 model 的声明完全一致。
+## 论文 demo 关键摘要（13 条 paper highlight）
 
-### 2. `degradation_invoke_join.csv` —— probe × invocations 关联（论文 demo 关键证据）
+| metric | value | note |
+|---|---|---|
+| probe_count | 40 | degradation_probe 总采样数（应 == invocation_events） |
+| invocation_events | 40 | 实际函数调用事件数（应 == 40） |
+| base_duration | 0.4 | 无竞争基础执行时间（simtime 秒） |
+| alpha | 0.35 | 每个并发请求引入的执行时间放大系数 |
+| max_active_requests_before | 29 | peak 并发负载（峰值 29） |
+| max_degradation_factor | 11.15 | peak 退化因子（应 == 1 + alpha × max_active = 11.15） |
+| max_final_duration | 4.46 | peak 退化后执行时间（应 ≈ 4.46s，证明退化生效） |
+| avg_final_duration | 2.535 | 平均退化后执行时间 |
+| duration_match_count | 40 | degradation_probe.final_duration 与 inv t_exec 一致的行数（应 == 40） |
+| duration_match_ratio | 1.0 | duration_match 比例（应 == 1.0） |
+| max_abs_diff | 0.0 | 退化公式 final = base × (1 + alpha × active) 的 max abs diff（应 == 0） |
+| concurrency_levels | 30 | degradation_concurrency_distribution 的不同 active_before 值数量 |
+| probe_equals_invocations | True | probe_count == invocation_events（probe×invocation 一致） |
 
-按 (function_name, request_id) 把 `degradation_probe` 和 `invocations` 一一对应：
+## 10 项数据自检（10 / 10 PASS）
 
-- `probe_final_duration`  simulator 派发的最终执行时间
-- `inv_t_exec`            faas-sim 记录的实际执行时间
-- `duration_match`         两个值是否完全相等
-
-预期 40 行，**`duration_match` 全部 True**。
-
-### 3. 论文 demo 关键图 —— 并发数 vs 执行时间
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/08_degradation/outputs/degradation_concurrency_distribution.csv")
-fig, ax = plt.subplots(figsize=(9, 4.5))
-ax.plot(df["active_requests_before"], df["avg_final_duration"], "o-", color="steelblue",
-        label="avg final_duration")
-ax.plot(df["active_requests_before"], df["max_final_duration"], "s--", color="darkorange",
-        label="max final_duration")
-# 理论曲线：final = 0.4 * (1 + 0.35 * active)
-xs = df["active_requests_before"].values
-ax.plot(xs, 0.4 * (1 + 0.35 * xs), ":", color="grey", alpha=0.7,
-        label="theory: 0.4 × (1 + 0.35 × active)")
-ax.set_xlabel("active_requests_before")
-ax.set_ylabel("final_duration (simtime)")
-ax.set_title("Degradation: request execution time vs node concurrent load")
-ax.legend()
-ax.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
-```
-
-### 4. 退化分布柱状图
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/08_degradation/outputs/degradation_concurrency_distribution.csv")
-fig, ax = plt.subplots(figsize=(9, 4))
-ax.bar(df["active_requests_before"], df["request_count"], color="steelblue")
-ax.set_xlabel("active_requests_before")
-ax.set_ylabel("request count")
-ax.set_title("How often each concurrency level was hit during the run")
-ax.grid(True, axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-```
-
-## 数据自洽验证
-
-跑完 `main.py` 后，7 个核心不变量应同时满足：
-
-| 不变量 | 验证方式 |
+| check_id | 含义 |
 |---|---|
-| `degradation_probe.csv` 行数 == 40 (max_requests) | `len(probe) == 40` |
-| `invocations.csv` 行数 == 40 | `len(inv) == 40` |
-| `degradation_invoke_join.csv` 行数 == 40 | `len(join) == 40` |
-| `degradation_invoke_join.csv` 的 `duration_match` 全部 True | `join.duration_match.all()` |
-| `degradation_model_consistency.csv` 的 `max_abs_diff == 0` | `cons.max_abs_diff.iloc[0] < 1e-9` |
-| `degradation_concurrency_distribution.csv` 中 active=0 行的 `avg_final_duration == 0.4` | base_duration |
-| `degradation_concurrency_distribution.csv` 中 active=29 行的 `avg_final_duration == 4.46` | 0.4 × (1 + 0.35 × 29) |
+| 01_probe_count_is_40 | degradation_probe 行数 == 40 |
+| 02_invocations_is_40 | invocations 行数 == 40 |
+| 03_join_rows_is_40 | degradation_invoke_join 行数 == 40 |
+| 04_all_duration_and_dispatch_match_true | duration/simtime/node 三类匹配全部为 True |
+| 05_max_abs_diff_zero | 数学一致性 max_abs_diff < 1e-9 |
+| 06_max_active_at_least_3 | max_active_requests_before >= 3（至少 3 个副本） |
+| 07_max_final_greater_than_base | max_final_duration > base_duration × 2（证明退化生效） |
+| 08_concurrency_levels_at_least_5 | concurrency_distribution 行数 >= 5 |
+| 09_probe_equals_invocations | probe_count == invocation_events |
+| 10_paper_self_consistent | paper_highlight 数字与 summary 一致 |
 
 ## 文件说明
 
 ### `main.py`
 
-样例主入口。
+样例主入口。职责包括：
 
-职责包括：
-
-1. 创建拓扑；
+1. 创建 4-server 拓扑；
 2. 初始化 Docker Registry；
 3. 注册函数镜像；
 4. 构造 3 副本函数部署；
 5. 使用固定节点调度器制造共节点并发；
-6. 运行请求负载；
-7. **轮询 `env.metrics.records` 直到所有 40 次 invoke 完成**（替代原 `env.timeout(3)` 硬等待，
-   并发峰值时 final_duration 可达 4.46s，硬等待必丢请求）；
-8. 导出退化和调用结果指标。
+6. 运行请求负载（rps=18, max_requests=40）；
+7. **轮询 `env.metrics.records` 直到所有 40 次 invoke 完成**（替代原 `env.timeout(3)` 硬等待）；
+8. 导出退化和调用结果指标 + 论文 demo 关键摘要 + 数据自检。
 
 ### `degradation_model.py`
 
-性能退化模型文件。
+性能退化模型文件。提供：
 
-该文件提供：
-
-```text
-LinearNodeContentionDegradationModel
-DegradationSample
-```
-
-用于根据节点已有并发请求数计算退化后的执行时间。
+- `LinearNodeContentionDegradationModel`：final = base × (1 + alpha × active)
+- `DegradationSample`：单次退化采样结果
 
 ### `simulator.py`
 
-函数生命周期模拟器文件。
+函数生命周期模拟器文件。提供 `DegradationFunctionSimulator`：
 
-该文件提供：
-
-```text
-DegradationSimulatorFactory
-DegradationFunctionSimulator
-```
-
-其核心逻辑是在 `invoke()` 中读取：
-
-```text
-active_requests_before = len(node.current_requests)   # 加入 current_requests 之前
-sample = self.model.sample(active_requests_before)
-env.metrics.log("degradation_probe", ...)
-node.current_requests.add(request)
-yield env.timeout(sample.final_duration)
-```
+- `deploy()` 调用 `docker.pull()`，与普通函数部署一致；
+- `startup()` 固定 0.2s；
+- `invoke()` 读取 active_requests_before → 计算退化 → 写 `degradation_probe` 探针 + `invoke_dispatch_probe` 探针 → yield final_duration；
+- `setup()` / `teardown()` 0s。
 
 ### `scheduler.py`
 
-固定节点调度器文件。
-
-该文件提供 `FixedNodeScheduler`，用于把多个函数副本固定部署到同一节点 `server_0`，
-从而稳定触发共节点并发退化。
+固定节点调度器文件。提供 `FixedNodeScheduler`，把 3 个副本固定部署到同一节点 `server_0`。
 
 ### `analysis.py`
 
-指标导出与分析文件。
+指标导出与分析文件。负责：
 
-该文件负责导出：
+- 导出 11 个 faas-sim / probe 内置 metric 的 CSV（含 invoke_dispatch_probe）
+- 生成 `degradation_summary`（按 function × node 聚合）
+- 生成 `degradation_concurrency_distribution`（按 active_requests_before 分组）
+- 生成 `degradation_invoke_join`（degradation_probe × invoke_dispatch_probe × invocations 三表关联）
+- 生成 `degradation_model_consistency`（退化公式数学一致性）
+- 生成 `degradation_paper_highlight`（13 条论文 demo 关键摘要）
+- 生成 `degradation_self_check`（10 项数据自检）
 
-- 10 个 faas-sim / probe 原生 metric（`degradation_probe` / `invocations` /
-  `schedule` / `function_deployments` / `function_deployment_lifecycle` /
-  `function_replicas` / `replica_deployment` / `flow` /
-  `function_utilization` / `node_utilization`）
-- `degradation_summary.csv`：按 (function_name, node_name) 聚合的退化摘要
-- `degradation_concurrency_distribution.csv`：按 active_requests_before 分组的执行时间分布
-- `degradation_invoke_join.csv`：probe × invocations 关联
-- `degradation_model_consistency.csv`：退化公式一致性
+### `plot.py`
+
+绘图脚本。读 `outputs/` CSV，输出 `figures/` 下 4 张 png+pdf：
+
+1. **fig01_concurrency_vs_duration** —— 并发数 vs 执行时间（含理论曲线 `0.4 × (1 + 0.35 × active)`）
+2. **fig02_concurrency_distribution** —— 每个并发级别出现次数
+3. **fig03_per_request_degradation** —— 每条请求的 active_before 和 final_duration 时序（双子图）
+4. **fig04_paper_highlight_metrics** —— 论文 demo 关键摘要条形图
 
 ### `outputs/`
 
-运行输出目录。
+CSV 输出目录。
 
-用于保存 CSV 结果文件。
+### `figures/`
+
+绘图输出目录（运行 plot.py 后生成）。
+
+## 论文叙事点
+
+> **"线性节点竞争退化模型 `final = 0.4 × (1 + 0.35 × active_requests_before)` 在 40 次 invoke 中 100% 一致执行：mathematical consistency `max_abs_diff = 0.0`、simulator 与 faas-sim 的 `duration_match = 1.0`、probe×invocation 完全匹配。共节点并发峰值达 29，最终执行时间从 0.4s 放大到 4.46s（11.15× 退化因子）。"**
+
+## 08 vs 02-07 demo 价值对比
+
+| 维度 | 02_load_balancer | 03_skippy_scheduler | 04_network_flow | 05_image_pull_network | 06_resource_monitor | 07_trace_oracle | 08_degradation |
+|---|---|---|---|---|---|---|---|
+| 仿真引擎 | faas-sim | faas-sim | Ether | faas-sim + docker | faas-sim + ResourceMonitor | faas-sim + Trace Oracle | faas-sim + Degradation Model |
+| 拓扑 | 4-server 最小 | 4-server 最小 | 边缘→云端 | 4-server + 1Gbps | 4-server 最小 | 4-server 最小 | 4-server 最小 |
+| 关注对象 | FunctionReplica 路由 | Pod 调度 | 网络 Flow | 镜像拉取 + 缓存 | CPU/内存利用率 | trace-driven 执行时间 | **节点竞争退化** |
+| 数据来源 | 合成 (固定 0.3s) | 合成 (固定 0.25s) | 合成 (Flow 模型) | 合成 (固定 0.05s) | 合成 (固定 1.5s) | CSV trace | **节点并发数** |
+| 探针 | invoke_dispatch_probe | schedule_probe + invoke_dispatch_probe | （不适用） | image_pull_probe + invoke_dispatch_probe | function_utilization + invoke_dispatch_probe | trace_oracle_sample + invoke_dispatch_probe | degradation_probe + invoke_dispatch_probe |
+| 关键 metric | route_events | feasible_nodes_full | scaling_factor | cache_savings_seconds | overall_max_cpu_util | duration_match_ratio | max_active_requests_before |
+| 论文 highlight | 11 条 | 10 条 | 11 条 | 12 条 | 15 条 | 9 条 | 13 条 |
+| self-check | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 |

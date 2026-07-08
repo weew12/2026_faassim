@@ -29,6 +29,56 @@ METRIC_NAMES = [
 ]
 
 
+METRIC_COLUMNS = {
+    "cache_aware_candidate": [
+        "time",
+        "function_name",
+        "pod_name",
+        "candidate_node",
+        "scheduler",
+        "cache_hit",
+        "cache_hit_score",
+        "freshness_score",
+        "load_score",
+        "total_score",
+        "pod_count",
+        "avg_cold_start",
+    ],
+    "cache_aware_scheduler_result": [
+        "time",
+        "function_name",
+        "pod_name",
+        "selected_node",
+        "scheduler",
+        "needed_images",
+        "cache_hit",
+        "selected_score",
+        "needed_images_count",
+    ],
+    "cache_aware_request_probe": [
+        "time",
+        "scenario",
+        "function_name",
+        "request_id",
+        "node_name",
+        "replica_id",
+        "simtime",
+        "cache_hit",
+        "warm_duration",
+        "cold_start_penalty",
+        "final_duration",
+        "avg_cold_start",
+    ],
+    "cache_aware_workload_request": [
+        "time",
+        "scenario",
+        "function_name",
+        "request_id",
+        "arrival_time",
+    ],
+}
+
+
 def extract_metrics(sim) -> Dict[str, pd.DataFrame]:
     """
     从仿真对象中提取常用指标。
@@ -42,7 +92,10 @@ def extract_metrics(sim) -> Dict[str, pd.DataFrame]:
             logger.info("metric %s extracted, rows=%d", name, len(df))
         except Exception as err:
             logger.warning("metric %s not available: %s", name, err)
-            dfs[name] = pd.DataFrame()
+            dfs[name] = pd.DataFrame(columns=METRIC_COLUMNS.get(name, []))
+
+        if dfs[name].empty and name in METRIC_COLUMNS:
+            dfs[name] = pd.DataFrame(columns=METRIC_COLUMNS[name])
 
     return dfs
 
@@ -58,7 +111,7 @@ def export_scenario_outputs(sim, scenario_name: str, output_dir: Path) -> Dict[s
 
     for name, df in dfs.items():
         path = scenario_dir / f"{name}.csv"
-        df.to_csv(path, encoding="utf-8-sig")
+        df.to_csv(path, index=False, encoding="utf-8-sig")
         logger.info("saved %s", path)
 
     summary_df = build_scenario_summary(scenario_name, dfs)
@@ -146,7 +199,7 @@ def build_probe_invocation_join(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     probe × invocations 关联（论文 demo 关键证据）。
 
     cache_aware_request_probe 里的 simtime 字段 = invocations 的 t_start。
-    按 (function_name, node_name, request_id) 关联，验证：
+    按 (function_name, node_name) 分组，并按 probe.simtime / inv.t_start 顺序对齐，验证：
     - probe.final_duration == inv.t_exec
     - probe.simtime == inv.t_start
     """
@@ -195,7 +248,7 @@ def build_paper_highlight(
     scenario_probe_joins: Dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（含 note 列，沿用 02-18 模式）。
 
     cache_aware_scheduler 样例的论文 demo 关注的是：
     1. cache_blind vs cache_aware 命中率差异
@@ -204,40 +257,46 @@ def build_paper_highlight(
     4. cache_aware 相对 cache_blind 的提升倍数
 
     以 cache_blind 为 baseline（基线是"无缓存感知"），cache_aware 是"有缓存感知"。
+
+    返回：DataFrame(metric, value, note)，note 是论文可引用的语义注释。
     """
     rows: List[Dict[str, Any]] = []
 
     if comparison_df.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     blind = comparison_df[comparison_df["scenario"] == "cache_blind"]
     aware = comparison_df[comparison_df["scenario"] == "cache_aware"]
 
     if blind.empty or aware.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     blind_row = blind.iloc[0]
     aware_row = aware.iloc[0]
 
-    # 1. per-scenario 命中率
+    # 1. per-scenario 命中率 + 平均延迟 + 冷启动惩罚
     for scenario_name, row in [("cache_blind", blind_row), ("cache_aware", aware_row)]:
         hit_rate = row.get("cache_hit_rate")
         if pd.notna(hit_rate):
             rows.append({
                 "metric": f"cache_hit_rate__{scenario_name}",
                 "value": float(hit_rate),
+                "note": f"{scenario_name} 10 个请求中 cache hit 比例（论文核心指标）",
             })
         rows.append({
             "metric": f"cache_hit_count__{scenario_name}",
             "value": int(row["cache_hit_count"]) if pd.notna(row["cache_hit_count"]) else 0,
+            "note": f"{scenario_name} 实际命中数（raw count）",
         })
         rows.append({
             "metric": f"avg_final_duration__{scenario_name}",
             "value": float(row["avg_final_duration"]) if pd.notna(row["avg_final_duration"]) else 0.0,
+            "note": f"{scenario_name} 平均每次 invoke final_duration（含 warm_duration 0.1s）",
         })
         rows.append({
             "metric": f"total_cold_start_penalty__{scenario_name}",
             "value": float(row["total_cold_start_penalty"]) if pd.notna(row["total_cold_start_penalty"]) else 0.0,
+            "note": f"{scenario_name} 全部请求 cold_start_penalty 累加（论文冷启动代价 metric）",
         })
 
     # 2. 策略相对提升（cache_aware vs cache_blind）
@@ -246,12 +305,18 @@ def build_paper_highlight(
     rows.append({
         "metric": "cache_hit_rate_improvement__cache_aware_over_cache_blind",
         "value": float(aware_hit - blind_hit),
+        "note": "cache_aware - cache_blind 命中率差值（论文 demo 关键数字）",
     })
     if blind_hit > 0:
         rows.append({
             "metric": "cache_hit_rate_ratio__cache_aware_over_cache_blind",
             "value": float(aware_hit / blind_hit),
+            "note": "cache_aware / cache_blind 命中率倍数",
         })
+    else:
+        # cache_blind=0 时，ratio 数学上未定义；不写入 paper_highlight（inf 会污染 fig04）
+        # improvement 已经表达了"全部提升"的信息
+        pass
 
     blind_cold = float(blind_row.get("total_cold_start_penalty", 0.0))
     aware_cold = float(aware_row.get("total_cold_start_penalty", 0.0))
@@ -259,6 +324,7 @@ def build_paper_highlight(
         rows.append({
             "metric": "cold_start_penalty_reduction__cache_aware_over_cache_blind",
             "value": float((blind_cold - aware_cold) / blind_cold),
+            "note": "cache_aware 相对 cache_blind 冷启动惩罚降低比例（论文核心数字）",
         })
 
     blind_dur = float(blind_row.get("avg_final_duration", 0.0))
@@ -267,9 +333,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "avg_duration_reduction__cache_aware_over_cache_blind",
             "value": float((blind_dur - aware_dur) / blind_dur),
+            "note": "cache_aware 相对 cache_blind 平均延迟降低比例",
         })
 
     # 3. probe×invocation join 一致性
+    # **诚实说明 sim 模型限制**：
+    # invocations 表按 (function, node) 1 行，probe 按 (function, node, request) N 行
+    # 同一 (fn, node) 多次 invoke 时，probe.simtime 不同但 inv.t_start 相同
+    # → simtime_match 只有"第 1 次 request"匹配，其它次 False
+    # → duration_match 每次都匹配（inv.t_exec 固定 = 0.1s warm_duration）
+    # 因此：duration_match = 论文 demo 关键证据（应 1.0）
+    #       simtime_match = sim 模型限制的诚实暴露（≈ 1/n_requests_per_function_node）
     for scenario_name, join_df in scenario_probe_joins.items():
         if join_df.empty or "duration_match" not in join_df.columns:
             continue
@@ -278,15 +352,32 @@ def build_paper_highlight(
         rows.append({
             "metric": f"probe_invocation_duration_match__{scenario_name}",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": f"{scenario_name} probe.final_duration == inv.t_exec 一致率（论文 demo 关键证据，应 1.0）",
         })
+        # simtime_match 仅作为 sim 模型限制的诚实记录，不进 self_check
+        simtime_matched = int(join_df["simtime_match"].sum())
         rows.append({
             "metric": f"probe_invocation_simtime_match__{scenario_name}",
-            "value": float(
-                int(join_df["simtime_match"].sum()) / n
-            ) if n > 0 else 0.0,
+            "value": float(simtime_matched / n) if n > 0 else 0.0,
+            "note": f"{scenario_name} probe.simtime == inv.t_start 一致率（sim 模型限制：invocations 按 (fn,node) 1 行，probe 按 (fn,node,req) N 行，~1/n_req_per_node）",
         })
 
-    return pd.DataFrame(rows)
+    # 4. 跨 scenario 综合 metric（4 函数 cache 节点分布）
+    if not comparison_df.empty:
+        aware_row = comparison_df[comparison_df["scenario"] == "cache_aware"].iloc[0]
+        blind_row2 = comparison_df[comparison_df["scenario"] == "cache_blind"].iloc[0]
+        rows.append({
+            "metric": "selected_nodes_count__cache_blind",
+            "value": len(str(blind_row2.get("selected_nodes", "")).split(";")) if pd.notna(blind_row2.get("selected_nodes")) else 0,
+            "note": "cache_blind 实际调度到的不同节点数（= 4：轮转 4 个 server）",
+        })
+        rows.append({
+            "metric": "selected_nodes_count__cache_aware",
+            "value": len(str(aware_row.get("selected_nodes", "")).split(";")) if pd.notna(aware_row.get("selected_nodes")) else 0,
+            "note": "cache_aware 实际调度到的不同节点数（= 3：server_0/1/2 有 cache，server_3 被避开）",
+        })
+
+    return pd.DataFrame(rows, columns=["metric", "value", "note"])
 
 
 def self_check(
@@ -347,6 +438,12 @@ def self_check(
 
     # 5. probe×invocation join 100% match
     for scenario_name, join_df in scenario_probe_joins.items():
+        n_join = len(join_df)
+        checks.append({
+            "name": f"probe_invocation_join_row_count__{scenario_name}",
+            "status": "PASS" if n_join == expected_request_count else "FAIL",
+            "detail": f"join rows={n_join}, expected={expected_request_count}",
+        })
         if join_df.empty or "duration_match" not in join_df.columns:
             continue
         n = len(join_df)
@@ -422,12 +519,13 @@ def self_check(
             selected_nodes_str = str(aware_row["selected_nodes"].iloc[0])
             selected_nodes = set(selected_nodes_str.split(";"))
             cached_nodes = set(cache_snapshot_df["node_name"].dropna().unique())
-            # cache_aware 选择的节点应该是 cached_nodes 的子集
-            cached_only = selected_nodes & cached_nodes
+            # cache_aware 选择的节点应该全部来自 cached_nodes
+            uncached_selected = selected_nodes - cached_nodes
             checks.append({
                 "name": "cache_aware_chooses_cached_nodes",
-                "status": "PASS" if cached_only else "FAIL",
-                "detail": f"selected={sorted(selected_nodes)}, cached={sorted(cached_nodes)}, intersection={sorted(cached_only)}",
+                "status": "PASS" if not uncached_selected else "FAIL",
+                "detail": f"selected={sorted(selected_nodes)}, cached={sorted(cached_nodes)}, "
+                          f"uncached_selected={sorted(uncached_selected)}",
             })
 
     # 10. 跨 scenario paper highlight consistency
@@ -462,6 +560,27 @@ def self_check(
                 "status": "PASS" if valid else "FAIL",
                 "detail": f"selected={nodes}, expected subset of {{server_0, server_1, server_2, server_3}}",
             })
+
+    # 12. 导出的表结构不应包含 pandas 默认索引列
+    frames_to_check: Dict[str, pd.DataFrame] = {
+        "comparison": comparison_df,
+        "paper_highlight": paper_highlight_df,
+        "cache_snapshot": cache_snapshot_df,
+    }
+    for scenario_name, join_df in scenario_probe_joins.items():
+        frames_to_check[f"probe_join__{scenario_name}"] = join_df
+    bad_columns = []
+    for name, df in frames_to_check.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_warn = sum(1 for c in checks if c["status"] == "WARN")

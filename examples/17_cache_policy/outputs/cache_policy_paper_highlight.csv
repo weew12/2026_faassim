@@ -1,27 +1,32 @@
-﻿metric,value
-hit_rate__fifo,0.125
-avg_latency__fifo,1.1903124999999999
-total_cold_start_penalty__fifo,32.85
-avg_cache_used_after__fifo,3.34375
-miss_count__fifo,28.0
-hit_rate__lru,0.125
-avg_latency__lru,1.1903124999999999
-total_cold_start_penalty__lru,32.85
-avg_cache_used_after__lru,3.375
-miss_count__lru,28.0
-hit_rate__utility_aware,0.3125
-avg_latency__utility_aware,1.0403125
-total_cold_start_penalty__utility_aware,28.05
-avg_cache_used_after__utility_aware,3.28125
-miss_count__utility_aware,22.0
-hit_rate_improvement__lru_over_fifo,0.0
-hit_rate_ratio__lru_over_fifo,1.0
-latency_reduction__lru_over_fifo,0.0
-cold_start_penalty_reduction__lru_over_fifo,0.0
-hit_rate_improvement__utility_aware_over_fifo,0.1875
-hit_rate_ratio__utility_aware_over_fifo,2.5
-latency_reduction__utility_aware_over_fifo,0.12601732738251503
-cold_start_penalty_reduction__utility_aware_over_fifo,0.14611872146118723
-best_function_hit_rate__fifo__img-resize,0.36363636363636365
-best_function_hit_rate__lru__img-resize,0.36363636363636365
-best_function_hit_rate__utility_aware__img-resize,0.9090909090909091
+﻿metric,value,note
+total_policies,3.0,策略数（fifo / lru / utility_aware）
+total_requests_per_policy,32.0,每个 policy 的 request 数（应一致，因为 trace 共享）
+total_functions,5.0,函数规格数（5 个：img-resize / json-parse / fft / video-transcode / ml-infer）
+total_function_summary_rows,15.0,function_summary 总行数（应 == policies × functions = 15）
+policy_summary_count,3.0,policy_summary 总行数（应 == policies 数）
+hit_rate__fifo,0.125,fifo 策略命中率（应 == hit_count / request_count）
+avg_latency__fifo,1.1903124999999999,fifo 策略平均延迟（含冷启动惩罚）
+total_cold_start_penalty__fifo,32.85,fifo 策略累计冷启动惩罚（命中率越低，惩罚越大）
+avg_cache_used_after__fifo,3.34375,fifo 策略平均缓存占用（应 <= capacity=4）
+miss_count__fifo,28.0,fifo 策略 miss 次数（= request_count - hit_count）
+hit_rate__lru,0.125,lru 策略命中率（应 == hit_count / request_count）
+avg_latency__lru,1.1903124999999999,lru 策略平均延迟（含冷启动惩罚）
+total_cold_start_penalty__lru,32.85,lru 策略累计冷启动惩罚（命中率越低，惩罚越大）
+avg_cache_used_after__lru,3.375,lru 策略平均缓存占用（应 <= capacity=4）
+miss_count__lru,28.0,lru 策略 miss 次数（= request_count - hit_count）
+hit_rate__utility_aware,0.3125,utility_aware 策略命中率（应 == hit_count / request_count）
+avg_latency__utility_aware,1.0403125,utility_aware 策略平均延迟（含冷启动惩罚）
+total_cold_start_penalty__utility_aware,28.05,utility_aware 策略累计冷启动惩罚（命中率越低，惩罚越大）
+avg_cache_used_after__utility_aware,3.28125,utility_aware 策略平均缓存占用（应 <= capacity=4）
+miss_count__utility_aware,22.0,utility_aware 策略 miss 次数（= request_count - hit_count）
+hit_rate_improvement__lru_over_fifo,0.0,lru vs fifo 命中率绝对差（论文 demo 关键数字）
+hit_rate_ratio__lru_over_fifo,1.0,lru vs fifo 命中率倍数（论文 demo 一句话核心：utility_aware=2.5x）
+latency_reduction__lru_over_fifo,0.0,lru vs fifo 平均延迟相对降低
+cold_start_penalty_reduction__lru_over_fifo,0.0,lru vs fifo 冷启动惩罚相对降低
+hit_rate_improvement__utility_aware_over_fifo,0.1875,utility_aware vs fifo 命中率绝对差（论文 demo 关键数字）
+hit_rate_ratio__utility_aware_over_fifo,2.5,utility_aware vs fifo 命中率倍数（论文 demo 一句话核心：utility_aware=2.5x）
+latency_reduction__utility_aware_over_fifo,0.12601732738251503,utility_aware vs fifo 平均延迟相对降低
+cold_start_penalty_reduction__utility_aware_over_fifo,0.14611872146118723,utility_aware vs fifo 冷启动惩罚相对降低
+best_function_hit_rate__fifo__img-resize,0.36363636363636365,fifo 策略下命中率最高的函数（img-resize 最频繁，最受益）
+best_function_hit_rate__lru__img-resize,0.36363636363636365,lru 策略下命中率最高的函数（img-resize 最频繁，最受益）
+best_function_hit_rate__utility_aware__img-resize,0.9090909090909091,utility_aware 策略下命中率最高的函数（img-resize 最频繁，最受益）

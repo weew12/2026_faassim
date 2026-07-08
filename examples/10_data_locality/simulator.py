@@ -123,6 +123,9 @@ class DataLocalityFunctionSimulator(FunctionSimulator):
             {
                 "download_duration": duration,
                 "storage_node_count": len(storage_nodes),
+                "t_start": float(started),
+                "t_end": float(env.now),
+                "simtime": float(env.now),
             },
             scenario=self.scenario_name,
             function_name=replica.function.name,

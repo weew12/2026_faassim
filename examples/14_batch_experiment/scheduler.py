@@ -8,7 +8,7 @@
 为了清晰展示策略对比，本样例额外提供：
 - fixed_node 策略：FixedNodeScheduler，固定选 server_0
 - default_skippy 策略：实际是 CapacityAwareScheduler，选 capacity 最大的节点
-  （这样 default_skippy 选 server_1，fixed_node 选 server_0，t_exec 产生差异）
+  （这样 default_skippy 选 server_1，fixed_node 选 server_0，节点选择产生差异）
 
 如果你的 faas-sim Skippy 默认调度器在最小拓扑上确实能选到不同节点（按 Skippy 内部
 priorities 排序），可以把 default_skippy 改回 faas-sim 原生调度器。

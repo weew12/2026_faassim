@@ -225,7 +225,7 @@ def build_paper_highlight(
     eviction_state_join_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（含 note 列，沿用 02-20 模式）。
 
     cold_start_aware_policy 样例跟 17 一样：trace 驱动的缓存算法实验。
     论文 demo 关注的是：
@@ -240,7 +240,7 @@ def build_paper_highlight(
     rows: List[Dict[str, Any]] = []
 
     if policy_summary_df.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     # 1. 每 policy 关键指标
     for _, srow in policy_summary_df.iterrows():
@@ -248,22 +248,27 @@ def build_paper_highlight(
         rows.append({
             "metric": f"hit_rate__{policy}",
             "value": float(srow["hit_rate"]),
+            "note": f"{policy} 命中率（论文 demo 关键指标）",
         })
         rows.append({
             "metric": f"avg_latency__{policy}",
             "value": float(srow["avg_latency"]),
+            "note": f"{policy} 平均每次 invoke latency（warm=fast, cold=慢）",
         })
         rows.append({
             "metric": f"total_cold_start_penalty__{policy}",
             "value": float(srow["total_cold_start_penalty"]),
+            "note": f"{policy} 全部请求 cold_start_penalty 累加（论文冷启动代价 metric）",
         })
         rows.append({
             "metric": f"avg_keep_alive_window__{policy}",
             "value": float(srow["avg_keep_alive_window"]),
+            "note": f"{policy} 平均 keep-alive window（cold_start_aware 动态 ≥ fixed 固定 2.0）",
         })
         rows.append({
             "metric": f"eviction_count__{policy}",
             "value": int(srow["eviction_count"]),
+            "note": f"{policy} 全部 evict 事件数",
         })
 
     # 2. 策略相对提升（以 fixed_keep_alive 为 baseline）
@@ -289,29 +294,34 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"hit_rate_improvement__{policy}_over_{baseline}",
                 "value": float(hit_rate - base_hit),
+                "note": f"{policy} - {baseline} 命中率差值（论文 demo 关键数字）",
             })
             # 命中率倍数
             if base_hit > 0:
                 rows.append({
                     "metric": f"hit_rate_ratio__{policy}_over_{baseline}",
                     "value": float(hit_rate / base_hit),
+                    "note": f"{policy} / {baseline} 命中率倍数（论文 demo 关键数字）",
                 })
             # 延迟相对降低
             if base_latency > 0:
                 rows.append({
                     "metric": f"latency_reduction__{policy}_over_{baseline}",
                     "value": float((base_latency - latency) / base_latency),
+                    "note": f"{policy} 相对 {baseline} 平均延迟降低比例",
                 })
             # 冷启动惩罚相对降低
             if base_cold > 0:
                 rows.append({
                     "metric": f"cold_start_penalty_reduction__{policy}_over_{baseline}",
                     "value": float((base_cold - cold) / base_cold),
+                    "note": f"{policy} 相对 {baseline} 冷启动惩罚降低比例",
                 })
             # 平均 keep-alive window 差异
             rows.append({
                 "metric": f"avg_keep_alive_window_diff__{policy}_over_{baseline}",
                 "value": float(window - base_window),
+                "note": f"{policy} - {baseline} 平均 keep-alive window 差（论文 demo 关键证据：cold_start_aware 真的给高频函数更长的窗口）",
             })
 
     # 3. request×decision 一致性
@@ -321,14 +331,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "request_decision_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "request × policy_decision join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "request_decision_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "request_decision_total",
             "value": n,
+            "note": "request×decision join 总行数（应 = 2 policy × 30 request = 60）",
         })
 
     # 4. eviction 跟 state 一致性
@@ -338,17 +351,20 @@ def build_paper_highlight(
         rows.append({
             "metric": "eviction_state_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "eviction × policy_decision warm_keys join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "eviction_state_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "eviction_state_total",
             "value": n,
+            "note": "eviction×state join 总行数（应 = 2 policy 全部 eviction）",
         })
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["metric", "value", "note"])
 
 
 def self_check(
@@ -362,7 +378,7 @@ def self_check(
     n_policies: int,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（cold_start_aware_policy 10 个不变量）。
+    数据自洽段（cold_start_aware_policy 17 个不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -417,7 +433,15 @@ def self_check(
                 "detail": f"sum={total}, expected={expected_request_count}",
             })
 
-    # 6. request×decision join 100% match
+    # 6. request×decision join 行数和 request 行数一致
+    n_req_join = len(request_decision_join_df)
+    checks.append({
+        "name": "request_decision_join_row_count",
+        "status": "PASS" if n_req_join == n_req else "FAIL",
+        "detail": f"join rows={n_req_join}, requests={n_req}",
+    })
+
+    # 7. request×decision join 100% match
     if not request_decision_join_df.empty and "match" in request_decision_join_df.columns:
         n = len(request_decision_join_df)
         matched = int(request_decision_join_df["match"].sum())
@@ -427,7 +451,16 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 7. eviction 跟 state 100% match
+    # 8. eviction×state join 行数和 eviction 行数一致
+    n_eviction = len(eviction_df)
+    n_ev_join = len(eviction_state_join_df)
+    checks.append({
+        "name": "eviction_state_join_row_count",
+        "status": "PASS" if n_ev_join == n_eviction else "FAIL",
+        "detail": f"join rows={n_ev_join}, evictions={n_eviction}",
+    })
+
+    # 9. eviction 跟 state 100% match
     if not eviction_state_join_df.empty and "match" in eviction_state_join_df.columns:
         n = len(eviction_state_join_df)
         matched = int(eviction_state_join_df["match"].sum())
@@ -437,7 +470,15 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 8. paper highlight 里 hit_rate 跟 policy_summary 一致
+    # 10. paper highlight 行数应稳定为 21
+    n_paper = len(paper_highlight_df)
+    checks.append({
+        "name": "paper_highlight_metric_count",
+        "status": "PASS" if n_paper == 21 else "FAIL",
+        "detail": f"paper_highlight metrics={n_paper}, expected=21",
+    })
+
+    # 11. paper highlight 里 hit_rate 跟 policy_summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         for _, srow in policy_summary_df.iterrows():
             policy = srow["policy_name"]
@@ -454,7 +495,7 @@ def self_check(
                 "detail": f"summary={summary_v:.6f}, highlight={hl_v:.6f}",
             })
 
-    # 9. paper highlight 里 hit_rate_ratio 跟 summary 一致
+    # 12. paper highlight 里 hit_rate_ratio 跟 summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "hit_rate_ratio__cold_start_aware_over_fixed_keep_alive"
@@ -471,7 +512,7 @@ def self_check(
                     "detail": f"highlight={hl_v:.6f}, expected={expected_v:.6f}",
                 })
 
-    # 10. cold_start_aware 命中率应该 >= fixed_keep_alive
+    # 13. cold_start_aware 命中率应该 >= fixed_keep_alive
     if not policy_summary_df.empty and "policy_name" in policy_summary_df.columns:
         aware = policy_summary_df[policy_summary_df.policy_name == "cold_start_aware"]
         fixed = policy_summary_df[policy_summary_df.policy_name == "fixed_keep_alive"]
@@ -483,6 +524,30 @@ def self_check(
                 "status": "PASS" if aware_hit >= fixed_hit else "FAIL",
                 "detail": f"cold_start_aware={aware_hit:.4f}, fixed={fixed_hit:.4f} (cold_start_aware 应 >= fixed)",
             })
+
+    # 14. 导出的 DataFrame 不应包含 pandas 默认索引列
+    frames_to_check = {
+        "request_result": request_df,
+        "policy_decision": decision_df,
+        "eviction": eviction_df,
+        "policy_summary": policy_summary_df,
+        "function_summary": function_summary_df,
+        "request_decision_join": request_decision_join_df,
+        "eviction_state_join": eviction_state_join_df,
+        "paper_highlight": paper_highlight_df,
+    }
+    bad_columns = []
+    for name, df in frames_to_check.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -543,6 +608,12 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     )
     log_self_check(self_check_result)
 
+    # 导出 self_check 结果到 csv（沿用 02-20 模式）
+    self_check_path = output_dir / "cold_start_aware_policy_self_check.csv"
+    self_check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    self_check_df.to_csv(self_check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", self_check_path)
+
     outputs = dict(outputs)
     outputs["cold_start_policy_summary"] = policy_summary_df
     outputs["cold_start_function_summary"] = function_summary_df
@@ -550,8 +621,13 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     outputs["cold_start_request_decision_join"] = request_decision_join_df
     outputs["cold_start_eviction_state_join"] = eviction_state_join_df
     outputs["cold_start_policy_paper_highlight"] = paper_highlight_df
+    outputs["cold_start_aware_policy_self_check"] = self_check_df
+    outputs["self_check_result"] = self_check_result
 
     for name, df in outputs.items():
+        # 跳过 self_check_result 字典（已通过 self_check_df 单独导出）
+        if not isinstance(df, pd.DataFrame):
+            continue
         path = output_dir / f"{name}.csv"
         df.to_csv(path, index=False, encoding="utf-8-sig")
         logger.info("saved %s", path)

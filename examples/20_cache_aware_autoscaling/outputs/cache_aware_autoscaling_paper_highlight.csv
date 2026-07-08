@@ -1,33 +1,34 @@
-﻿metric,value
-action_count__scale_out,5.0
-action_count__scale_in,6.0
-action_count__protect,8.0
-action_count__prewarm,0.0
-action_count__observe,1.0
-r_load_dominant_events,5.0
-r_cache_only_events,0.0
-r_both_active_events,15.0
-r_neither_active_events,4.0
-r_load_dominant_ratio,0.25
-cache_budget_used,19.0
-cache_budget_total,5.0
-cache_budget_utilization,3.8
-r_cache_rejected_by_budget,1.0
-decision_plan_consistency,1.0
-decision_plan_matched,20.0
-decision_plan_total,20.0
-per_time_total_r_cache__0.0,3.0
-per_time_total_r_load__0.0,3.0
-per_time_total_r_desired__0.0,3.0
-per_time_total_r_cache__1.0,4.0
-per_time_total_r_load__1.0,6.0
-per_time_total_r_desired__1.0,6.0
-per_time_total_r_cache__2.0,3.0
-per_time_total_r_load__2.0,8.0
-per_time_total_r_desired__2.0,8.0
-per_time_total_r_cache__3.0,3.0
-per_time_total_r_load__3.0,3.0
-per_time_total_r_desired__3.0,3.0
-per_time_total_r_cache__4.0,2.0
-per_time_total_r_load__4.0,3.0
-per_time_total_r_desired__4.0,3.0
+﻿metric,value,note
+action_count__scale_out,5.0,scale_out 动作的 state 数（论文 demo 关键分布指标）
+action_count__scale_in,6.0,scale_in 动作的 state 数（论文 demo 关键分布指标）
+action_count__protect,8.0,protect 动作的 state 数（论文 demo 关键分布指标）
+action_count__prewarm,0.0,prewarm 动作的 state 数（论文 demo 关键分布指标）
+action_count__observe,1.0,observe 动作的 state 数（论文 demo 关键分布指标）
+r_load_dominant_events,5.0,R_load > R_cache 主导的 events（R_load 触发扩容）
+r_cache_only_events,0.0,R_cache > 0 且 R_load == 0 的 events（仅靠 cache 保护）
+r_both_active_events,15.0,R_cache > 0 且 R_load > 0 的 events（cache + load 同时保护）
+r_neither_active_events,4.0,R_cache == 0 且 R_load == 0 的 events（idle 状态）
+r_load_dominant_ratio,0.25,R_load 主导占比（论文 demo 关键数字）
+cache_budget_used,19.0,被 cache budget 实际选中的 memory_units 跨 time 累加总和（不是单轮利用率）
+cache_budget_max_used_per_time,4.0,单个 time 内被 cache budget 选中的最大 memory_units（用于计算利用率）
+cache_budget_total,5.0,总 cache budget（= 5 unit）
+cache_budget_utilization,0.8,单一 time 最大 cache budget 利用率（= max per-time selected memory / budget）
+r_cache_rejected_by_budget,1.0,R_cache > 0 但被 budget 拒绝的 events（被限缩为 0）
+decision_plan_consistency,1.0,decision × control_plan join match 占比（论文 demo 关键证据，应 1.0）
+decision_plan_matched,20.0,matched 行数
+decision_plan_total,20.0,decision×plan join 总行数（应 == decision 数）
+per_time_total_r_cache__0.0,3.0,time=0.0 所有函数 R_cache 总和（per-time 时间序列）
+per_time_total_r_load__0.0,3.0,time=0.0 所有函数 R_load 总和（per-time 时间序列）
+per_time_total_r_desired__0.0,3.0,time=0.0 所有函数 R_desired 总和（per-time 时间序列）
+per_time_total_r_cache__1.0,4.0,time=1.0 所有函数 R_cache 总和（per-time 时间序列）
+per_time_total_r_load__1.0,6.0,time=1.0 所有函数 R_load 总和（per-time 时间序列）
+per_time_total_r_desired__1.0,6.0,time=1.0 所有函数 R_desired 总和（per-time 时间序列）
+per_time_total_r_cache__2.0,3.0,time=2.0 所有函数 R_cache 总和（per-time 时间序列）
+per_time_total_r_load__2.0,8.0,time=2.0 所有函数 R_load 总和（per-time 时间序列）
+per_time_total_r_desired__2.0,8.0,time=2.0 所有函数 R_desired 总和（per-time 时间序列）
+per_time_total_r_cache__3.0,3.0,time=3.0 所有函数 R_cache 总和（per-time 时间序列）
+per_time_total_r_load__3.0,3.0,time=3.0 所有函数 R_load 总和（per-time 时间序列）
+per_time_total_r_desired__3.0,3.0,time=3.0 所有函数 R_desired 总和（per-time 时间序列）
+per_time_total_r_cache__4.0,2.0,time=4.0 所有函数 R_cache 总和（per-time 时间序列）
+per_time_total_r_load__4.0,3.0,time=4.0 所有函数 R_load 总和（per-time 时间序列）
+per_time_total_r_desired__4.0,3.0,time=4.0 所有函数 R_desired 总和（per-time 时间序列）

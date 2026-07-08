@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_same_node_cache_hit_equals_1,True
+02_same_node_cold_pull_equals_1,True
+03_same_node_flow_events_equals_1,True
+04_different_node_cache_hit_equals_0,True
+05_different_node_cold_pull_equals_2,True
+06_different_node_flow_events_equals_2,True
+07_different_total_equals_2x_same,True
+08_speedup_ratio_equals_2,True
+09_saved_bytes_equals_image_size,True
+10_probe_flow_join_all_match_50ms,True

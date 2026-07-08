@@ -1,29 +1,34 @@
-﻿metric,value
-invoke_events__cooldown__release_attention,7.0
-avg_final_duration__cooldown__release_attention,0.17099999999999999
-impact_relative_to_normal__cooldown__release_attention,0.95
-invoke_events__edge_pressure__scale_attention,13.0
-avg_final_duration__edge_pressure__scale_attention,0.323
-impact_relative_to_normal__edge_pressure__scale_attention,1.7944444444444445
-invoke_events__network_slowdown__network_attention,12.0
-avg_final_duration__network_slowdown__network_attention,0.448
-impact_relative_to_normal__network_slowdown__network_attention,2.488888888888889
-invoke_events__normal__observe,4.0
-avg_final_duration__normal__observe,0.18
-exchange_events__cooldown__release_attention,4.0
-exchange_events__edge_pressure__scale_attention,4.0
-exchange_events__idle__observe,2.0
-exchange_events__network_slowdown__network_attention,4.0
-exchange_events__normal__observe,4.0
-trace_rps__normal,3.0
-trace_runtime_factor__normal,1.0
-trace_network_delay__normal,0.0
-trace_rps__edge_pressure,8.0
-trace_runtime_factor__edge_pressure,1.35
-trace_network_delay__edge_pressure,0.08
-trace_rps__network_slowdown,5.0
-trace_runtime_factor__network_slowdown,1.1
-trace_network_delay__network_slowdown,0.25
-trace_rps__cooldown,2.0
-trace_runtime_factor__cooldown,0.95
-trace_network_delay__cooldown,0.0
+﻿metric,value,note
+total_phases,4.0,外部 trace 的 phase 数（normal / edge_pressure / network_slowdown / cooldown）
+total_invocations,36.0,所有 phase 的 invoke 总数（应 == trace 总 request 数）
+total_exchange_events,18.0,外部控制器与 faas-sim 的总状态交换数（每 0.5s 一次 × trace duration）
+phase_summary_count,4.0,"cosim_phase_invoke_summary.csv 的行数（应 == 不同 (phase, action) 组合数）"
+exchange_summary_count,5.0,"cosim_exchange_summary.csv 的行数（应 == 不同 (phase, action) 组合数）"
+invoke_events__cooldown__release_attention,7.0,cooldown phase 的 probe 记录 invoke 数（= trigger 量，受 phase 边界 lag 影响）
+avg_final_duration__cooldown__release_attention,0.17099999999999999,cooldown phase 的 avg_final_duration = base_duration × runtime_factor + network_delay
+impact_relative_to_normal__cooldown__release_attention,0.95,cooldown phase 相对 normal baseline 的耗时倍数（论文 demo 关键数字）
+invoke_events__edge_pressure__scale_attention,13.0,edge_pressure phase 的 probe 记录 invoke 数（= trigger 量，受 phase 边界 lag 影响）
+avg_final_duration__edge_pressure__scale_attention,0.323,edge_pressure phase 的 avg_final_duration = base_duration × runtime_factor + network_delay
+impact_relative_to_normal__edge_pressure__scale_attention,1.7944444444444445,edge_pressure phase 相对 normal baseline 的耗时倍数（论文 demo 关键数字）
+invoke_events__network_slowdown__network_attention,12.0,network_slowdown phase 的 probe 记录 invoke 数（= trigger 量，受 phase 边界 lag 影响）
+avg_final_duration__network_slowdown__network_attention,0.448,network_slowdown phase 的 avg_final_duration = base_duration × runtime_factor + network_delay
+impact_relative_to_normal__network_slowdown__network_attention,2.488888888888889,network_slowdown phase 相对 normal baseline 的耗时倍数（论文 demo 关键数字）
+invoke_events__normal__observe,4.0,normal phase 的 probe 记录 invoke 数（= trigger 量，受 phase 边界 lag 影响）
+avg_final_duration__normal__observe,0.18,normal phase 的 avg_final_duration = base_duration × runtime_factor + network_delay
+exchange_events__cooldown__release_attention,4.0,cooldown phase 内外部控制器状态交换次数（控制循环 0.5s 一次）
+exchange_events__edge_pressure__scale_attention,4.0,edge_pressure phase 内外部控制器状态交换次数（控制循环 0.5s 一次）
+exchange_events__idle__observe,2.0,idle phase 内外部控制器状态交换次数（控制循环 0.5s 一次）
+exchange_events__network_slowdown__network_attention,4.0,network_slowdown phase 内外部控制器状态交换次数（控制循环 0.5s 一次）
+exchange_events__normal__observe,4.0,normal phase 内外部控制器状态交换次数（控制循环 0.5s 一次）
+trace_rps__normal,3.0,normal phase 的 trace 设定 RPS（外部环境负载）
+trace_runtime_factor__normal,1.0,normal phase 的 trace 设定 runtime_factor（= 1.0 表示无 CPU 放大）
+trace_network_delay__normal,0.0,normal phase 的 trace 设定 network_delay（额外的网络延迟）
+trace_rps__edge_pressure,8.0,edge_pressure phase 的 trace 设定 RPS（外部环境负载）
+trace_runtime_factor__edge_pressure,1.35,edge_pressure phase 的 trace 设定 runtime_factor（= 1.0 表示无 CPU 放大）
+trace_network_delay__edge_pressure,0.08,edge_pressure phase 的 trace 设定 network_delay（额外的网络延迟）
+trace_rps__network_slowdown,5.0,network_slowdown phase 的 trace 设定 RPS（外部环境负载）
+trace_runtime_factor__network_slowdown,1.1,network_slowdown phase 的 trace 设定 runtime_factor（= 1.0 表示无 CPU 放大）
+trace_network_delay__network_slowdown,0.25,network_slowdown phase 的 trace 设定 network_delay（额外的网络延迟）
+trace_rps__cooldown,2.0,cooldown phase 的 trace 设定 RPS（外部环境负载）
+trace_runtime_factor__cooldown,0.95,cooldown phase 的 trace 设定 runtime_factor（= 1.0 表示无 CPU 放大）
+trace_network_delay__cooldown,0.0,cooldown phase 的 trace 设定 network_delay（额外的网络延迟）

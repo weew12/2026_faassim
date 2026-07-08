@@ -1,221 +1,160 @@
-# 06_resource_monitor：faas-sim 原生 ResourceMonitor 资源监控样例
+# 06_resource_monitor：faas-sim ResourceMonitor 资源监控样例
 
-本样例用于演示 faas-sim 中 `ResourceState` 和 `ResourceMonitor` 的基本用法，重点展示函数执行期间如何登记 CPU / 内存资源占用、如何释放资源，以及如何把 ResourceMonitor 周期性采集到的资源利用率与函数调用按时间窗关联起来。
+本样例演示 faas-sim 中 `ResourceState` 和 `ResourceMonitor` 的基本用法，重点展示函数执行期间如何登记 CPU / memory，执行结束后如何释放资源，以及如何把周期性资源采样与函数调用记录关联起来。
 
 ## 运行方式
 
-将 `06_resource_monitor/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+在项目根目录运行：
 
 ```bash
 python -u examples/06_resource_monitor/main.py
+python -u examples/06_resource_monitor/plot.py
 ```
+
+第一步产出 CSV 到 `outputs/`，第二步产出 PNG/PDF 到 `figures/`。
 
 ## 样例目标
 
-该样例主要回答以下问题：
+1. 演示 `env.resource_state.put_resource()` / `remove_resource()`。
+2. 演示 `ResourceMonitor` 如何周期性采集 per-replica CPU/memory 利用率。
+3. 导出 `function_utilization.csv`、`invocations.csv`、`invoke_dispatch_probe.csv` 等原始指标。
+4. 额外导出 `resource_monitor_sample_probe.csv`，从 `env.metrics_server` 读取真实 `ResourceWindow.time`，弥补原始 `function_utilization.csv` 缺少 simtime 的问题。
+5. 生成 `invocation_resource_join.csv`，用真实采样 simtime 关联 invocation 执行窗口和资源采样。
+6. 生成 `resource_monitor_invoke_probe_invocation_join.csv`，逐条验证 invoke probe 与 invocation 记录一致。
 
-1. 函数执行期间如何向 `env.resource_state` 登记 CPU / memory；
-2. 函数执行结束后如何释放资源；
-3. `ResourceMonitor` 如何周期性采集资源状态；
-4. 如何从 `sim.env.metrics` 中导出资源监控 DataFrame；
-5. **如何把 ResourceMonitor 周期性采集到的 cpu/mem util 和每次 invoke 的执行时间窗关联起来**，从而回答"这个调用实际拿到了多少资源"。
+## 拓扑
 
-## 实验设计
-
-样例部署一个函数：
-
-```text
-resource-heavy-python-pi
-```
-
-该函数保持 2 个副本，并触发 12 个请求。每次请求执行期间会登记：
+最小 4-server 拓扑：
 
 ```text
-CPU      节点 CPU 容量的 35%（由 simulator.py 按 node.capacity.cpu_millis 动态计算）
-Memory   128 MiB
-执行时间  1.5 个仿真时间单位
+internet -- registry_link(200 Mbps) -- switch -- link_server_X(200 Mbps) -- server_X
 ```
 
-请求结束后，CPU 和内存资源会从 `env.resource_state` 中释放。
+本样例关注 CPU/memory 监控，不关注网络瓶颈。两个函数副本由默认 Skippy 调度到 `server_0`。
 
-> faas-sim 的 `ResourceMonitor(reconcile_interval=1)` 在 `sim.faassim.Simulation.run()` 中由
-> `env.process(env.resource_monitor.run())` 启动，每 1 个 simtime 秒对所有 RUNNING 副本采样一次。
-> 采样指标写入 `function_utilization`（per-replica：cpu / memory / cpu_util / mem_util）。
+## 工作负载
+
+| 函数 | 镜像 | 副本数 | 请求数 | RPS | invoke 时长 |
+|---|---|---:|---:|---:|---:|
+| resource-heavy-python-pi | resource-heavy-python-pi-cpu | 2 | 12 | 3 | 1.5s |
+
+`main.py` 会等待两个副本都进入 `RUNNING` 后再触发请求，避免负载只压到第一个副本。
+
+## 资源占用
+
+`simulator.py` 在每次 invoke 开始时登记：
+
+| 资源 | 数值 |
+|---|---:|
+| CPU | 节点 CPU 容量 × 35% = 1400 millis |
+| memory | 128 MiB |
+
+同一 replica 上多个并发请求会叠加。因此当前输出中单个 replica 的峰值 CPU util 为 `1.05`，表示该 replica 在某个采样点上叠加了约 3 个并发请求。
 
 ## 输出文件
 
-运行结束后，结果会保存到：
+运行结束后，结果保存到 `examples/06_resource_monitor/outputs/`：
 
 ```text
-examples/06_resource_monitor/outputs/
-```
-
-实际生成：
-
-```text
-function_utilization.csv                # 06 关键：ResourceMonitor 周期性采集到的 per-replica 资源利用率
-node_utilization.csv                    # 节点级资源利用率（本样例 UrbanSensing 拓扑下为 0 行，因 faas-sim ResourceMonitor 只在函数级采样）
-invocations.csv                         # 每次 invoke 的 t_start/t_exec/replica 等
-resource_utilization_per_replica.csv    # 06 新增：按 (node, replica_id) 聚合的 avg/max cpu+mem util
-invocation_resource_join.csv            # 06 新增：每个 invoke 在 [t_start, t_start+t_exec] 内的 cpu/mem util
-resource_monitor_summary.csv            # 总体资源监控摘要（采样数 / 监控副本数 / 平均峰值 util）
-resource_monitor_invocation_summary.csv # 调用摘要（次数 / 函数数 / avg-max duration）
+function_utilization.csv                          # ResourceMonitor 原始 per-replica 资源采样，time 是 wall clock
+resource_monitor_sample_probe.csv                 # 样例新增：真实 simtime 资源采样
+node_utilization.csv                              # 节点级资源采样；当前 faas-sim 版本为空
+invocations.csv                                   # 12 次调用记录，含 t_start/t_exec
+invoke_dispatch_probe.csv                         # simulator invoke 派发探针
 schedule.csv
 function_deployments.csv
 function_deployment_lifecycle.csv
 function_replicas.csv
 replica_deployment.csv
 flow.csv
+resource_utilization_per_replica.csv              # 每个 replica 的资源聚合
+invocation_resource_join.csv                      # invocation 执行窗口 × ResourceMonitor 采样
+resource_monitor_invoke_probe_invocation_join.csv # invoke probe × invocations 逐条 join
+resource_monitor_summary.csv                      # 总体资源摘要
+resource_monitor_invocation_summary.csv           # 调用摘要
+resource_monitor_paper_highlight.csv              # 论文 demo 关键指标
+resource_monitor_self_check.csv                   # 10 项 self-check
 ```
 
-> 旧版 README 列出的 `resource.csv / resources.csv / resource_monitor.csv / resource_state.csv`
-> 这 4 个 CSV 在当前 faas-sim 版本中不存在（faas-sim 的 ResourceMonitor 实际记录的 metric 名是
-> `function_utilization` / `node_utilization`），已从输出列表中删除。
-
-## 关键导出与图
-
-### 1. `resource_utilization_per_replica.csv` —— 每个副本的 CPU / 内存 util 画像
-
-按 `(node, replica_id)` 聚合：
-
-- `samples`              ResourceMonitor 在该副本上的采样次数
-- `avg_cpu_util / max_cpu_util`   CPU 平均 / 峰值利用率（占节点 CPU 容量比）
-- `avg_cpu_millis / max_cpu_millis` CPU 平均 / 峰值占用（毫核）
-- `avg_mem_util / max_mem_util`   内存平均 / 峰值利用率
-- `avg_mem_bytes / max_mem_bytes` 内存平均 / 峰值占用（字节）
-
-```python
-import pandas as pd
-df = pd.read_csv("examples/06_resource_monitor/outputs/resource_utilization_per_replica.csv")
-print(df[["node", "replica_id", "samples", "avg_cpu_util", "max_cpu_util", "avg_mem_util", "max_mem_util"]])
-```
-
-### 2. `invocation_resource_join.csv` —— 调用 × 资源关联（README §5 核心）
-
-按 `(function_name, replica_id, t_start, t_exec)` 把 `invocations.csv` 的执行时间窗
-和 `function_utilization.csv` 的 ResourceMonitor 采样按时间对齐。
-
-- `samples_in_window`   该 invoke 在执行时间窗内被 ResourceMonitor 采到的次数
-- `avg_cpu_util / max_cpu_util`   该 invoke 在窗口内的平均 / 峰值 CPU 利用率
-- `avg_mem_util / max_mem_util`   该 invoke 在窗口内的平均 / 峰值内存利用率
-- `avg_cpu_millis / max_cpu_millis`   该 invoke 在窗口内的平均 / 峰值 CPU 占用
-- `avg_mem_bytes / max_mem_bytes`   该 invoke 在窗口内的平均 / 峰值内存占用
-
-> 仿真时间窗重建说明：
-> - `invocations.csv` 在 fields 中显式记录了 float simtime 的 `t_start` / `t_exec`，可直接读出。
-> - `function_utilization.csv` 没有 simtime 字段（faas-sim 的 `extract_dataframe` 把
->   wall-clock datetime 当成 index）。但 ResourceMonitor 的采样间隔 `reconcile_interval`
->   已知（默认 1 simtime 秒），所以可以按 `replica_id` 内排序后用 `(rank + 1) * reconcile_interval`
->   重建 simtime。这一逻辑由 `analysis.build_invocation_resource_join` 实现。
-
-**论文 demo 关键图**：每个 invoke 的 `avg_cpu_util` 柱状图（直观看 12 次 invoke 各自的资源画像）：
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/06_resource_monitor/outputs/invocation_resource_join.csv")
-df["invocation_id"] = range(1, len(df) + 1)
-
-fig, ax = plt.subplots(figsize=(9, 4))
-ax.bar(df["invocation_id"], df["avg_cpu_util"], color="steelblue", label="avg_cpu_util")
-ax.bar(df["invocation_id"], df["max_cpu_util"], color="darkorange", alpha=0.6, label="max_cpu_util")
-ax.set_xlabel("invocation id")
-ax.set_ylabel("CPU utilization (fraction of node capacity)")
-ax.set_title("Per-invocation CPU utilization (12 requests on 2 replicas, 0.35 each)")
-ax.set_ylim(0, 1.0)
-ax.legend()
-ax.grid(True, axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-```
-
-**为什么有些行 avg_cpu_util=0.525 而不是 0.7**：
-两个副本轮流执行 invoke，所以某些 invoke 的执行窗口内**只有一个副本**正在跑（cpu_util=0.35），
-另一个时刻**两个副本同时在跑**（各自 0.35，per-replica 看到 0.7）。窗口平均 ≈ 0.525。
-这正是 README §5 想展示的"调用 × 资源"关联细节。
-
-### 3. `resource_monitor_summary.csv` —— 总体资源摘要
-
-```python
-import pandas as pd
-df = pd.read_csv("examples/06_resource_monitor/outputs/resource_monitor_summary.csv")
-print(df.to_string(index=False))
-```
-
-预期输出（每次 ID 不同）：
+绘图输出到 `examples/06_resource_monitor/figures/`：
 
 ```text
- total_resource_samples  monitored_replicas  monitored_nodes  overall_avg_cpu_util  overall_max_cpu_util  ...
-                    13                   2                1              0.430769                   0.7  ...
+fig01_per_invocation_cpu_util.png/pdf
+fig02_per_replica_util.png/pdf
+fig03_cpu_util_timeline.png/pdf
+fig04_paper_highlight_metrics.png/pdf
 ```
 
-## 数据自洽验证
+## 关键结果
 
-跑完 `main.py` 后，6 个核心不变量应同时满足：
+### Resource Summary
 
-| 不变量 | 验证方式 |
+| metric | value |
+|---|---:|
+| total_resource_samples | 12 |
+| monitored_replicas | 2 |
+| monitored_nodes | 1 |
+| overall_avg_cpu_util | 0.583333 |
+| overall_max_cpu_util | 1.05 |
+| overall_avg_mem_util | 0.104167 |
+| overall_max_mem_util | 0.1875 |
+| invocation_events | 12 |
+| join_coverage | 1.0 |
+| join_sample_coverage | 1.0 |
+| invoke_probe_join_match_ratio | 1.0 |
+
+`join_coverage=1.0` 表示 `invocation_resource_join.csv` 对 12 次调用都生成了行。`join_sample_coverage=1.0` 表示 12/12 个调用窗口内至少包含一个真实 ResourceMonitor 采样点。
+
+### Per-Replica Summary
+
+当前两个副本资源分布对称：
+
+| samples | avg_cpu_util | max_cpu_util | avg_mem_util | max_mem_util |
+|---:|---:|---:|---:|---:|
+| 6 | 0.583333 | 1.05 | 0.104167 | 0.1875 |
+| 6 | 0.583333 | 1.05 | 0.104167 | 0.1875 |
+
+### Probe Join
+
+`resource_monitor_invoke_probe_invocation_join.csv` 逐条验证：
+
+- `probe_simtime == inv_t_start`
+- `probe_node == inv_node`
+- 行数 == 12
+
+当前 `invoke_probe_join_match_ratio = 1.0`。
+
+## Self-Check
+
+`main.py` 运行后应输出 `data self-check: 10 / 10 PASS`：
+
+| check_id | 含义 |
 |---|---|
-| `function_utilization.csv` 行数 == 资源监控 summary 中的 `total_resource_samples` | `len(pd.read_csv("function_utilization.csv")) == resource_monitor_summary.total_resource_samples` |
-| `invocations.csv` 行数 == 12（max_requests） | `len(pd.read_csv("invocations.csv")) == 12` |
-| `invocation_resource_join.csv` 行数 == `invocations.csv` 行数 | `len(join) == len(inv)` |
-| 每行 join 的 `samples_in_window` ≥ 1 | `(join.samples_in_window >= 1).all()` |
-| `resource_utilization_per_replica.csv` 每行 `samples` 之和 == `function_utilization.csv` 行数 | `per_replica.samples.sum() == len(util)` |
-| `monitored_replicas` == 2 | `summary.monitored_replicas == 2` |
+| 01_total_resource_samples_at_least_10 | 至少采到 10 条资源样本 |
+| 02_monitored_replicas_is_2 | 采样覆盖 2 个副本 |
+| 03_overall_max_cpu_util_above_0.5 | 确实采到明显 CPU 使用 |
+| 04_invocations_count_is_12 | 调用数为 12 |
+| 05_join_rows_equals_invocations | resource join 行数等于调用数 |
+| 06_resource_join_has_samples | 调用窗口包含资源采样 |
+| 07_per_replica_rows_is_2 | per-replica 聚合有 2 行 |
+| 08_per_replica_samples_sum_matches | per-replica 样本数之和等于总样本数 |
+| 09_invoke_dispatch_probe_events_is_12 | invoke probe 行数为 12 |
+| 10_invoke_probe_join_consistent | probe 与 invocations 逐条一致 |
+
+## 图表说明
+
+- `fig01_per_invocation_cpu_util`：每次 invoke 执行窗口内的平均/峰值 CPU util。
+- `fig02_per_replica_util`：两个副本的 CPU/memory 平均和峰值利用率。
+- `fig03_cpu_util_timeline`：使用 `resource_monitor_sample_probe.csv` 的真实 simtime，按 replica 展示 ResourceMonitor 周期采样，参考线为 1/2/3 个并发请求的 CPU util。
+- `fig04_paper_highlight_metrics`：只展示适合横向比较的比例类指标。
 
 ## 文件说明
 
-### `main.py`
+- `main.py`：创建拓扑、部署 2 个副本、等待副本 running、触发 12 次请求并导出结果。
+- `simulator.py`：在 invoke 阶段登记/释放 CPU 和 memory，并写入 `invoke_dispatch_probe`。
+- `analysis.py`：导出真实 simtime 资源采样、资源聚合、调用关联、probe join、paper highlight 和 self-check。
+- `plot.py`：读取输出 CSV，生成 4 张论文 demo 图。
 
-样例主入口。
+## 论文叙事点
 
-职责包括：
-
-1. 创建拓扑；
-2. 初始化 Docker Registry；
-3. 注册函数镜像；
-4. 构造函数部署；
-5. 运行请求负载；
-6. 导出资源监控和调用结果指标。
-
-### `simulator.py`
-
-函数生命周期模拟器文件。
-
-该文件提供：
-
-```text
-ResourceMonitorSimulatorFactory
-ResourceMonitorFunctionSimulator
-```
-
-其核心逻辑是在 `invoke()` 中调用：
-
-```text
-env.resource_state.put_resource(replica, "cpu", cpu_millis)
-env.resource_state.put_resource(replica, "memory", memory_bytes)
-env.resource_state.remove_resource(replica, "cpu", cpu_millis)
-env.resource_state.remove_resource(replica, "memory", memory_bytes)
-```
-
-从而让 ResourceMonitor 能够采集到资源使用变化。
-
-### `analysis.py`
-
-指标导出与分析文件。
-
-该文件负责导出：
-
-- 7 个 faas-sim 原生 metric（`function_utilization` / `node_utilization` / `invocations` /
-  `schedule` / `function_deployments` / `function_deployment_lifecycle` /
-  `function_replicas` / `replica_deployment` / `flow`）
-- `resource_utilization_per_replica.csv`：per-replica CPU/mem util 聚合
-- `invocation_resource_join.csv`：调用 × 资源 join
-- `resource_monitor_summary.csv`：总体资源摘要
-- `resource_monitor_invocation_summary.csv`：调用摘要
-
-### `outputs/`
-
-运行输出目录。
-
-用于保存 CSV 结果文件。
+12 次 invoke 在 2 个 replica 上执行，每次请求登记 1400 millis CPU 和 128 MiB memory。ResourceMonitor 采到 12 条真实 simtime per-replica 样本，两个副本各 6 条；峰值 CPU util 为 1.05，表示单个副本上约 3 个请求并发叠加。`invocation_resource_join.csv` 对 12 次调用全部建行，且 12 次调用窗口都包含资源采样点；`resource_monitor_invoke_probe_invocation_join.csv` 进一步验证 invoke 派发探针与 invocation 记录 100% 一致。

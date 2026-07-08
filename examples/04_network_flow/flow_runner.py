@@ -126,6 +126,8 @@ def run_single_flow_scenario(network) -> List[Dict[str, Any]]:
     运行单个 Flow 场景。
 
     该场景用于观察没有并发竞争时，一次边缘到云端传输需要多长时间。
+    数据大小使用 30M，和并发场景中的每条流一致，便于公平计算
+    concurrent / single 的延迟放大倍数。
     """
     env = simpy.Environment()
     records: List[Dict[str, Any]] = []
@@ -139,7 +141,7 @@ def run_single_flow_scenario(network) -> List[Dict[str, Any]]:
             flow_id="single_a_to_cloud",
             source=network.nodes["edge_client_a"],
             sink=network.nodes["cloud_server"],
-            size_bytes=parse_size_string("20M"),
+            size_bytes=parse_size_string("30M"),
             start_delay=0,
             action_type="data_transfer",
         )
@@ -162,7 +164,7 @@ def run_concurrent_bottleneck_scenario(network) -> List[Dict[str, Any]]:
     specs = [
         ("flow_a", "edge_client_a", "30M", 0.0),
         ("flow_b", "edge_client_b", "30M", 0.0),
-        ("flow_c", "edge_client_c", "30M", 0.5),
+        ("flow_c", "edge_client_c", "30M", 0.0),
     ]
 
     for flow_id, source_name, size, start_delay in specs:

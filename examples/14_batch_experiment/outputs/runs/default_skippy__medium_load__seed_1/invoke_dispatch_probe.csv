@@ -1,0 +1,25 @@
+﻿time,simtime,replica_id,request_id,expected_t_exec,case_id,policy,workload,function_name,node
+2026-07-08 00:36:55.035422,0.625,1911724242800,25,0.19074913952899208,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035475,0.75,1911724242800,26,0.2477946989549786,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035536,0.875,1911724242800,27,0.24110196951812912,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035637,1.0,1911724242800,28,0.20040552205915374,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035695,1.125,1911724242800,29,0.21963480696735527,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035756,1.25,1911724242800,30,0.21595928518309904,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035808,1.375,1911724242800,31,0.23212743781782103,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035859,1.5,1911724242800,32,0.24309786809084105,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035912,1.625,1911724242800,33,0.1875087669419388,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.035963,1.75,1911724242800,34,0.1822677981217605,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036012,1.875,1911724242800,35,0.24686120831358957,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036106,2.0,1911724242800,36,0.21462136543240426,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036199,2.125,1911724242800,37,0.24098240659663536,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036284,2.25,1911724696256,38,0.18016848426808885,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036343,2.375,1911724242800,39,0.2156309755243841,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036398,2.5,1911724696256,40,0.2377232025872626,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036452,2.625,1911724242800,41,0.1983009777016362,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036504,2.75,1911724696256,42,0.25562165564431377,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036564,2.875,1911724242800,43,0.25211419660891865,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036662,3.0,1911724696256,44,0.18244719864268427,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036725,3.125,1911724242800,45,0.18203566887947686,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036797,3.25,1911724696256,46,0.22331299782347971,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036854,3.375,1911724242800,47,0.2551319330222808,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1
+2026-07-08 00:36:55.036928,3.5,1911724696256,48,0.210496339015057,default_skippy__medium_load__seed_1,default_skippy,medium_load,batch-exp-python-pi,server_1

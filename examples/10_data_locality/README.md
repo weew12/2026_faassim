@@ -1,14 +1,17 @@
 # 10_data_locality：faas-sim 数据本地性样例
 
-本样例用于演示 faas-sim / Skippy 中的数据本地性机制，重点展示 `StorageIndex`、函数数据标签、`DataLocalityPriority` 和 `simulate_data_download()` 之间的关系。
+本样例演示 faas-sim / Skippy 中的**数据本地性机制**，重点展示 `StorageIndex`、函数数据标签、`DataLocalityPriority` 和 `simulate_data_download()` 之间的关系。
 
 ## 运行方式
 
-将 `data_locality/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+在项目根目录运行：
 
 ```bash
 python -u examples/10_data_locality/main.py
+python -u examples/10_data_locality/plot.py
 ```
+
+第一步产出 CSV 到 `outputs/`（两个场景子目录 + 顶层对比文件），第二步产出 png+pdf 到 `figures/`。
 
 ## 样例目标
 
@@ -20,245 +23,192 @@ python -u examples/10_data_locality/main.py
 4. `simulate_data_download()` 如何根据数据位置触发网络传输；
 5. 数据本地性感知调度和强制远端调度在下载耗时上的差异。
 
+## 拓扑
+
+**自定义边缘-存储拓扑**（4 节点 + 1 存储节点）：
+
+```
+                         storage_near
+                              |
+                        storage_link (200Mbps)
+                              |
+edge_near -- near_link -- data_switch -- mid_link -- edge_mid
+(200Mbps,                    (10ms)
+ 3ms latency)                   |
+                              far_link (10Mbps, 30ms latency)
+                              |
+                           edge_far
+
+internet -- internet_link -- data_switch  (DockerRegistry 自动接入)
+```
+
+| 节点 | 标签 | 到 storage_near 带宽 | 延迟 |
+|---|---|---|---|
+| edge_near | zone=near | 200Mbps | 3ms |
+| edge_mid | zone=mid | 60Mbps | 10ms |
+| edge_far | zone=far | 10Mbps | 30ms |
+| storage_near | data.skippy.io/storage=true | （存储节点本身） | - |
+
 ## 实验设计
 
-样例构造一个小型边缘-存储拓扑：
+| 场景 | 调度器 | 选中节点 | 数据下载耗时 |
+|---|---|---|---|
+| data_locality_aware | InstrumentedDataLocalityScheduler | **edge_near**（默认 Skippy DataLocality） | ~2.65s |
+| forced_remote | ForcedNodeScheduler | **edge_far**（强制） | ~52.88s |
 
-```text
-edge_near   靠近 storage_near，带宽高、延迟低（near_link=200 Mbps, latency=3ms）
-edge_mid    中等距离            （mid_link=60 Mbps, latency=10ms）
-edge_far    远离 storage_near，带宽低、延迟高（far_link=10 Mbps, latency=30ms）
-storage_near  保存输入对象的存储节点（storage_link=200 Mbps, latency=2ms）
-```
+**输入对象**：`video-bucket/frame-seq-001` (64MB)，位于 `storage_near`。
 
-输入对象为：
+**函数声明数据标签**：
+- `data.skippy.io/receives-from-storage=64M`
+- `data.skippy.io/receives-from-storage/path=video-bucket/frame-seq-001`
 
-```text
-video-bucket/frame-seq-001   size=64M   位于 storage_near
-```
-
-函数通过以下标签声明输入数据：
-
-```text
-data.skippy.io/receives-from-storage=64M
-data.skippy.io/receives-from-storage/path=video-bucket/frame-seq-001
-```
-
-样例运行两个场景：
-
-```text
-data_locality_aware   使用 Skippy 默认数据本地性优先级 → 倾向选择 edge_near
-forced_remote         强制调度到 edge_far，作为远端访问对比组
-```
-
-> **本样例不触发 invoke**：Benchmark 只调用 `poll_available_replica`，关注的是**数据下载阶段**的耗时差异，
-> 不涉及函数执行业务。`invocations.csv` 永远是 0 行（符合设计）。
+> **本样例不触发 invoke**：Benchmark 只调用 `poll_available_replica`，关注**数据下载阶段**的耗时差异，不涉及函数执行业务。`invocations.csv` 永远是 0 行（符合设计）。
 
 ## 输出文件
 
-运行结束后，结果会保存到：
-
-```text
-examples/10_data_locality/outputs/
-```
-
-每个场景有独立子目录：
+运行结束后，结果会保存到 `outputs/`（两个场景子目录 + 顶层对比文件）：
 
 ```text
 outputs/data_locality_aware/        # 数据本地性感知场景
-outputs/forced_remote/              # 强制远端调度对比场景
+├── data_locality_scheduler_result.csv  # 调度器记录：feasible_nodes / needed_images / selected_node
+├── data_locality_candidate.csv         # 每个候选节点的估算下载时间 + 带宽
+├── data_locality_download.csv          # 实际下载时长（每个 replica 一条）
+├── candidate_vs_actual_join.csv        # 论文 demo 关键：candidate 估算 vs download 实际
+├── data_locality_summary.csv           # 单场景摘要（含 theoretical_download_duration 反算）
+├── flow.csv / network.csv / schedule.csv / etc.
+
+outputs/forced_remote/              # 强制远端调度对比场景（同样结构，但无 candidate）
+
+# 跨场景对比文件（顶层）
+outputs/data_locality_comparison.csv        # 两场景 side-by-side
+outputs/data_locality_paper_highlight.csv   # 论文 demo 关键摘要（11 条 metric/value，含 note 列）
+outputs/data_locality_self_check.csv         # 数据自检（10 项 PASS/FAIL）
 ```
 
-每个子目录：
+绘图脚本生成 4 张图到 `figures/`：
 
 ```text
-data_locality_scheduler_result.csv  # 调度器记录：feasible_nodes / needed_images / selected_node
-data_locality_candidate.csv         # 每个候选节点的估算下载时间 + 带宽（仅 data_locality_aware）
-data_locality_download.csv          # 实际下载时长（每个 replica 一条）
-candidate_vs_actual_join.csv        # 论文 demo 关键：candidate 估算 vs download 实际，按 candidate_node 对齐
-data_locality_summary.csv           # 单场景摘要（含 theoretical_download_duration 反算）
-flow.csv                            # 网络流（action_type=docker_pull / data_download）
-network.csv                         # 链路级传输记录（link_name / type / bytes）
-schedule.csv
-function_deployments.csv
-function_deployment_lifecycle.csv
-function_replicas.csv
-replica_deployment.csv
-invocations.csv                     # 设计上为 0 行
+fig01_aware_vs_forced_comparison.png/pdf  # aware vs forced 下载耗时柱状图（含 19.9× speedup 标题）
+fig02_candidate_estimates.png/pdf         # edge_near/mid/far 估算下载时间柱状图（含实际叠加）
+fig03_download_timeline.png/pdf          # simtime vs download_duration 时序图（阶梯图）
+fig04_paper_highlight_metrics.png/pdf     # 论文 demo 关键摘要指标条形图
 ```
 
-跨场景对比文件（在 `outputs/` 顶层）：
+## 论文 demo 关键摘要（11 条 paper highlight）
 
-```text
-data_locality_comparison.csv        # 两场景 side-by-side
-data_locality_paper_highlight.csv   # 论文 demo 关键摘要：aware/forced 下载时长 + 20x speedup
-```
+| metric | value | note |
+|---|---|---|
+| aware_download_seconds | 2.6542 | data_locality_aware 场景的实际下载耗时（edge_near） |
+| forced_download_seconds | 52.8795 | forced_remote 场景的实际下载耗时（edge_far） |
+| **speedup_ratio_forced_over_aware** | **19.9231** | **forced / aware 的延迟放大倍数（论文 demo 关键数字）** |
+| aware_selected_node | edge_near | data_locality_aware 场景 Skippy 默认调度选择的节点 |
+| forced_selected_node | edge_far | forced_remote 场景 ForcedNodeScheduler 强制选择的节点 |
+| aware_theoretical_seconds | 2.56 | aware 场景理论下载时间（按 near_link=200Mbps 反算） |
+| forced_theoretical_seconds | 51.2 | forced 场景理论下载时间（按 far_link=10Mbps 反算） |
+| aware_actual_vs_theoretical_diff | 0.0942 | aware 场景实际 - 理论下载时间（越小越好） |
+| forced_actual_vs_theoretical_diff | 1.6795 | forced 场景实际 - 理论下载时间 |
+| edge_near_match_tolerance_5pct | True | edge_near 行的 Skippy 估算 vs 实际下载误差 < 5% |
+| data_size_bytes | 64000000 | 输入对象 video-bucket/frame-seq-001 大小（64M） |
 
-## 关键导出与图
+## 10 项数据自检（10 / 10 PASS）
 
-### 1. `data_locality_paper_highlight.csv` —— 论文 demo 核心
-
-```text
-metric                              value
-aware_download_seconds              2.654
-forced_download_seconds             52.880
-speedup_ratio_forced_over_aware     19.9
-aware_theoretical_seconds           2.441
-forced_theoretical_seconds          48.828
-```
-
-**关键发现**：把函数调度到 `edge_far` 比调度到 `edge_near` 数据下载耗时 **慢 19.9 倍**。
-
-### 2. `candidate_vs_actual_join.csv` —— Skippy 估算 vs 实际下载（论文 demo 关键证据）
-
-`data_locality_aware` 场景下，按 candidate_node 对齐后：
-
-```text
-candidate_node  estimated_download_time  best_bandwidth_mbps  actual_download_duration  estimated_vs_actual_diff  match_tolerance_5pct
-edge_near                          2.56                  200                  2.654                   0.094                   True
-edge_mid                           8.53                   60                    NaN                        —                     —
-edge_far                          51.20                   10                    NaN                        —                     —
-```
-
-`edge_near` 行的 `match_tolerance_5pct=True` 说明 Skippy `DataLocalityPriority` 估算的下载时间和 `simulate_data_download()` 实际跑出来的下载时间误差 < 5%。
-
-### 3. 论文 demo 关键图 —— aware vs forced 下载时长
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/10_data_locality/outputs/data_locality_comparison.csv")
-hl = pd.read_csv("examples/10_data_locality/outputs/data_locality_paper_highlight.csv")
-speedup = float(hl[hl.metric == "speedup_ratio_forced_over_aware"]["value"].iloc[0])
-
-fig, ax = plt.subplots(figsize=(7, 4))
-bars = ax.bar(df["scenario"], df["total_download_duration"], color=["steelblue", "darkorange"])
-for bar, val in zip(bars, df["total_download_duration"]):
-    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
-            f"{val:.2f}s", ha="center")
-ax.set_ylabel("data download duration (simtime)")
-ax.set_title(f"Data locality awareness: forced_remote is {speedup:.1f}x slower")
-plt.tight_layout()
-plt.show()
-```
-
-### 4. 候选节点估算下载时间分布
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/10_data_locality/outputs/data_locality_aware/candidate_vs_actual_join.csv")
-fig, ax = plt.subplots(figsize=(7, 4))
-bars = ax.bar(df["candidate_node"], df["estimated_download_time"], color="steelblue")
-for bar, val in zip(bars, df["estimated_download_time"]):
-    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
-            f"{val:.2f}s", ha="center")
-ax.set_ylabel("estimated download time (simtime)")
-ax.set_title("DataLocalityPriority estimates per candidate node")
-plt.tight_layout()
-plt.show()
-```
-
-## 数据自洽验证
-
-跑完 `main.py` 后，6 个核心不变量应同时满足：
-
-| 不变量 | 验证方式 |
+| check_id | 含义 |
 |---|---|
-| `data_locality_paper_highlight.csv` 中 `speedup_ratio_forced_over_aware` ≥ 10 | forced/aware 数据下载时长差距 |
-| `data_locality_aware/candidate_vs_actual_join.csv` 中 `edge_near` 行 `match_tolerance_5pct=True` | Skippy 估算 vs 实际 ≤ 5% |
-| `data_locality_comparison.csv` 中 `aware.selected_node == 'edge_near'` | Skippy 默认调度选最近节点 |
-| `data_locality_comparison.csv` 中 `forced.selected_node == 'edge_far'` | ForcedNodeScheduler 工作正确 |
-| `data_locality_aware/data_locality_summary.csv` 中 `theoretical_vs_actual_diff` < 1.0s | 理论带宽反算 vs 实际下载 |
-| `invocations.csv` 行为 0 行 | 样例不触发 invoke 是设计选择 |
+| 01_speedup_ratio_above_10 | forced / aware >= 10× |
+| 02_aware_selected_edge_near | data_locality_aware 选 edge_near |
+| 03_forced_selected_edge_far | forced_remote 选 edge_far |
+| 04_edge_near_match_tolerance_5pct | edge_near 行 Skippy 估算 vs 实际 < 5% 误差 |
+| 05_aware_diff_less_than_1s | aware 场景 实际 - 理论 < 1s |
+| 06_forced_diff_less_than_10s | forced 场景 实际 - 理论 < 10s |
+| 07_invocations_count_is_zero | invocations.csv == 0 行（设计上不触发 invoke） |
+| 08_candidate_join_rows_at_least_1 | candidate_vs_actual_join 行数 >= 1 |
+| 09_paper_summary_consistent | paper_highlight 数字与 summary 一致 |
+| 10_paper_speedup_matches_comparison | paper_highlight speedup 与 comparison 一致 |
 
 ## 文件说明
 
 ### `main.py`
 
-样例主入口。
-
-职责包括：
+样例主入口。职责包括：
 
 1. 创建数据本地性拓扑；
 2. 创建 StorageIndex；
 3. 注册函数镜像；
 4. 构造带数据标签的函数部署；
-5. 分别运行数据本地性感知调度和强制远端调度；
-6. 导出结果并生成对比摘要；
+5. 分别运行数据_locality_aware 和 forced_remote 两个场景；
+6. 导出结果、生成对比摘要 + paper_highlight + data_self_check；
 7. log 论文 demo 关键摘要（`speedup = forced / aware`）。
 
 ### `topology.py`
 
-拓扑构建文件。
-
-该文件创建 `edge_near`、`edge_mid`、`edge_far` 和 `storage_near`，并设置不同带宽和延迟，用于稳定制造近数据节点与远数据节点的差异。
+拓扑构建文件。创建 `edge_near` / `edge_mid` / `edge_far` / `storage_near` 4 个节点，并设置不同带宽和延迟，用于稳定制造近数据节点与远数据节点的差异。
 
 ### `storage.py`
 
-对象存储索引文件。
+对象存储索引文件。提供：
 
-该文件提供：
-
-```text
-DEFAULT_DATA_OBJECT
-build_storage_index()
-```
-
-用于登记 `video-bucket/frame-seq-001` 位于 `storage_near`。
+- `DEFAULT_DATA_OBJECT`：video-bucket/frame-seq-001 (64M) on storage_near
+- `build_storage_index()`：构造 StorageIndex 并 put DataItem
 
 ### `scheduler.py`
 
-调度器文件。
+调度器文件。提供：
 
-该文件提供：
-
-```text
-InstrumentedDataLocalityScheduler
-ForcedNodeScheduler
-```
-
-前者保留 Skippy 默认调度语义并记录候选节点数据本地性信息（`estimated_download_time`、`best_bandwidth_mbps`），
-后者用于构造强制远端对比组。
-
-> **修复说明**：`InstrumentedDataLocalityScheduler._log_data_locality_candidates` 中
-> `best_bandwidth` 来自 `cluster_context.get_dl_bandwidth()`，单位是 Mbps（与 `Link(bandwidth=200, ...)` 一致）。
-> `estimated_download_time` 计算时需要先把 Mbps 转成 bytes/s：`bandwidth_mbps * 1.25e5`。
-> 之前直接 `data_item.size / best_bandwidth` 是单位错配，会让估算时间多 4 个数量级。
+- `InstrumentedDataLocalityScheduler`：保留 Skippy 默认调度语义，并记录每个候选节点的 `estimated_download_time` 和 `best_bandwidth_mbps`
+- `ForcedNodeScheduler`：强制调度到指定节点（用于对比组）
 
 ### `simulator.py`
 
-函数生命周期模拟器文件。
+函数生命周期模拟器文件。提供 `DataLocalityFunctionSimulator`：
 
-该文件提供：
-
-```text
-DataLocalitySimulatorFactory
-DataLocalityFunctionSimulator
-```
-
-其核心逻辑是在 `setup()` 阶段调用：
-
-```text
-yield from simulate_data_download(env, replica)
-```
-
-从而根据数据路径和 StorageIndex 触发数据下载。
+- `deploy()` 调用 `docker.pull()`，与普通函数部署一致；
+- `startup()` 固定 0.15s；
+- `setup()` 调用 `simulate_data_download(env, replica)` 并写 `data_locality_download` 探针（含 t_start/t_end/simtime）；
+- `invoke()` 0.1s（设计触发但实际不会运行）；
+- `setup()` / `teardown()` 0s。
 
 ### `analysis.py`
 
-指标导出与分析文件。
+指标导出与分析文件。负责：
 
-该文件负责导出每个场景的调度、下载、网络流、部署和调用指标，并生成：
-- `data_locality_summary.csv`：单场景摘要
-- `candidate_vs_actual_join.csv`：candidate 估算 vs download 实际 join
-- `data_locality_comparison.csv`：两场景 side-by-side
-- `data_locality_paper_highlight.csv`：论文 demo 关键摘要（含 speedup_ratio 和 theoretical 反算）
+- 导出 10 个 faas-sim / 探针内置 metric 的 CSV
+- 生成 `candidate_vs_actual_join`（probe × download join）
+- 生成 `data_locality_summary`（单场景摘要 + theoretical_download_duration 反算）
+- 生成 `data_locality_comparison`（两场景 side-by-side）
+- 生成 `data_locality_paper_highlight`（11 条论文 demo 关键摘要，含 note 列）
+- 生成 `data_locality_self_check`（10 项数据自检）
+
+### `plot.py`
+
+绘图脚本。读 `outputs/` CSV，输出 `figures/` 下 4 张 png+pdf：
+
+1. **fig01_aware_vs_forced_comparison** —— 两个场景下载耗时对比（论文 demo 关键图，含 19.9× speedup 标题）
+2. **fig02_candidate_estimates** —— 候选节点估算下载时间（含实际叠加）
+3. **fig03_download_timeline** —— simtime vs download_duration 阶梯图（论文 demo 关键图）
+4. **fig04_paper_highlight_metrics** —— 论文 demo 关键摘要条形图
 
 ### `outputs/`
 
-运行输出目录。
+CSV 输出目录（两个场景子目录 + 顶层对比文件）。
 
-用于保存 CSV 结果文件。
+### `figures/`
+
+绘图输出目录（运行 plot.py 后生成）。
+
+## 论文叙事点
+
+> **"Skippy 默认 DataLocalityPriority 选择 edge_near（200Mbps, 3ms），实际下载 2.65s；强制调度到 edge_far（10Mbps, 30ms）需要 52.88s；speedup = 19.92×。edge_near 行的 Skippy 估算（2.56s）与实际 simulate_data_download()（2.65s）误差 < 5%。理论下载时间由 near_link=200Mbps 与 far_link=10Mbps 反算（2.56s / 51.2s），与实际差值 < 0.10s / 1.68s，证明 faas-sim 网络模型与数据本地性估算口径一致。"**
+
+## 10 vs 02-09 demo 价值对比
+
+| 维度 | 02_load_balancer | 03_skippy_scheduler | 04_network_flow | 05_image_pull_network | 06_resource_monitor | 07_trace_oracle | 08_degradation | 09_topologies | 10_data_locality |
+|---|---|---|---|---|---|---|---|---|---|
+| 仿真引擎 | faas-sim | faa-sim | Ether | faas-sim + docker | faas-sim + ResourceMonitor | faas-sim + Trace Oracle | faas-sim + Degradation Model | faas-sim Topology 静态分析 | **faas-sim + Storage + DataLocality** |
+| 拓扑 | 4-server 最小 | 4-server 最小 | 边缘→云端瓶颈 | 4-server + 1Gbps | 4-server 最小 | 4-server 最小 | 4-server 最小 | 4 种代表性拓扑对比 | **边缘-存储 4 节点** |
+| 关注对象 | FunctionReplica 路由 | Pod 调度 | 网络 Flow | 镜像拉取 + 缓存 | CPU/内存利用率 | trace-driven 执行时间 | 节点竞争退化 | 拓扑规模 + 路由特征 | **数据本地性 + 下载延迟** |
+| 是否跑仿真 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗（静态） | **✓** |
+| 是否触发 invoke | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | **✗（设计上）** |
+| 探针 | invoke_dispatch_probe | schedule_probe + invoke_dispatch_probe | （不适用） | image_pull_probe + invoke_dispatch_probe | function_utilization + invoke_dispatch_probe | trace_oracle_sample + invoke_dispatch_probe | degradation_probe + invoke_dispatch_probe | （不适用） | **data_locality_download（含 simtime）** |
+| 关键 metric | route_events | feasible_nodes_full | scaling_factor | cache_savings_seconds | overall_max_cpu_util | duration_match_ratio | max_active_requests_before | total_graph_nodes | **speedup_ratio_forced_over_aware** |
+| 论文 highlight | 11 条 | 10 条 | 11 条 | 12 条 | 15 条 | 9 条 | 13 条 | 14 条 | **11 条** |
+| self-check | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | 10 项 | **10 项** |

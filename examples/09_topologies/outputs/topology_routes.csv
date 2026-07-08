@@ -1,12 +1,12 @@
 ﻿topology,source,sink,route_available,rtt_ms,hop_count,path,hops,bottleneck_link,bottleneck_bandwidth_mbps
 minimal,edge_node,cloud_node,True,14.0,1,edge_node -> direct_link -> cloud_node,direct_link,direct_link,100
-edge_cloud_star,cloud_node,edge_3,True,72.0,3,cloud_node -> cloud_access -> cloud_switch -> backbone -> edge_switch -> access_3 -> edge_3,cloud_access -> backbone -> access_3,backbone,50
-edge_cloud_star,edge_0,edge_3,True,12.0,2,edge_0 -> access_0 -> edge_switch -> access_3 -> edge_3,access_0 -> access_3,access_0,100
-edge_cloud_star,edge_1,edge_3,True,12.0,2,edge_1 -> access_1 -> edge_switch -> access_3 -> edge_3,access_1 -> access_3,access_1,100
-edge_cloud_star,edge_2,edge_3,True,12.0,2,edge_2 -> access_2 -> edge_switch -> access_3 -> edge_3,access_2 -> access_3,access_2,100
+edge_cloud_star,edge_0,cloud_node,True,72.0,3,edge_0 -> access_0 -> edge_switch -> backbone -> cloud_switch -> cloud_access -> cloud_node,access_0 -> backbone -> cloud_access,backbone,50
+edge_cloud_star,edge_1,cloud_node,True,72.0,3,edge_1 -> access_1 -> edge_switch -> backbone -> cloud_switch -> cloud_access -> cloud_node,access_1 -> backbone -> cloud_access,backbone,50
+edge_cloud_star,edge_2,cloud_node,True,72.0,3,edge_2 -> access_2 -> edge_switch -> backbone -> cloud_switch -> cloud_access -> cloud_node,access_2 -> backbone -> cloud_access,backbone,50
+edge_cloud_star,edge_3,cloud_node,True,72.0,3,edge_3 -> access_3 -> edge_switch -> backbone -> cloud_switch -> cloud_access -> cloud_node,access_3 -> backbone -> cloud_access,backbone,50
 bottleneck,edge_a,cloud_node,True,76.0,3,edge_a -> edge_a_access -> edge_switch -> bottleneck -> cloud_switch -> cloud_access -> cloud_node,edge_a_access -> bottleneck -> cloud_access,bottleneck,10
 bottleneck,edge_b,cloud_node,True,76.0,3,edge_b -> edge_b_access -> edge_switch -> bottleneck -> cloud_switch -> cloud_access -> cloud_node,edge_b_access -> bottleneck -> cloud_access,bottleneck,10
-urban_sensing,nuc_0,tx2_9,True,99.52801298721039,6,nuc_0 -> link_nuc_0 -> switch_lan_2 -> shared_0 -> up_shared_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_6 -> link_tx2_9 -> tx2_9,link_nuc_0 -> shared_0 -> up_shared_0 -> down_shared_1 -> shared_1 -> link_tx2_9,up_shared_0,25
-urban_sensing,registry,tx2_9,True,44.96176483726969,3,registry -> internet -> down_shared_1 -> shared_1 -> switch_lan_6 -> link_tx2_9 -> tx2_9,down_shared_1 -> shared_1 -> link_tx2_9,down_shared_1,125
-urban_sensing,rpi3_0,tx2_9,True,152.58872050659394,6,rpi3_0 -> link_rpi3_0 -> switch_lan_0 -> shared_0 -> up_shared_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_6 -> link_tx2_9 -> tx2_9,link_rpi3_0 -> shared_0 -> up_shared_0 -> down_shared_1 -> shared_1 -> link_tx2_9,up_shared_0,25
-urban_sensing,server_0,tx2_9,True,45.83136778052612,5,server_0 -> link_server_0 -> switch_lan_11 -> switch_cloudlet_0 -> up_cloudlet_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_6 -> link_tx2_9 -> tx2_9,link_server_0 -> up_cloudlet_0 -> down_shared_1 -> shared_1 -> link_tx2_9,down_shared_1,125
+urban_sensing,nuc_0,tx2_9,True,95.34753918677275,6,nuc_0 -> link_nuc_0 -> switch_lan_3 -> shared_0 -> up_shared_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_7 -> link_tx2_9 -> tx2_9,link_nuc_0 -> shared_0 -> up_shared_0 -> down_shared_1 -> shared_1 -> link_tx2_9,up_shared_0,25
+urban_sensing,registry,tx2_9,True,55.23163499342197,3,registry -> internet -> down_shared_1 -> shared_1 -> switch_lan_7 -> link_tx2_9 -> tx2_9,down_shared_1 -> shared_1 -> link_tx2_9,down_shared_1,125
+urban_sensing,rpi3_0,tx2_9,True,96.14678445756275,6,rpi3_0 -> link_rpi3_0 -> switch_lan_0 -> shared_0 -> up_shared_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_7 -> link_tx2_9 -> tx2_9,link_rpi3_0 -> shared_0 -> up_shared_0 -> down_shared_1 -> shared_1 -> link_tx2_9,up_shared_0,25
+urban_sensing,server_0,tx2_9,True,52.94309418540504,5,server_0 -> link_server_0 -> switch_lan_11 -> switch_cloudlet_0 -> up_cloudlet_0 -> internet -> down_shared_1 -> shared_1 -> switch_lan_7 -> link_tx2_9 -> tx2_9,link_server_0 -> up_cloudlet_0 -> down_shared_1 -> shared_1 -> link_tx2_9,down_shared_1,125

@@ -1,0 +1,18 @@
+﻿name,status,detail,passed
+cache_request_result_row_count,PASS,"rows=96, expected=96 (3 policies × 32 requests)",True
+cache_state_row_count,PASS,"state rows=96, request rows=96",True
+cache_policy_summary_row_count,PASS,"summary rows=3, expected=3",True
+policy_request_count__fifo,PASS,"request_count=32, expected=32",True
+policy_request_count__lru,PASS,"request_count=32, expected=32",True
+policy_request_count__utility_aware,PASS,"request_count=32, expected=32",True
+function_summary_total_requests__fifo,PASS,"sum of function request_count=32, expected=32",True
+function_summary_total_requests__lru,PASS,"sum of function request_count=32, expected=32",True
+function_summary_total_requests__utility_aware,PASS,"sum of function request_count=32, expected=32",True
+eviction_state_join_row_count,PASS,"join rows=69, eviction rows=69",True
+eviction_state_consistency,PASS,matched=69/69,True
+paper_highlight_hit_rate__fifo,PASS,"summary=0.125000, highlight=0.125000",True
+paper_highlight_hit_rate__lru,PASS,"summary=0.125000, highlight=0.125000",True
+paper_highlight_hit_rate__utility_aware,PASS,"summary=0.312500, highlight=0.312500",True
+utility_aware_beats_fifo,PASS,"utility_aware=0.3125, fifo=0.1250 (utility_aware 应 >= fifo)",True
+paper_highlight_hit_rate_improvement,PASS,"highlight=0.187500, expected=0.187500",True
+export_tables_have_no_index_column,PASS,no pandas index columns,True

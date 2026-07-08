@@ -1,0 +1,15 @@
+﻿metric,value,note
+total_topologies,4.0,构建的拓扑样例总数（minimal/edge_cloud_star/bottleneck/urban_sensing）
+total_graph_nodes,142.0,4 个拓扑的图节点总数
+total_graph_edges,268.0,4 个拓扑的图边总数（有向边）
+total_route_records,11.0,4 个拓扑的 route 总数
+minimal_graph_nodes,3.0,minimal 拓扑的图节点数
+urban_sensing_graph_nodes,117.0,urban_sensing 拓扑的图节点数（最大）
+urban_sensing_graph_edges,224.0,urban_sensing 拓扑的图边数
+size_scaling_minimal_to_urban,39.0,urban_sensing 节点数 / minimal 节点数（论文 demo 关键比值）
+avg_route_rtt_ms,68.5154,所有成功路由的平均 RTT（ms）
+max_route_rtt_ms,96.1468,所有成功路由的最大 RTT（ms）
+avg_route_hop_count,3.5455,所有成功路由的平均 hop 数
+max_route_hop_count,6.0,所有成功路由的最大 hop 数
+route_success_count,11.0,成功的 route 数（route_available == True）
+route_failure_count,0.0,失败的 route 数

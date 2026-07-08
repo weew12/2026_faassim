@@ -1,0 +1,12 @@
+﻿check_id,passed
+01_five_phases_present,True
+02_request_events_equals_3,True
+03_startup_equals_0_75,True
+04_setup_equals_0_55,True
+05_first_invoke_avg_equals_0_30,True
+06_warm_invoke_avg_equals_0_08,True
+07_cold_activation_equals_sum,True
+08_first_request_path_equals_cold_plus_first,True
+09_first_warm_speedup_3_75x,True
+10_probe_invocation_t_exec_match_full,True
+11_dispatch_probe_equals_invocations,True

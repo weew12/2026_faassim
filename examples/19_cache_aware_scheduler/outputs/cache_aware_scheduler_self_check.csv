@@ -1,0 +1,19 @@
+﻿name,status,detail
+comparison_row_count,PASS,"comparison rows=2, expected=2"
+request_events__cache_blind,PASS,"request_events=10, expected=10"
+request_events__cache_aware,PASS,"request_events=10, expected=10"
+cache_aware_beats_cache_blind_hit_rate,PASS,"cache_aware=1.0000, cache_blind=0.0000 (cache_aware 应 >= cache_blind)"
+cache_aware_below_cache_blind_cold_penalty,PASS,"cache_aware=0.0000, cache_blind=10.5000 (cache_aware 应 <= cache_blind)"
+probe_invocation_join_row_count__cache_blind,PASS,"join rows=10, expected=10"
+probe_invocation_duration_match__cache_blind,PASS,duration_match=10/10
+probe_invocation_join_row_count__cache_aware,PASS,"join rows=10, expected=10"
+probe_invocation_duration_match__cache_aware,PASS,duration_match=10/10
+paper_highlight_cache_hit_rate__cache_blind,PASS,"comparison=0.000000, highlight=0.000000"
+paper_highlight_cache_hit_rate__cache_aware,PASS,"comparison=1.000000, highlight=1.000000"
+cache_snapshot_node_names_valid,PASS,"cached nodes=['server_0', 'server_1', 'server_2']"
+cache_aware_selected_nodes_in_server_range,PASS,"selected nodes=['server_0', 'server_1', 'server_2']"
+cache_aware_chooses_cached_nodes,PASS,"selected=['server_0', 'server_1', 'server_2'], cached=['server_0', 'server_1', 'server_2'], uncached_selected=[]"
+paper_highlight_improvement_consistency,PASS,"highlight=1.000000, expected=1.000000"
+selected_nodes_in_4_server_topology__cache_blind,PASS,"selected=['server_0', 'server_1', 'server_2', 'server_3'], expected subset of {server_0, server_1, server_2, server_3}"
+selected_nodes_in_4_server_topology__cache_aware,PASS,"selected=['server_0', 'server_1', 'server_2'], expected subset of {server_0, server_1, server_2, server_3}"
+export_tables_have_no_index_column,PASS,no pandas index columns

@@ -5,10 +5,12 @@
 - 第一次部署小镜像时触发 docker_pull 网络流；
 - 同一节点第二次部署同一镜像时复用节点镜像缓存；
 - 部署大镜像时产生更长镜像拉取耗时；
-- 导出 image_pull_probe、flow 和部署生命周期指标。
+- 导出 image_pull_probe、flow、invoke 探针和部署生命周期指标；
+- 论文 demo 关键摘要 + 数据自检。
 
 运行方式：
     python -u examples/05_image_pull_network/main.py
+    python -u examples/05_image_pull_network/plot.py
 """
 
 import logging
@@ -16,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -54,17 +56,46 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 状态污染（与 02/03 一致风格）。
+# 原版用 UrbanSensingScenario 但 FixedNodeScheduler 强制选 server_0，所以拓扑污染对结果影响有限。
+# 不过为了与其他样例保持统一，改用最小 4-server + DockerRegistry 拓扑。
+# registry_link / server link 用 1000Mbps：保留原版 pull_speed ≈ 121 MB/s 的论文数字。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建镜像拉取网络样例使用的拓扑。
+    创建镜像拉取网络样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry 节点。
-    docker.pull() 会从 DockerRegistry 到目标节点查询网络路由并启动 SafeFlow。
+    链路设计：
+    - internet -- registry_link(1000Mbps) -- switch
+    - switch -- link_server_X(1000Mbps) -- server_X (X=0..3)
+
+    端到端瓶颈：1000Mbps（保留原版 cloudlet 1Gbps 的 pull_speed 数字）。
+    small=32M 拉取 ~0.27s, large=192M 拉取 ~1.59s。
+
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        registry_link = Link(bandwidth=1000, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=1000, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 class ImagePullNetworkBenchmark(Benchmark):
@@ -201,11 +232,32 @@ def main():
 
     image_pull_summary_df = dfs.get("image_pull_summary")
     if image_pull_summary_df is not None and len(image_pull_summary_df) > 0:
-        logger.info("image pull summary:\\n%s", image_pull_summary_df.to_string(index=False))
+        logger.info("image pull summary:\n%s", image_pull_summary_df.to_string(index=False))
 
     flow_summary_df = dfs.get("image_pull_flow_summary")
     if flow_summary_df is not None and len(flow_summary_df) > 0:
-        logger.info("image pull flow summary:\\n%s", flow_summary_df.to_string(index=False))
+        logger.info("image pull flow summary:\n%s", flow_summary_df.to_string(index=False))
+
+    cold_warm_df = dfs.get("image_pull_cold_warm_comparison")
+    if cold_warm_df is not None and len(cold_warm_df) > 0:
+        logger.info("image pull cold/warm comparison:\n%s", cold_warm_df.to_string(index=False))
+
+    size_duration_df = dfs.get("image_pull_size_duration_comparison")
+    if size_duration_df is not None and len(size_duration_df) > 0:
+        logger.info("image pull size vs duration:\n%s", size_duration_df.to_string(index=False))
+
+    paper_df = dfs.get("image_pull_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("image_pull_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

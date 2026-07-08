@@ -5,10 +5,12 @@
 - 读取函数执行时间轨迹；
 - 为不同函数维护独立样本序列；
 - 函数 invoke 阶段从 trace 中取样；
-- 导出实际取样记录和调用结果。
+- 导出实际取样记录和调用结果；
+- 论文 demo 关键摘要 + 数据自检。
 
 运行方式：
     python -u examples/07_trace_oracle/main.py
+    python -u examples/07_trace_oracle/plot.py
 """
 
 import logging
@@ -16,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -53,16 +55,36 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 状态污染（与 02/03/05/06 一致风格）。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建 trace_oracle 样例使用的拓扑。
+    创建 trace_oracle 样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry。
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
@@ -231,15 +253,15 @@ def main():
 
     trace_input_summary_df = dfs.get("trace_input_summary")
     if trace_input_summary_df is not None and len(trace_input_summary_df) > 0:
-        logger.info("trace input summary:\\n%s", trace_input_summary_df.to_string(index=False))
+        logger.info("trace input summary:\n%s", trace_input_summary_df.to_string(index=False))
 
     trace_sample_summary_df = dfs.get("trace_sample_summary")
     if trace_sample_summary_df is not None and len(trace_sample_summary_df) > 0:
-        logger.info("trace sample summary:\\n%s", trace_sample_summary_df.to_string(index=False))
+        logger.info("trace sample summary:\n%s", trace_sample_summary_df.to_string(index=False))
 
     trace_cycle_df = dfs.get("trace_cycle_summary")
     if trace_cycle_df is not None and len(trace_cycle_df) > 0:
-        logger.info("trace cycle summary:\\n%s", trace_cycle_df.to_string(index=False))
+        logger.info("trace cycle summary:\n%s", trace_cycle_df.to_string(index=False))
 
     trace_join_df = dfs.get("trace_invoke_sample_join")
     if trace_join_df is not None and len(trace_join_df) > 0:
@@ -251,7 +273,20 @@ def main():
 
     invocation_summary_df = dfs.get("trace_invocation_summary")
     if invocation_summary_df is not None and len(invocation_summary_df) > 0:
-        logger.info("trace invocation summary:\\n%s", invocation_summary_df.to_string(index=False))
+        logger.info("trace invocation summary:\n%s", invocation_summary_df.to_string(index=False))
+
+    paper_df = dfs.get("trace_oracle_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("trace_oracle_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

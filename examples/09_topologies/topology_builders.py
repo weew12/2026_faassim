@@ -6,11 +6,24 @@
 """
 
 from dataclasses import dataclass
+import random
 from typing import Dict, List
 
 import ether.scenarios.urbansensing as scenario
+import numpy as np
 from ether.core import Node, Link, Connection
 from sim.topology import Topology
+
+
+RANDOM_SEED = 20260707
+
+
+def reset_random_seed() -> None:
+    """
+    固定 UrbanSensingScenario 内部分布采样，保证示例 CSV 和图可复现。
+    """
+    random.seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
 
 
 @dataclass
@@ -239,6 +252,7 @@ def build_all_topology_cases() -> List[TopologyCase]:
     """
     构造所有拓扑样例。
     """
+    reset_random_seed()
     return [
         build_minimal_topology(),
         build_edge_cloud_star_topology(edge_count=4),

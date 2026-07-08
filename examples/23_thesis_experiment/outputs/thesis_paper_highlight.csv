@@ -1,47 +1,50 @@
-﻿metric,value
-warm_hit_rate__cache_aware_joint,0.5714285714285714
-image_cache_hit_rate__cache_aware_joint,0.8571428571428571
-data_cache_hit_rate__cache_aware_joint,0.8571428571428571
-avg_latency__cache_aware_joint,0.8547428571428571
-p95_latency__cache_aware_joint,3.165599999999997
-total_cold_start_penalty__cache_aware_joint,17.55
-avg_r_cache__cache_aware_joint,0.9714285714285714
-avg_r_load__cache_aware_joint,1.0
-avg_r_desired__cache_aware_joint,1.0
-eviction_count__cache_aware_joint,12
-warm_hit_rate__faascache,0.5428571428571428
-image_cache_hit_rate__faascache,0.37142857142857144
-data_cache_hit_rate__faascache,0.37142857142857144
-avg_latency__faascache,1.4409714285714286
-p95_latency__faascache,5.1624
-total_cold_start_penalty__faascache,19.45
-avg_r_cache__faascache,0.9714285714285714
-avg_r_load__faascache,0.0
-avg_r_desired__faascache,0.9714285714285714
-eviction_count__faascache,13
-warm_hit_rate__load_only,0.2
-image_cache_hit_rate__load_only,0.37142857142857144
-data_cache_hit_rate__load_only,0.37142857142857144
-avg_latency__load_only,1.9095428571428572
-p95_latency__load_only,5.1624
-total_cold_start_penalty__load_only,35.85
-avg_r_cache__load_only,0.0
-avg_r_load__load_only,1.0
-avg_r_desired__load_only,1.0
-eviction_count__load_only,27
-avg_latency_reduction__cache_aware_joint_vs_load_only,0.5523835173713979
-cold_start_penalty_reduction__cache_aware_joint_vs_load_only,0.5104602510460251
-image_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565
-data_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565
-avg_latency_reduction__cache_aware_joint_vs_faascache,0.40682872665265496
-image_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565
-data_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565
-r_dominant_summary__cache_aware_joint,"r_cache=0.971, r_load=1.000, r_desired=1.000; max=1.000"
-r_dominant_summary__load_only,"r_cache=0.000, r_load=1.000, r_desired=1.000; max=1.000"
-r_dominant_summary__faascache,"r_cache=0.971, r_load=0.000, r_desired=0.971; max=0.971"
-result_candidate_consistency,1.0
-result_candidate_matched,105
-result_candidate_total,105
-request_decision_consistency,1.0
-request_decision_matched,105
-request_decision_total,105
+﻿metric,value,note
+warm_hit_rate__cache_aware_joint,0.5714285714285714,cache_aware_joint (CacheAwareJoint) 函数 warm 实例命中率（论文 demo 关键指标）
+image_cache_hit_rate__cache_aware_joint,0.8571428571428571,cache_aware_joint 镜像缓存命中率（避免镜像拉取）
+data_cache_hit_rate__cache_aware_joint,0.8571428571428571,cache_aware_joint 数据缓存命中率（避免数据获取）
+avg_latency__cache_aware_joint,0.8547428571428571,cache_aware_joint 平均每次 invoke latency
+p95_latency__cache_aware_joint,3.165599999999997,cache_aware_joint p95 latency（论文 demo 重要 tail-latency 指标）
+total_cold_start_penalty__cache_aware_joint,17.55,cache_aware_joint 全部冷启动惩罚累加
+avg_r_cache__cache_aware_joint,0.9714285714285714,cache_aware_joint 平均 R_cache（cache 驱动的副本需求）
+avg_r_load__cache_aware_joint,1.0,cache_aware_joint 平均 R_load（负载驱动的副本需求）
+avg_r_desired__cache_aware_joint,1.0,"cache_aware_joint 平均 R_desired = max(R_cache, R_load)"
+eviction_count__cache_aware_joint,12.0,cache_aware_joint 全部 evict 事件数
+warm_hit_rate__faascache,0.5428571428571428,faascache (FaasCache) 函数 warm 实例命中率（论文 demo 关键指标）
+image_cache_hit_rate__faascache,0.37142857142857144,faascache 镜像缓存命中率（避免镜像拉取）
+data_cache_hit_rate__faascache,0.37142857142857144,faascache 数据缓存命中率（避免数据获取）
+avg_latency__faascache,1.4409714285714286,faascache 平均每次 invoke latency
+p95_latency__faascache,5.1624,faascache p95 latency（论文 demo 重要 tail-latency 指标）
+total_cold_start_penalty__faascache,19.45,faascache 全部冷启动惩罚累加
+avg_r_cache__faascache,0.9714285714285714,faascache 平均 R_cache（cache 驱动的副本需求）
+avg_r_load__faascache,0.0,faascache 平均 R_load（负载驱动的副本需求）
+avg_r_desired__faascache,0.9714285714285714,"faascache 平均 R_desired = max(R_cache, R_load)"
+eviction_count__faascache,13.0,faascache 全部 evict 事件数
+warm_hit_rate__load_only,0.2,load_only (LoadOnly) 函数 warm 实例命中率（论文 demo 关键指标）
+image_cache_hit_rate__load_only,0.37142857142857144,load_only 镜像缓存命中率（避免镜像拉取）
+data_cache_hit_rate__load_only,0.37142857142857144,load_only 数据缓存命中率（避免数据获取）
+avg_latency__load_only,1.9095428571428572,load_only 平均每次 invoke latency
+p95_latency__load_only,5.1624,load_only p95 latency（论文 demo 重要 tail-latency 指标）
+total_cold_start_penalty__load_only,35.85,load_only 全部冷启动惩罚累加
+avg_r_cache__load_only,0.0,load_only 平均 R_cache（cache 驱动的副本需求）
+avg_r_load__load_only,1.0,load_only 平均 R_load（负载驱动的副本需求）
+avg_r_desired__load_only,1.0,"load_only 平均 R_desired = max(R_cache, R_load)"
+eviction_count__load_only,27.0,load_only 全部 evict 事件数
+avg_latency_reduction__cache_aware_joint_vs_load_only,0.5523835173713979,CacheAwareJoint 相对 LoadOnly 平均延迟降低比例（论文 demo 关键数字）
+cold_start_penalty_reduction__cache_aware_joint_vs_load_only,0.5104602510460251,CacheAwareJoint 相对 LoadOnly 冷启动惩罚降低比例（论文 demo 关键数字）
+image_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565,CacheAwareJoint 相对 LoadOnly 镜像缓存命中率提升
+data_cache_hit_rate_improvement__cache_aware_joint_vs_load_only,0.48571428571428565,CacheAwareJoint 相对 LoadOnly 数据缓存命中率提升
+avg_latency_reduction__cache_aware_joint_vs_faascache,0.40682872665265496,CacheAwareJoint 相对 FaasCache 平均延迟降低比例（论文 demo 关键证据：cache-aware 调度胜出）
+image_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565,CacheAwareJoint 相对 FaasCache 镜像缓存命中率提升
+data_cache_hit_rate_improvement__cache_aware_joint_vs_faascache,0.48571428571428565,CacheAwareJoint 相对 FaasCache 数据缓存命中率提升
+r_dominant_max__cache_aware_joint,1.0,"CacheAwareJoint R_dominant = max(avg_r_cache, avg_r_load)"
+r_dominant_source__cache_aware_joint,1.0,"CacheAwareJoint R_dominant 来源（1=R_load, 0=R_cache）"
+r_dominant_max__load_only,1.0,"LoadOnly R_dominant = max(avg_r_cache, avg_r_load)（应 = avg_r_load）"
+r_dominant_source__load_only,1.0,LoadOnly R_dominant 来源（应 = 1 R_load）
+r_dominant_max__faascache,0.9714285714285714,"FaasCache R_dominant = max(avg_r_cache, avg_r_load)（应 = avg_r_cache）"
+r_dominant_source__faascache,0.0,FaasCache R_dominant 来源（应 = 0 R_cache）
+result_candidate_consistency,1.0,result × candidate join match 占比（论文 demo 关键证据，应 1.0）
+result_candidate_matched,105.0,matched 行数
+result_candidate_total,105.0,join 总行数（应 == 3 case × 35 request = 105）
+request_decision_consistency,1.0,request × decision join match 占比（论文 demo 关键证据，应 1.0）
+request_decision_matched,105.0,matched 行数
+request_decision_total,105.0,join 总行数（应 == 3 case × 35 request = 105）

@@ -1,4 +1,4 @@
 ﻿function_name,image,node_name,image_size_mb,pull_duration_seconds,pull_speed_mb_per_sec
-image-pull-small-cold,image-pull-small-cpu,server_0,32.0,0.26830308783423285,119.26810182583785
+image-pull-small-cold,image-pull-small-cpu,server_0,32.0,0.30291752577319586,105.63931525031481
 image-pull-small-warm,image-pull-small-cpu,server_0,32.0,0.0,
-image-pull-large-cold,image-pull-large-cpu,server_0,192.0,1.5879013206136934,120.91431470426366
+image-pull-large-cold,image-pull-large-cpu,server_0,192.0,1.622505154639175,118.33552543794438

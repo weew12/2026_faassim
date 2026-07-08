@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_trace_oracle_sample_is_28,True
+02_invocations_is_28,True
+03_join_rows_is_28,True
+04_all_duration_match_true,True
+05_cycles_used_fast_is_2,True
+06_cycles_used_slow_is_1,True
+07_last_sample_id_fast_is_4,True
+08_fast_invocations_is_16,True
+09_slow_invocations_is_12,True
+10_probe_sample_invocation_consistent,True

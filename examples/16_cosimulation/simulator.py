@@ -81,12 +81,32 @@ class CosimulationFunctionSimulator(FunctionSimulator):
         模拟一次函数调用。
 
         本函数读取外部状态，并记录 cosim_invoke_probe。
+
+        关键探针（沿用 02-15 的 invoke_dispatch_probe 模式）：
+        入口 simtime + replica_id + request_id + expected_t_exec（按 cosim
+        算出的 final_duration 真实派发）一并写两条探针（dispatch_probe +
+        cosim_invoke_probe），便于 probe×invocation join 自洽检查。
         """
         snapshot = self.context.snapshot()
 
         runtime_factor = float(snapshot["runtime_factor"])
         network_delay = float(snapshot["network_delay"])
         final_duration = self.base_duration * runtime_factor + network_delay
+
+        # 派发探针（沿用 02-15 模式）：simtime + replica_id + request_id + expected_t_exec
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "expected_t_exec": float(final_duration),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+            phase_name=snapshot["phase_name"],
+            controller_action=snapshot["controller_action"],
+        )
 
         logger.info(
             "[simtime=%.2f] cosim invoke request=%s phase=%s action=%s duration=%.4f",

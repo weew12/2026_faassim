@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_speedup_ratio_above_10,True
+02_aware_selected_edge_near,True
+03_forced_selected_edge_far,True
+04_edge_near_match_tolerance_5pct,True
+05_aware_diff_less_than_1s,True
+06_forced_diff_less_than_10s,True
+07_invocations_count_is_zero,True
+08_candidate_join_rows_at_least_1,True
+09_paper_summary_consistent,True
+10_paper_speedup_matches_comparison,True

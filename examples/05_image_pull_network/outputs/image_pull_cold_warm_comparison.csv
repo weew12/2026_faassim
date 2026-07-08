@@ -1,4 +1,4 @@
 ﻿image,cold_or_warm,pull_events,avg_pull_duration,min_pull_duration,max_pull_duration,cache_savings_seconds,cache_savings_ratio
-image-pull-large-cpu,cold_pull,1,1.5879013206136934,1.5879013206136934,1.5879013206136934,,
-image-pull-small-cpu,cold_pull,1,0.26830308783423285,0.26830308783423285,0.26830308783423285,0.26830308783423285,1.0
-image-pull-small-cpu,warm_cache_hit,1,0.0,0.0,0.0,0.26830308783423285,1.0
+image-pull-large-cpu,cold_pull,1,1.622505154639175,1.622505154639175,1.622505154639175,,
+image-pull-small-cpu,cold_pull,1,0.30291752577319586,0.30291752577319586,0.30291752577319586,0.30291752577319586,1.0
+image-pull-small-cpu,warm_cache_hit,1,0.0,0.0,0.0,0.30291752577319586,1.0

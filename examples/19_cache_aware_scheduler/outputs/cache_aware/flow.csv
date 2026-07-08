@@ -1,5 +1,5 @@
-﻿time,bytes,duration,source,sink,action_type
-2026-07-07 17:27:28.637289,64000000,2.678175257731959,registry,server_1,docker_pull
-2026-07-07 17:27:28.637867,64000000,2.678175257731959,registry,server_0,docker_pull
-2026-07-07 17:27:28.638465,64000000,2.678175257731958,registry,server_0,docker_pull
-2026-07-07 17:27:28.639095,64000000,2.678175257731958,registry,server_2,docker_pull
+﻿bytes,duration,source,sink,action_type
+64000000,2.678175257731959,registry,server_1,docker_pull
+64000000,2.678175257731959,registry,server_0,docker_pull
+64000000,2.678175257731958,registry,server_0,docker_pull
+64000000,2.678175257731958,registry,server_2,docker_pull

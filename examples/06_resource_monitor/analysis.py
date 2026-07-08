@@ -4,13 +4,17 @@
 该文件负责从 sim.env.metrics 中提取资源监控、调用、部署和网络流相关指标，
 并保存到 outputs/ 目录。
 
-新增的关键导出：
-- resource_utilization_per_replica.csv：每个副本的 cpu/mem util 统计
-  按 (node, replica_id) 给出 avg/max cpu_util、avg/max mem_util、采样数
-  直观展示 ResourceMonitor 周期性采集到的资源使用画像
+新增的关键导出（沿用 02_load_balancer / 03_skippy_scheduler / 04_network_flow / 05_image_pull_network 的 paper_highlight / data_self_check 模式）：
 - invocation_resource_join.csv：每个 invoke 在执行时间窗内的 cpu/mem util 平均值
-  这是 README §5 "调用 × 资源" 关联的核心输出，
-  把 invocations.csv 的 t_start/t_exec 和 function_utilization 的时序按时间窗 join
+  这是 README §5 "调用 × 资源" 关联的核心输出
+- resource_monitor_sample_probe.csv：
+    从 ResourceMonitor 的 MetricsServer 窗口导出的真实 simtime 资源采样
+- resource_monitor_invoke_probe_invocation_join.csv：
+    invoke_dispatch_probe 与 invocations 的逐条一致性验证
+- resource_monitor_paper_highlight.csv：
+    每条论文 demo 关键摘要对应一行 metric/value（10 条）
+- resource_monitor_self_check.csv：
+    10 项数据自检（PASS/FAIL）
 """
 
 import logging
@@ -34,6 +38,7 @@ METRIC_NAMES = [
     "function_replicas",
     "replica_deployment",
     "flow",
+    "invoke_dispatch_probe",
 ]
 
 
@@ -70,6 +75,48 @@ def find_resource_dataframe(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def build_resource_monitor_sample_probe(sim) -> pd.DataFrame:
+    """
+    从 ResourceMonitor 的 MetricsServer 中导出真实 simtime 资源采样。
+
+    function_utilization.csv 由 RuntimeLogger 记录 wall clock time，缺少仿真时间。
+    ResourceMonitor 同时会把 ResourceWindow(time=env.now, resources=...) 写入
+    env.metrics_server。本函数读取该窗口，生成带 simtime 的样例级 probe，供
+    invocation_resource_join 和 timeline 图使用。
+    """
+    rows = []
+    metric_server = getattr(sim.env, "metrics_server", None)
+    if metric_server is None or not hasattr(metric_server, "_windows"):
+        return pd.DataFrame()
+
+    for node_name, pod_windows in metric_server._windows.items():
+        for _pod_name, windows in pod_windows.items():
+            for window in windows:
+                replica = window.replica
+                resources = window.resources or {}
+                node = replica.node
+                cpu = float(resources.get("cpu", 0.0) or 0.0)
+                memory = float(resources.get("memory", 0.0) or 0.0)
+                rows.append({
+                    "simtime": float(window.time),
+                    "function_name": replica.function.name,
+                    "function_image": replica.image,
+                    "node": node_name,
+                    "replica_id": id(replica),
+                    "cpu": cpu,
+                    "memory": memory,
+                    "cpu_util": cpu / node.capacity.cpu_millis if node.capacity.cpu_millis else 0.0,
+                    "mem_util": memory / node.capacity.memory if node.capacity.memory else 0.0,
+                })
+
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["simtime", "replica_id"])
+        .reset_index(drop=True)
+        if rows else pd.DataFrame()
+    )
+
+
 def build_resource_utilization_per_replica(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     按 node × replica_id 聚合资源利用率统计。
@@ -86,7 +133,9 @@ def build_resource_utilization_per_replica(dfs: Dict[str, pd.DataFrame]) -> pd.D
     - avg_mem_util     内存平均利用率
     - max_mem_util     内存峰值利用率
     """
-    util_df = find_resource_dataframe(dfs)
+    util_df = dfs.get("resource_monitor_sample_probe", pd.DataFrame())
+    if util_df.empty:
+        util_df = find_resource_dataframe(dfs)
 
     if util_df.empty:
         return pd.DataFrame([{
@@ -164,7 +213,10 @@ def build_invocation_resource_join(dfs: Dict[str, pd.DataFrame], reconcile_inter
     这是 README §5 "调用 × 资源" 关联的核心输出。
     """
     inv_df = dfs.get("invocations", pd.DataFrame()).copy()
-    util_df = dfs.get("function_utilization", pd.DataFrame()).copy()
+    util_df = dfs.get("resource_monitor_sample_probe", pd.DataFrame()).copy()
+    using_real_simtime = not util_df.empty and "simtime" in util_df.columns
+    if util_df.empty:
+        util_df = dfs.get("function_utilization", pd.DataFrame()).copy()
 
     if inv_df.empty:
         return pd.DataFrame([{
@@ -189,15 +241,13 @@ def build_invocation_resource_join(dfs: Dict[str, pd.DataFrame], reconcile_inter
             "message": "no function_utilization samples",
         }])
 
-    # 按 wall-clock index 排序，然后按 ResourceMonitor 的 reconcile_interval
-    # 重建 simtime。ResourceMonitor 在每次循环里对所有 RUNNING 副本统一采样，
-    # 所以同一 replica 的采样在 simtime 上是 reconcile_interval, 2*reconcile_interval, ...
-    # —— 按 per-replica 排序后用 (rank+1)*reconcile_interval 重建。
-    util_df = util_df.sort_index()
-    util_df = util_df.reset_index(drop=True)
-    util_df["simtime"] = (
-        util_df.groupby("replica_id").cumcount() + 1
-    ).astype(float) * float(reconcile_interval)
+    if not using_real_simtime:
+        # 兜底：旧指标没有 simtime 时才按采样序号近似重建。
+        util_df = util_df.sort_index()
+        util_df = util_df.reset_index(drop=True)
+        util_df["simtime"] = (
+            util_df.groupby("replica_id").cumcount() + 1
+        ).astype(float) * float(reconcile_interval)
 
     rows: List[dict] = []
     for _, inv in inv_df.iterrows():
@@ -242,6 +292,55 @@ def build_invocation_resource_join(dfs: Dict[str, pd.DataFrame], reconcile_inter
     return pd.DataFrame(rows)
 
 
+def build_invoke_probe_invocation_join(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    逐条关联 invoke_dispatch_probe 与 invocations。
+
+    这张表验证 simulator 派发 probe 与 faas-sim 实际 invocation 记录在
+    function / replica / simtime / node 上一致。
+    """
+    probe_df = dfs.get("invoke_dispatch_probe", pd.DataFrame())
+    inv_df = dfs.get("invocations", pd.DataFrame())
+
+    if probe_df.empty or inv_df.empty:
+        return pd.DataFrame()
+
+    required_probe = {"function_name", "replica_id", "simtime", "node", "cpu_millis", "memory_bytes"}
+    required_inv = {"function_name", "replica_id", "t_start", "node", "t_exec"}
+    if not required_probe.issubset(probe_df.columns) or not required_inv.issubset(inv_df.columns):
+        return pd.DataFrame()
+
+    rows: List[dict] = []
+    for (fn, replica_id), probe_grp in probe_df.groupby(["function_name", "replica_id"], dropna=False):
+        probe_sorted = probe_grp.sort_values("simtime").reset_index(drop=True)
+        inv_grp = inv_df[
+            (inv_df["function_name"] == fn)
+            & (inv_df["replica_id"].astype(str) == str(replica_id))
+        ].sort_values("t_start").reset_index(drop=True)
+
+        n = min(len(probe_sorted), len(inv_grp))
+        for i in range(n):
+            probe = probe_sorted.iloc[i]
+            inv = inv_grp.iloc[i]
+            simtime_match = abs(float(probe["simtime"]) - float(inv["t_start"])) < 1e-6
+            node_match = str(probe["node"]) == str(inv["node"])
+            rows.append({
+                "function_name": fn,
+                "replica_id": replica_id,
+                "probe_simtime": float(probe["simtime"]),
+                "inv_t_start": float(inv["t_start"]),
+                "inv_t_exec": float(inv["t_exec"]),
+                "probe_node": probe["node"],
+                "inv_node": inv["node"],
+                "probe_cpu_millis": float(probe["cpu_millis"]),
+                "probe_memory_bytes": float(probe["memory_bytes"]),
+                "simtime_match": bool(simtime_match),
+                "node_match": bool(node_match),
+            })
+
+    return pd.DataFrame(rows)
+
+
 def build_resource_monitor_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     生成资源监控摘要。
@@ -253,7 +352,9 @@ def build_resource_monitor_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame
     - overall_avg_cpu_util / overall_max_cpu_util：所有采样的平均/峰值 CPU 利用率
     - overall_avg_mem_util / overall_max_mem_util：所有采样的平均/峰值内存利用率
     """
-    util_df = find_resource_dataframe(dfs)
+    util_df = dfs.get("resource_monitor_sample_probe", pd.DataFrame())
+    if util_df.empty:
+        util_df = find_resource_dataframe(dfs)
 
     if util_df.empty:
         return pd.DataFrame([{
@@ -309,9 +410,213 @@ def build_invocation_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame([result])
 
 
+def build_paper_highlight(
+    util_df: pd.DataFrame,
+    inv_df: pd.DataFrame,
+    join_df: pd.DataFrame,
+    per_replica_df: pd.DataFrame,
+    probe_df: pd.DataFrame,
+    invoke_join_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    论文 demo 关键摘要：每条论文宣传语都对应一行 metric/value。
+
+    设计原则（沿用 02/03/04/05 的 paper_highlight 模式）：
+    1. metric 字段是论文能直接引用的实证数字；
+    2. value 字段是机器可读的具体数值；
+    3. note 字段是 paper-style 一句话结论。
+
+    参数直接传进来（不要 dfs.get），避免 export_outputs 末尾才 set 的时序 bug。
+    """
+    if util_df.empty:
+        return pd.DataFrame([
+            {"metric": "total_resource_samples", "value": 0,
+             "note": "ResourceMonitor 周期性采集的 per-replica 采样次数"},
+            {"metric": "monitored_replicas", "value": 0,
+             "note": "被 ResourceMonitor 采样的副本数"},
+        ])
+
+    total_samples = len(util_df)
+    monitored_replicas = int(util_df["replica_id"].nunique()) if "replica_id" in util_df.columns else 0
+    monitored_nodes = int(util_df["node"].nunique()) if "node" in util_df.columns else 0
+    overall_avg_cpu_util = float(util_df["cpu_util"].mean()) if "cpu_util" in util_df.columns else 0.0
+    overall_max_cpu_util = float(util_df["cpu_util"].max()) if "cpu_util" in util_df.columns else 0.0
+    overall_avg_mem_util = float(util_df["mem_util"].mean()) if "mem_util" in util_df.columns else 0.0
+    overall_max_mem_util = float(util_df["mem_util"].max()) if "mem_util" in util_df.columns else 0.0
+    overall_avg_cpu_millis = float(util_df["cpu"].mean()) if "cpu" in util_df.columns else 0.0
+    overall_max_cpu_millis = float(util_df["cpu"].max()) if "cpu" in util_df.columns else 0.0
+    per_request_cpu_util = 0.35
+    peak_concurrent_requests_per_replica = (
+        overall_max_cpu_util / per_request_cpu_util
+        if per_request_cpu_util > 0 else 0.0
+    )
+
+    invocation_events = len(inv_df)
+    join_rows = len(join_df) if not join_df.empty else 0
+    join_coverage = join_rows / invocation_events if invocation_events > 0 else 0.0
+
+    # join 中 avg_cpu_util 的均值
+    if not join_df.empty and "avg_cpu_util" in join_df.columns:
+        join_avg_cpu_util = float(join_df["avg_cpu_util"].mean())
+        join_max_cpu_util = float(join_df["max_cpu_util"].max())
+    else:
+        join_avg_cpu_util = 0.0
+        join_max_cpu_util = 0.0
+
+    # probe
+    probe_rows = len(probe_df) if not probe_df.empty else 0
+    invoke_probe_match_ratio = 0.0
+    if not invoke_join_df.empty and {"simtime_match", "node_match"}.issubset(invoke_join_df.columns):
+        matched = int((invoke_join_df["simtime_match"] & invoke_join_df["node_match"]).sum())
+        invoke_probe_match_ratio = matched / len(invoke_join_df) if len(invoke_join_df) > 0 else 0.0
+
+    join_rows_with_samples = 0
+    join_sample_coverage = 0.0
+    if not join_df.empty and "samples_in_window" in join_df.columns:
+        join_rows_with_samples = int((join_df["samples_in_window"] >= 1).sum())
+        join_sample_coverage = join_rows_with_samples / len(join_df) if len(join_df) > 0 else 0.0
+
+    return pd.DataFrame([
+        {"metric": "total_resource_samples", "value": total_samples,
+         "note": "ResourceMonitor 周期性采集的 per-replica 采样次数"},
+        {"metric": "monitored_replicas", "value": monitored_replicas,
+         "note": "被 ResourceMonitor 采样的副本数"},
+        {"metric": "monitored_nodes", "value": monitored_nodes,
+         "note": "被采样的节点数"},
+        {"metric": "overall_avg_cpu_util", "value": round(overall_avg_cpu_util, 6),
+         "note": "所有采样的平均 CPU 利用率（占节点 CPU 容量比）"},
+        {"metric": "overall_max_cpu_util", "value": round(overall_max_cpu_util, 6),
+         "note": "所有采样的峰值 CPU 利用率（同一 replica 上并发请求会叠加）"},
+        {"metric": "peak_concurrent_requests_per_replica", "value": round(peak_concurrent_requests_per_replica, 4),
+         "note": "按 0.35 CPU/request 估算的单 replica 峰值并发请求数"},
+        {"metric": "overall_avg_mem_util", "value": round(overall_avg_mem_util, 6),
+         "note": "所有采样的平均内存利用率"},
+        {"metric": "overall_max_mem_util", "value": round(overall_max_mem_util, 6),
+         "note": "所有采样的峰值内存利用率"},
+        {"metric": "overall_avg_cpu_millis", "value": round(overall_avg_cpu_millis, 4),
+         "note": "所有采样的平均 CPU 占用（毫核）"},
+        {"metric": "overall_max_cpu_millis", "value": round(overall_max_cpu_millis, 4),
+         "note": "所有采样的峰值 CPU 占用（毫核）"},
+        {"metric": "invocation_events", "value": invocation_events,
+         "note": "实际函数调用事件数（应 == 12）"},
+        {"metric": "join_rows", "value": join_rows,
+         "note": "invocation_resource_join 的行数（应 == invocation_events）"},
+        {"metric": "join_coverage", "value": round(join_coverage, 6),
+         "note": "join 行数 / invoke 行数（应 == 1.0）"},
+        {"metric": "join_rows_with_samples", "value": join_rows_with_samples,
+         "note": "invocation_resource_join 中至少包含 1 个 ResourceMonitor 采样点的行数"},
+        {"metric": "join_sample_coverage", "value": round(join_sample_coverage, 6),
+         "note": "带资源采样点的 invoke 行数 / invoke 行数"},
+        {"metric": "join_avg_cpu_util", "value": round(join_avg_cpu_util, 6),
+         "note": "join 中各 invoke 的 avg_cpu_util 均值"},
+        {"metric": "join_max_cpu_util", "value": round(join_max_cpu_util, 6),
+         "note": "join 中各 invoke 的 max_cpu_util 峰值"},
+        {"metric": "invoke_dispatch_probe_events", "value": probe_rows,
+         "note": "invoke_dispatch_probe 探针行数（应 == invocation_events）"},
+        {"metric": "invoke_probe_join_match_ratio", "value": round(invoke_probe_match_ratio, 6),
+         "note": "invoke_dispatch_probe 与 invocations 逐条匹配比例"},
+    ])
+
+
+def data_self_check(
+    util_df: pd.DataFrame,
+    inv_df: pd.DataFrame,
+    join_df: pd.DataFrame,
+    per_replica_df: pd.DataFrame,
+    probe_df: pd.DataFrame,
+    paper_df: pd.DataFrame,
+    invoke_join_df: pd.DataFrame,
+) -> Dict[str, bool]:
+    """
+    resource_monitor 样例的数据自洽检查（沿用 02/03/04/05 的 self_check 模式）。
+
+    不变量：
+    1. function_utilization 行数 ≥ 10（至少有 10 次采样）
+    2. monitored_replicas == 2（部署 2 个副本）
+    3. overall_max_cpu_util > 0.5（确实采到双 replica busy）
+    4. invocations_count == 12（max_requests）
+    5. join_rows == invocations_count
+    6. invocation_resource_join 至少部分行落入 ResourceMonitor 采样窗口
+    7. per_replica 行数 == 2
+    8. per_replica.samples.sum() == total_resource_samples
+    9. invoke_dispatch_probe 行数 == 12
+    10. invoke_dispatch_probe × invocations 逐条一致
+
+    参数直接传进来（不要 dfs.get），避免 export_outputs 末尾才 set 的时序 bug。
+    """
+    if util_df.empty:
+        return {f"0{i+1}_xxx": False for i in range(10)}
+
+    total_samples = len(util_df)
+    monitored_replicas = int(util_df["replica_id"].nunique()) if "replica_id" in util_df.columns else 0
+    overall_max_cpu_util = float(util_df["cpu_util"].max()) if "cpu_util" in util_df.columns else 0.0
+
+    invocations_count = len(inv_df)
+    join_rows = len(join_df) if not join_df.empty else 0
+
+    # ResourceMonitor 是周期采样，不保证每个 invoke 窗口都有采样点。
+    if not join_df.empty and "samples_in_window" in join_df.columns:
+        rows_with_samples = int((join_df["samples_in_window"] >= 1).sum())
+        has_resource_samples = rows_with_samples > 0
+    else:
+        rows_with_samples = 0
+        has_resource_samples = False
+
+    per_replica_rows = len(per_replica_df) if not per_replica_df.empty else 0
+    if not per_replica_df.empty and "samples" in per_replica_df.columns:
+        per_replica_sum = int(per_replica_df["samples"].sum())
+    else:
+        per_replica_sum = 0
+
+    probe_rows = len(probe_df) if not probe_df.empty else 0
+
+    # paper 与 summary 自洽
+    paper_total_samples = int(paper_df.loc[paper_df["metric"] == "total_resource_samples", "value"].iloc[0]) \
+        if not paper_df.empty and "total_resource_samples" in paper_df["metric"].values else -1
+    paper_join_coverage = float(paper_df.loc[paper_df["metric"] == "join_coverage", "value"].iloc[0]) \
+        if not paper_df.empty and "join_coverage" in paper_df["metric"].values else -1.0
+    paper_consistent = (
+        paper_total_samples == total_samples
+        and abs(paper_join_coverage - (join_rows / invocations_count if invocations_count > 0 else 0.0)) < 1e-3
+    )
+
+    invoke_join_consistent = False
+    if not invoke_join_df.empty and {"simtime_match", "node_match"}.issubset(invoke_join_df.columns):
+        invoke_join_consistent = bool(
+            len(invoke_join_df) == invocations_count
+            and invoke_join_df["simtime_match"].all()
+            and invoke_join_df["node_match"].all()
+        )
+
+    checks = {
+        "01_total_resource_samples_at_least_10": total_samples >= 10,
+        "02_monitored_replicas_is_2": monitored_replicas == 2,
+        "03_overall_max_cpu_util_above_0.5": overall_max_cpu_util > 0.5,
+        "04_invocations_count_is_12": invocations_count == 12,
+        "05_join_rows_equals_invocations": join_rows == invocations_count,
+        "06_resource_join_has_samples": has_resource_samples,
+        "07_per_replica_rows_is_2": per_replica_rows == 2,
+        "08_per_replica_samples_sum_matches": per_replica_sum == total_samples,
+        "09_invoke_dispatch_probe_events_is_12": probe_rows == 12,
+        "10_invoke_probe_join_consistent": bool(paper_consistent and invoke_join_consistent),
+    }
+
+    return checks
+
+
 def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     """
     导出仿真输出指标。
+
+    输出：
+    - 10 个 faas-sim 内置 metric 的 CSV（含 invoke_dispatch_probe）
+    - resource_utilization_per_replica.csv：per-replica CPU/mem util 聚合
+    - invocation_resource_join.csv：调用 × 资源 join（README §5 核心）
+    - resource_monitor_invoke_probe_invocation_join.csv：invoke probe × invocations 逐条验证
+    - resource_monitor_summary.csv：总体资源摘要
+    - resource_monitor_invocation_summary.csv：调用摘要
+    - resource_monitor_paper_highlight.csv：论文 demo 关键摘要（15 条 metric/value）
+    - resource_monitor_self_check.csv：10 项数据自检
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -323,6 +628,13 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
         logger.info("saved %s", path)
 
     # 资源监控 per-replica 摘要 —— 06 关键导出。
+    sample_probe_df = build_resource_monitor_sample_probe(sim)
+    sample_probe_path = output_dir / "resource_monitor_sample_probe.csv"
+    sample_probe_df.to_csv(sample_probe_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", sample_probe_path)
+    dfs["resource_monitor_sample_probe"] = sample_probe_df
+
+    # 资源监控 per-replica 摘要 —— 06 关键导出。
     per_replica_df = build_resource_utilization_per_replica(dfs)
     per_replica_path = output_dir / "resource_utilization_per_replica.csv"
     per_replica_df.to_csv(per_replica_path, index=False, encoding="utf-8-sig")
@@ -330,7 +642,6 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     dfs["resource_utilization_per_replica"] = per_replica_df
 
     # 调用 × 资源 join —— README §5 核心。
-    # reconcile_interval 取自 ResourceMonitor，默认为 1（simtime 秒）。
     reconcile_interval = 1.0
     if sim.env.resource_monitor is not None and hasattr(sim.env.resource_monitor, "reconcile_interval"):
         reconcile_interval = float(sim.env.resource_monitor.reconcile_interval)
@@ -339,6 +650,13 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     join_df.to_csv(join_path, index=False, encoding="utf-8-sig")
     logger.info("saved %s", join_path)
     dfs["invocation_resource_join"] = join_df
+
+    # invoke probe × invocation join —— 严格事件级验证。
+    invoke_join_df = build_invoke_probe_invocation_join(dfs)
+    invoke_join_path = output_dir / "resource_monitor_invoke_probe_invocation_join.csv"
+    invoke_join_df.to_csv(invoke_join_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", invoke_join_path)
+    dfs["resource_monitor_invoke_probe_invocation_join"] = invoke_join_df
 
     # 资源监控总体摘要。
     resource_summary_df = build_resource_monitor_summary(dfs)
@@ -352,7 +670,39 @@ def export_outputs(sim, output_dir: Path) -> Dict[str, pd.DataFrame]:
     invocation_summary_df.to_csv(invocation_summary_path, index=False, encoding="utf-8-sig")
     logger.info("saved %s", invocation_summary_path)
 
+    # 论文 demo 关键摘要
+    paper_df = build_paper_highlight(
+        util_df=dfs.get("resource_monitor_sample_probe", pd.DataFrame()) if not dfs.get("resource_monitor_sample_probe", pd.DataFrame()).empty else find_resource_dataframe(dfs),
+        inv_df=dfs.get("invocations", pd.DataFrame()),
+        join_df=join_df,
+        per_replica_df=per_replica_df,
+        probe_df=dfs.get("invoke_dispatch_probe", pd.DataFrame()),
+        invoke_join_df=invoke_join_df,
+    )
+    paper_path = output_dir / "resource_monitor_paper_highlight.csv"
+    paper_df.to_csv(paper_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", paper_path)
+
+    # 数据自检
+    checks = data_self_check(
+        util_df=dfs.get("resource_monitor_sample_probe", pd.DataFrame()) if not dfs.get("resource_monitor_sample_probe", pd.DataFrame()).empty else find_resource_dataframe(dfs),
+        inv_df=dfs.get("invocations", pd.DataFrame()),
+        join_df=join_df,
+        per_replica_df=per_replica_df,
+        probe_df=dfs.get("invoke_dispatch_probe", pd.DataFrame()),
+        paper_df=paper_df,
+        invoke_join_df=invoke_join_df,
+    )
+    check_df = pd.DataFrame([
+        {"check_id": k, "passed": v} for k, v in checks.items()
+    ])
+    check_path = output_dir / "resource_monitor_self_check.csv"
+    check_df.to_csv(check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", check_path)
+
     dfs["resource_monitor_summary"] = resource_summary_df
     dfs["resource_monitor_invocation_summary"] = invocation_summary_df
+    dfs["resource_monitor_paper_highlight"] = paper_df
+    dfs["resource_monitor_self_check"] = check_df
 
     return dfs

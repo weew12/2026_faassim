@@ -1,0 +1,11 @@
+﻿check_id,passed
+01_single_flow_count_is_1,True
+02_concurrent_flow_count_is_3,True
+03_single_throughput_near_bottleneck,True
+04_concurrent_throughput_near_share,True
+05_scaling_factor_near_3,True
+06_all_flows_share_one_bottleneck,True
+07_single_total_bytes_is_30M,True
+08_concurrent_total_bytes_is_90M,True
+09_rtt_consistent_across_flows,True
+10_summary_paper_scaling_consistent,True

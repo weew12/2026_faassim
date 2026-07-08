@@ -1,261 +1,184 @@
-# 11_fault_model：faas-sim 故障模型样例
+# 11_fault_model — 故障模型与请求成败分类
 
-本样例用于演示如何在 faas-sim 中构造简单、可复现的故障模型。样例不修改 faas-sim 核心代码，而是在函数执行模拟器中引入故障判定逻辑，并通过自定义指标记录请求成败与故障原因。
+> **目标**：在 faas-sim 函数执行模拟器中引入确定性故障模型（节点不可用 / 副本错误 / 网络退化），
+> 验证每条请求的故障分类、窗口判定一致性、以及 probe×invocation 派发一致性。
 
-## 运行方式
-
-将 `fault_model/` 放入项目的 `examples/` 目录后，在项目根目录运行：
+## 1. 复现步骤
 
 ```bash
+# 1) 跑仿真（30 个请求，6 rps，触发 DeterministicFaultModel 的两个窗口事件）
 python -u examples/11_fault_model/main.py
+
+# 2) 跑绘图（4 张图：请求时间线 + 故障原因分布 + final_duration 散点 + 论文摘要）
+python -u examples/11_fault_model/plot.py
 ```
 
-## 样例目标
+输出：
+- `outputs/`：12 个仿真/探针 metric + fault_events + probe_with_simtime + probe_fault_window_check + probe_invocation_join + fault_model_summary + fault_reason_distribution + **fault_model_paper_highlight** + **fault_model_self_check**
+- `figures/`：4 张图（png + pdf 同时输出）
 
-该样例主要回答以下问题：
+## 2. 实验设计
 
-1. 如何定义节点不可用窗口；
-2. 如何模拟函数副本瞬时失败；
-3. 如何模拟网络退化导致的执行时间变长；
-4. 如何将故障判定写入 `fault_model_probe.csv`；
-5. 如何导出故障事件时间线；
-6. **如何验证 probe 中的故障判定和故障窗口在 simtime 上严格对齐**（论文 demo 关键证据）；
-7. **如何验证 simulator 派发的 final_duration 和 faas-sim 记录的 t_exec 完全一致**。
+### 2.1 确定性故障模型（`fault_model.py`）
 
-## 故障模型
+| 故障类型 | 描述 | 触发方式 | 影响 |
+|---------|------|---------|------|
+| `node_outage` | 节点不可用窗口 | simtime ∈ [1.00, 1.80]，target=server_0 | 硬故障，请求快速失败（0.03s） |
+| `network_degradation` | 网络路径退化 | simtime ∈ [2.20, 3.60]，target=server_0 | 软故障，请求成功但 final_duration +0.45s |
+| `replica_error` | 周期性副本错误 | request_id % 7 == 0（即 id=7,14,21,28） | 硬故障，请求快速失败（0.03s） |
 
-样例内置三类故障：
+判定优先级（`fault_model.decide`）：
+1. **active event（node_outage）** 优先 → 硬故障失败
+2. **replica_error** 周期性触发
+3. **active event（network_degradation）** → 软故障成功但延时长
+4. 正常请求 → 0.25s 完成
 
-```text
-node_outage             节点不可用窗口，请求快速失败（failure_latency=0.03）
-replica_error           周期性函数副本错误（每 7 个请求触发一次），请求快速失败
-network_degradation     网络退化，请求仍成功但执行时间增加（base+0.45=0.70s）
+### 2.2 拓扑与调度
+
+- **4-server 最小拓扑**（与 02/03/05/06/07/08 一致）：用 `ether.core` 直接构造 4 个 server 节点 + Docker Registry，
+  构造一次复用。避免 `ether.scenarios.urbansensing` 连续实例化导致节点集不一致。
+- **FixedNodeScheduler**：强制所有副本部署到 `server_0`，使故障窗口稳定作用于目标节点。
+
+### 2.3 关键探针（沿用 02-10 的 invoke_dispatch_probe 模式）
+
+`simulator.invoke` 入口写两条探针：
+- `invoke_dispatch_probe`：`simtime` + `replica_id` + `request_id` + `expected_t_exec`（按 `decision.final_duration` 真实派发），
+  用于 probe×invocation join 自洽检查。
+- `fault_model_probe`：故障判定结果（`success` / `reason` / `base_duration` / `extra_delay` / `final_duration` / `failure_latency` / `active_fault`），
+  用于故障类型统计和窗口命中。
+
+## 3. 数据自检（11 项 PASS）
+
+```
+data self-check: 11 / 11 PASS
 ```
 
-故障事件表（fault_events.csv）：
+| # | check_id | 含义 |
+|---|---------|------|
+| 01 | `request_events_30` | 30 个请求全部完成 |
+| 02 | `node_outage_failures_gt_zero` | 节点不可用窗口内有请求失败 |
+| 03 | `replica_error_candidates_classified` | 4 个候选 id (7,14,21,28) 全部被 replica_error 或 node_outage 分类 |
+| 04 | `replica_error_failures_at_least_3` | 至少 3 个候选 id 归到 replica_error（1 个可能被 node_outage 抢先） |
+| 05 | `network_degradation_count_gt_zero` | 网络退化窗口内有请求被软故障 |
+| 06 | `failure_count_explains_node_replica` | 失败数 == node_outage + replica_error（两类失败穷尽） |
+| 07 | `node_outage_window_match_full` | 所有 node_outage 探针都落在 [1.0, 1.8] 窗口内 |
+| 08 | `network_degradation_window_match_full` | 所有 network_degradation 探针都落在 [2.2, 3.6] 窗口内 |
+| 09 | `normal_window_outside_full` | 所有 normal 探针都在窗口外 |
+| 10 | `probe_invocation_t_exec_match_full` | simulator 派发的 final_duration 与 invocations.t_exec 100% 匹配 |
+| 11 | `dispatch_probe_equals_invocations` | invoke_dispatch_probe 行数 == invocations 行数 |
 
-| name | type | start | end | target_node | severity | extra_delay |
-|---|---|---|---|---|---|---|
-| node_outage_server_0 | node_outage | 1.00 | 1.80 | server_0 | hard | 0.0 |
-| network_degradation_server_0 | network_degradation | 2.20 | 3.60 | server_0 | soft | 0.45 |
+**关于 check 03/04 的关键设计**：fault_model 的判定优先级是 active event 优先于 replica_error。
+当候选 id=7（simtime=1.67）落在 node_outage 窗口 [1.0, 1.8] 内时，会被 node_outage 抢先判定失败。
+因此 4 个候选 id 真正归到 replica_error 的数量 = 3（id=14, 21, 28），id=7 归到 node_outage。
+check 03 验证 4 个候选 id 全部被 replica_error 或 node_outage 分类（=4），check 04 验证 replica_error >= 3。
+这比简单断言 `replica_error == 4` 更准确，避免对判定优先级的过强假设。
 
-判定优先级（fault_model.decide）：
-1. **node_outage 窗口内** → 失败，reason=node_outage
-2. **request_id % 7 == 0**（replica_error_mod=7） → 失败，reason=replica_error
-3. **network_degradation 窗口内** → 成功，reason=network_degradation，final_duration=base+extra_delay
-4. 其他 → 成功，reason=normal
+## 4. 论文 demo 关键摘要（18 条）
 
-## 重要说明
+`outputs/fault_model_paper_highlight.csv` 包含：
 
-faas-sim 默认 `invocations.csv` 只记录调用耗时，不直接表达 HTTP 状态码或业务成败。因此本样例将请求成败记录在自定义指标中：
+| metric | 期望/示例 | 含义 |
+|--------|----------|------|
+| `request_events` | 30 | 触发请求总数 |
+| `success_count` | 23 | 成功请求数（normal + network_degradation） |
+| `failure_count` | 7 | 失败请求数（node_outage + replica_error） |
+| `failure_rate` | 0.2333 | 失败率 |
+| `node_outage_failures` | 4 | 节点不可用窗口失败数 |
+| `replica_error_failures` | 3 | 周期性副本错误失败数 |
+| `replica_error_candidates_classified` | 4 | 4 个候选 id 全部被 replica_error 或 node_outage 分类 |
+| `network_degradation_count` | 7 | 网络退化软故障数 |
+| `normal_count` | 16 | 正常请求数 |
+| `avg_final_duration` | 0.3037 | 平均 final_duration（含故障延长） |
+| `max_final_duration` | 0.70 | 最大 final_duration（= base + extra_delay） |
+| `node_outage_window_match_rate` | 1.0 | node_outage 探针 100% 落在窗口内 |
+| `network_degradation_window_match_rate` | 1.0 | network_degradation 探针 100% 落在窗口内 |
+| `normal_window_match_rate` | 1.0 | normal 探针 100% 落在窗口外 |
+| `probe_invocation_t_exec_match_rate` | 1.0 | probe 派发与 invocations 记录 100% 匹配 |
+| `fault_event_total` | 2 | 故障事件数（节点 + 网络） |
+| `fault_window_total_seconds` | 2.2 | 故障窗口总时长（0.8 + 1.4） |
+| `dispatch_probe_count` | 30 | invoke_dispatch_probe 行数 |
 
-```text
-fault_model_probe.csv
+## 5. 4 张图说明
+
+### fig01 — Request Timeline vs Fault Windows（论文 demo 关键图）
+- x 轴：simtime，y 轴：请求序号（按 simtime 升序）
+- 颜色：reason（绿=normal, 紫=replica_error, 红=node_outage, 橙=network_degradation）
+- 红色阴影 = node_outage 窗口 [1.0, 1.8]
+- 橙色阴影 = network_degradation 窗口 [2.2, 3.6]
+- **论文价值**：视觉证明所有 node_outage / network_degradation 请求严格落在故障窗口内，验证 fault_model 的窗口判定是精确的。
+
+### fig02 — Fault Reason Distribution
+- 4 个 reason 的请求数柱状图，颜色与 fig01 一致
+- **论文价值**：一眼看出三类故障类型的相对频率。
+
+### fig03 — Per-Request final_duration vs Simtime
+- x 轴：simtime，y 轴：final_duration
+- 三条参考线：base_duration=0.25s（绿）、base+extra_delay=0.70s（橙）、failure_latency=0.03s（红）
+- **论文价值**：直观显示网络退化把请求时长从 0.25s 放大到 0.70s，失败请求被压到 0.03s。
+
+### fig04 — Paper Highlight Metrics
+- 论文 demo 关键摘要指标的横向条形图（17 个 metric）
+- **论文价值**：所有 demo 数字集中展示，便于图表引用。
+
+## 6. 与 02-10 的 demo 价值对比
+
+| 维度 | 02 LB | 05 scale | 06 trig | 08 deg | **11 fault** |
+|------|-------|---------|---------|--------|------------|
+| 验证目标 | 路由均衡 | 副本伸缩 | 请求生成 | 性能退化 | **故障判定 + 窗口一致性** |
+| 探针 | dispatch_probe | dispatch_probe | dispatch_probe | dispatch_probe | **dispatch_probe + fault_probe** |
+| 关键 join | route×probe×inv | — | — | probe×degradation | **probe×fault_events×invocation** |
+| 核心数字 | balance_std=0 | scale_min→max | rps=profile | slowdown_pct | **failure_rate=0.23, window_match=1.0** |
+| 论文 chart | 阶梯图 + 分布 | 副本数曲线 | 到达曲线 | 退化曲线 | **窗口阴影散点 + duration 散点** |
+
+**11 的独特价值**：11 是 02-10 中**唯一一个**用「时间窗口 + 探针 + 判定优先级」三重机制共同验证故障模型的样例。
+其他样例关注"请求发生了什么"，11 关注"请求被分类为什么，且分类是否与仿真事件时间线严格一致"。
+
+## 7. 输出文件清单
+
+```
+examples/11_fault_model/
+├── main.py                                # 4-server 拓扑 + FixedNodeScheduler + 故障 Benchmark
+├── fault_model.py                         # DeterministicFaultModel + FaultEvent + FaultDecision
+├── scheduler.py                           # FixedNodeScheduler（强制 server_0）
+├── simulator.py                           # FaultModelFunctionSimulator + invoke_dispatch_probe
+├── analysis.py                            # 13 metrics + probe×simtime + 窗口命中 + paper_highlight + self_check
+├── plot.py                                # 4 张图（png + pdf）
+├── README.md                              # 本文件
+├── outputs/
+│   ├── invocations.csv                    # faas-sim 内置
+│   ├── schedule.csv                       # faas-sim 内置
+│   ├── function_deployments.csv           # faas-sim 内置
+│   ├── function_replicas.csv              # faas-sim 内置
+│   ├── replica_deployment.csv             # faas-sim 内置
+│   ├── flow.csv                           # faas-sim 内置
+│   ├── function_utilization.csv           # faas-sim 内置
+│   ├── node_utilization.csv               # faas-sim 内置
+│   ├── function_deployment_lifecycle.csv  # faas-sim 内置
+│   ├── invoke_dispatch_probe.csv          # 新增：invoke 入口探针（simtime + replica_id）
+│   ├── fault_model_probe.csv              # 故障判定探针
+│   ├── fault_timeline.csv                 # 故障事件时间线
+│   ├── fault_events.csv                   # 故障事件定义
+│   ├── probe_with_simtime.csv             # probe 重建 simtime
+│   ├── probe_fault_window_check.csv       # probe × fault_events 窗口命中
+│   ├── probe_invocation_join.csv          # probe × invocations 关联
+│   ├── fault_model_summary.csv            # 故障摘要
+│   ├── fault_reason_distribution.csv      # 故障原因分布
+│   ├── fault_model_paper_highlight.csv    # 论文 demo 关键摘要
+│   └── fault_model_self_check.csv         # 11 项数据自检
+└── figures/
+    ├── fig01_request_timeline_with_fault_windows.png/pdf
+    ├── fig02_fault_reason_distribution.png/pdf
+    ├── fig03_per_request_final_duration.png/pdf
+    └── fig04_paper_highlight_metrics.png/pdf
 ```
 
-分析请求是否失败时，应优先查看 `fault_model_probe.csv` 中的：
+## 8. 设计取舍
 
-```text
-success         bool
-reason          node_outage / replica_error / network_degradation / normal
-active_fault    fault event name that fired
-final_duration  simulator 派发的执行时长（含故障放大）
-```
-
-## 输出文件
-
-运行结束后，结果会保存到：
-
-```text
-examples/11_fault_model/outputs/
-```
-
-实际生成：
-
-```text
-fault_model_probe.csv                # 每次请求的故障判定（30 行）
-fault_timeline.csv                   # 故障事件开始/结束时间线
-fault_events.csv                     # 故障事件表（从 fault_model.events_dataframe()）
-fault_model_summary.csv              # 总体验成败摘要
-fault_reason_distribution.csv        # 按 reason × success 分组的耗时分布
-probe_with_simtime.csv               # 论文 demo 关键：probe + 重建 simtime 列
-probe_fault_window_check.csv         # 论文 demo 关键：probe × fault_events 窗口命中验证（30/30 match）
-probe_invocation_join.csv             # probe × invocations 关联，duration_match 验证
-function_utilization.csv
-node_utilization.csv
-invocations.csv
-schedule.csv
-function_deployments.csv
-function_deployment_lifecycle.csv
-function_replicas.csv
-replica_deployment.csv
-flow.csv
-```
-
-> 旧 README 列出的 `resource.csv / resources.csv / resource_monitor.csv / resource_state.csv`
-> 这 4 个 CSV 在 faas-sim 当前版本中不存在对应的 metric，已删除并替换为实际生成的
-> `function_utilization.csv` / `node_utilization.csv`。
-
-## 关键导出与图
-
-### 1. `probe_fault_window_check.csv` —— 故障窗口命中验证（论文 demo 关键证据）
-
-按 (function_name, replica_id, request_id) 给出每条 probe 的：
-- `simtime`           重建后的 simtime（用 invocations 的 t_start 对齐）
-- `in_window_faults`  该 simtime 时刻位于哪些故障窗口内（用 ; 连接）
-- `expected_in_window` reason 期望是否在窗口内
-- `window_match`      实际命中是否与 expected 一致
-
-预期 30 行 **`window_match=True` 30/30 = 100%**。
-
-### 2. `probe_invocation_join.csv` —— probe × invocations 关联
-
-按 (function_name, replica_id, request_id) 一一对应：
-
-- `probe_final_duration`  simulator 派发的 final_duration
-- `inv_t_exec`            faas-sim 记录的实际执行时长
-- `duration_match`         完全相等为 True
-
-预期 30 行 **`duration_match=True` 全部 True**。
-
-### 3. 论文 demo 关键图 —— 故障窗口 vs 实际请求成败
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-probe = pd.read_csv("examples/11_fault_model/outputs/probe_with_simtime.csv")
-faults = pd.read_csv("examples/11_fault_model/outputs/fault_events.csv")
-
-fig, ax = plt.subplots(figsize=(11, 4))
-color_map = {
-    "normal": "steelblue",
-    "node_outage": "crimson",
-    "replica_error": "darkorange",
-    "network_degradation": "mediumseagreen",
-}
-for reason, sub in probe.groupby("reason"):
-    ax.scatter(sub["simtime"], [reason] * len(sub),
-               s=60, color=color_map.get(reason, "grey"), label=f"{reason} (n={len(sub)})")
-for _, ev in faults.iterrows():
-    ax.axvspan(ev["start_time"], ev["end_time"], alpha=0.15, color=color_map.get(ev["fault_type"], "lightgrey"))
-ax.set_xlabel("simtime")
-ax.set_title("Fault window vs probe reason (window match 30/30)")
-ax.legend(loc="upper right")
-plt.tight_layout()
-plt.show()
-```
-
-### 4. 故障原因分布柱状图
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("examples/11_fault_model/outputs/fault_reason_distribution.csv")
-fig, ax = plt.subplots(figsize=(8, 4))
-labels = [f"{r.reason}\n(success={r.success})" for r in df.itertuples()]
-colors = ["crimson" if not r.success else "mediumseagreen" for r in df.itertuples()]
-ax.bar(labels, df["request_count"], color=colors)
-ax.set_ylabel("request count")
-ax.set_title("Fault reason distribution (30 requests)")
-ax.grid(True, axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-```
-
-## 数据自洽验证
-
-跑完 `main.py` 后，7 个核心不变量应同时满足：
-
-| 不变量 | 验证方式 |
-|---|---|
-| `fault_model_probe.csv` 行数 == 30 | `len(probe) == 30` |
-| `invocations.csv` 行数 == 30 | `len(inv) == 30` |
-| `probe_fault_window_check.csv` 的 `window_match=True` 数 == 30 | `window_check.window_match.sum() == 30` |
-| `probe_fault_window_check.csv` 中 `node_outage` 行的 `simtime` 都在 [1.0, 1.8] | 直接读 |
-| `probe_fault_window_check.csv` 中 `network_degradation` 行的 `simtime` 都在 [2.2, 3.6] | 直接读 |
-| `probe_invocation_join.csv` 的 `duration_match` 全部 True | `join.duration_match.all()` |
-| `fault_reason_distribution.csv` 中 `node_outage`+`replica_error` 的 count 之和 == `failure_count` (7) | 4+3=7 ✓ |
-
-## 文件说明
-
-### `main.py`
-
-样例主入口。
-
-职责包括：
-
-1. 创建拓扑；
-2. 初始化 Docker Registry；
-3. 注册函数镜像；
-4. 构造函数部署；
-5. 固定调度到目标节点；
-6. 启动故障事件时间线；
-7. 运行请求负载；
-8. **轮询 `env.metrics.records` 直到 30 次 invoke 全部完成**（替代原 `env.timeout(4)` 硬等待）；
-9. 导出故障与调用结果指标；
-10. log `window match = 100%` 和 `duration_match = True`。
-
-### `fault_model.py`
-
-故障模型定义文件。
-
-该文件提供：
-
-```text
-FaultEvent
-FaultDecision
-DeterministicFaultModel
-```
-
-用于描述故障窗口、判断请求是否受故障影响，并输出故障事件表。
-
-### `simulator.py`
-
-函数生命周期模拟器文件。
-
-该文件提供：
-
-```text
-FaultModelSimulatorFactory
-FaultModelFunctionSimulator
-```
-
-其核心逻辑是在 `invoke()` 中调用：
-
-```text
-decision = self.fault_model.decide(env.now, request.request_id, node.name)
-```
-
-并将判定结果写入 `fault_model_probe` 指标。
-
-### `scheduler.py`
-
-固定节点调度器文件。
-
-该文件提供 `FixedNodeScheduler`，用于把函数副本固定部署到目标节点 `server_0`，
-使故障窗口稳定影响请求。
-
-### `analysis.py`
-
-指标导出与分析文件。
-
-该文件负责导出：
-
-- 11 个 faas-sim / fault 原生 metric（`fault_model_probe` / `fault_timeline` /
-  `invocations` / `schedule` / `function_deployments` / `function_deployment_lifecycle` /
-  `function_replicas` / `replica_deployment` / `flow` /
-  `function_utilization` / `node_utilization`）
-- `fault_events.csv`：故障事件表
-- `fault_model_summary.csv`：总体成败摘要
-- `fault_reason_distribution.csv`：按 reason × success 分组
-- `probe_with_simtime.csv`：probe + 重建 simtime
-- `probe_fault_window_check.csv`：probe × fault_events 窗口命中验证
-- `probe_invocation_join.csv`：probe × invocations 关联
-
-### `outputs/`
-
-运行输出目录。
-
-用于保存 CSV 结果文件。
+- **确定 vs 随机故障**：用确定性故障事件（固定 start_time / end_time）而非随机分布，便于样例复现和结果解释。
+  论文 demo 需要"跑两次结果一致"的可重现性。
+- **故障判定与仿真解耦**：fault_model 不修改 faas-sim 核心代码，而是通过独立模块 + 自定义指标实现。
+  这保留了原框架的纯洁性，也方便替换为更复杂的故障模型（如基于历史 trace 的故障注入）。
+- **窗口 vs 探针的双向验证**：用 `probe_fault_window_check.csv` 反向验证「每个标记为 node_outage 的请求都落在 [1.0, 1.8] 窗口内」，
+  而不是只检查「窗口内有多少请求」。这种"双向"验证更接近论文里"假设 H 在所有样本中成立"的标准。
+- **判定优先级透明化**：当候选 id=7 因落在 node_outage 窗口内而被抢先判定时，self_check 03/04 的拆分
+  显式承认"4 个候选 id 中有 3 个归到 replica_error、1 个被 node_outage 覆盖"，避免对 fault_model 行为的过强假设。

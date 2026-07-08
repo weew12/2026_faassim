@@ -1,0 +1,12 @@
+﻿name,status,detail,passed
+run_metrics_min_rows,PASS,run_metrics rows=8,True
+total_probe_equals_total_invocation,PASS,"total_probes=144, total_invocations=144",True
+per_run_probe_equals_invocation,PASS,mismatch_runs=0/8,True
+summary_row_count,PASS,"summary rows=4, expected=4 (policies=2 × workloads=2)",True
+comparison_row_count,PASS,"comparison rows=2, expected=2 ((policies-1=1) × workloads=2)",True
+high_capacity_hit_ratio__default_skippy,PASS,"hit 4/4 = 1.00, highlight=1.00, expected=1.00",True
+high_capacity_hit_ratio__fixed_node,PASS,"hit 0/4 = 0.00, highlight=0.00, expected=0.00",True
+avg_probe_seconds_consistency__default_skippy__low_load,PASS,"summary=0.221079, highlight=0.221079",True
+avg_probe_seconds_consistency__default_skippy__medium_load,PASS,"summary=0.219739, highlight=0.219739",True
+avg_probe_seconds_consistency__fixed_node__low_load,PASS,"summary=0.221079, highlight=0.221079",True
+avg_probe_seconds_consistency__fixed_node__medium_load,PASS,"summary=0.219739, highlight=0.219739",True

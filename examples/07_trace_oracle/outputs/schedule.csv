@@ -1,7 +1,7 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-07 13:53:37.561358,queue,trace-fast-python-pi,trace-fast-python-pi-cpu,2033291479760,,
-2026-07-07 13:53:37.561476,queue,trace-slow-python-pi,trace-slow-python-pi-cpu,2033291124944,,
-2026-07-07 13:53:37.561502,start,trace-fast-python-pi,trace-fast-python-pi-cpu,2033291479760,,
-2026-07-07 13:53:37.569442,finish,trace-fast-python-pi,trace-fast-python-pi-cpu,2033291479760,server_0,True
-2026-07-07 13:53:37.569841,start,trace-slow-python-pi,trace-slow-python-pi-cpu,2033291124944,,
-2026-07-07 13:53:37.570285,finish,trace-slow-python-pi,trace-slow-python-pi-cpu,2033291124944,server_0,True
+2026-07-07 21:17:43.106879,queue,trace-fast-python-pi,trace-fast-python-pi-cpu,2154410164976,,
+2026-07-07 21:17:43.106999,queue,trace-slow-python-pi,trace-slow-python-pi-cpu,2154409943888,,
+2026-07-07 21:17:43.107027,start,trace-fast-python-pi,trace-fast-python-pi-cpu,2154410164976,,
+2026-07-07 21:17:43.107949,finish,trace-fast-python-pi,trace-fast-python-pi-cpu,2154410164976,server_0,True
+2026-07-07 21:17:43.108183,start,trace-slow-python-pi,trace-slow-python-pi-cpu,2154409943888,,
+2026-07-07 21:17:43.108310,finish,trace-slow-python-pi,trace-slow-python-pi-cpu,2154409943888,server_0,True

@@ -1,0 +1,20 @@
+﻿metric,value,note
+total_resource_samples,12.0,ResourceMonitor 周期性采集的 per-replica 采样次数
+monitored_replicas,2.0,被 ResourceMonitor 采样的副本数
+monitored_nodes,1.0,被采样的节点数
+overall_avg_cpu_util,0.583333,所有采样的平均 CPU 利用率（占节点 CPU 容量比）
+overall_max_cpu_util,1.05,所有采样的峰值 CPU 利用率（同一 replica 上并发请求会叠加）
+peak_concurrent_requests_per_replica,3.0,按 0.35 CPU/request 估算的单 replica 峰值并发请求数
+overall_avg_mem_util,0.104167,所有采样的平均内存利用率
+overall_max_mem_util,0.1875,所有采样的峰值内存利用率
+overall_avg_cpu_millis,2333.3333,所有采样的平均 CPU 占用（毫核）
+overall_max_cpu_millis,4200.0,所有采样的峰值 CPU 占用（毫核）
+invocation_events,12.0,实际函数调用事件数（应 == 12）
+join_rows,12.0,invocation_resource_join 的行数（应 == invocation_events）
+join_coverage,1.0,join 行数 / invoke 行数（应 == 1.0）
+join_rows_with_samples,12.0,invocation_resource_join 中至少包含 1 个 ResourceMonitor 采样点的行数
+join_sample_coverage,1.0,带资源采样点的 invoke 行数 / invoke 行数
+join_avg_cpu_util,0.83125,join 中各 invoke 的 avg_cpu_util 均值
+join_max_cpu_util,1.05,join 中各 invoke 的 max_cpu_util 峰值
+invoke_dispatch_probe_events,12.0,invoke_dispatch_probe 探针行数（应 == invocation_events）
+invoke_probe_join_match_ratio,1.0,invoke_dispatch_probe 与 invocations 逐条匹配比例

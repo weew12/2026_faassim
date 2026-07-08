@@ -101,6 +101,13 @@ def main():
             elif metric.startswith("function_cache_hit_rate__") or metric.startswith("avg_estimated_latency__"):
                 logger.info("paper highlight: %s = %s", metric, value)
 
+    # data self-check 一句话总结（沿用 02-21 模式）
+    self_check_result = outputs.get("self_check_result") or {}
+    n_pass = self_check_result.get("n_pass", 0)
+    n_fail = self_check_result.get("n_fail", 0)
+    n_total = n_pass + n_fail
+    logger.info("data self-check: %d / %d PASS", n_pass, n_total)
+
     logger.info("outputs saved to %s", output_dir)
 
 

@@ -1,1 +1,1 @@
-﻿""
+﻿time,function_name,pod_name,candidate_node,scheduler,cache_hit,cache_hit_score,freshness_score,load_score,total_score,pod_count,avg_cold_start

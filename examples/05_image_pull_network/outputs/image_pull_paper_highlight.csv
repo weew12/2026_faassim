@@ -1,0 +1,14 @@
+﻿metric,value,note
+small_image_size_mb,32.0,small 镜像大小（MB）
+large_image_size_mb,192.0,large 镜像大小（MB）
+small_cold_pull_duration_s,0.302918,small 镜像冷拉取耗时（秒），首次部署 32M 镜像
+small_warm_cache_hit_duration_s,0.0,small 镜像 cache 命中耗时（秒），同节点复用
+large_cold_pull_duration_s,1.622505,large 镜像冷拉取耗时（秒），首次部署 192M 镜像
+small_cold_pull_speed_mb_per_sec,105.6393,small 冷拉取速度（MB/s），应接近 121 MB/s（1Gbps/8×0.97）
+large_cold_pull_speed_mb_per_sec,118.3355,large 冷拉取速度（MB/s），应接近 121 MB/s
+cache_savings_seconds,0.302918,small 缓存命中节省时间（秒），论文 demo 关键数字
+cache_savings_ratio,1.0,small 缓存节省比例（warm/cold），越接近 1 缓存越有效
+docker_pull_flow_count,2.0,docker_pull 网络流数量（small-cold + large-cold = 2，warm 不算）
+bandwidth_utilization_ratio,0.9236,实测拉取速度 / 理论最大速度（链路利用率，越接近 1 越好）
+invocation_events,10.0,invoke 调用事件数（small-cold 触发 10 个请求）
+invoke_probe_join_match_ratio,1.0,invoke_dispatch_probe 与 invocations 逐条匹配比例

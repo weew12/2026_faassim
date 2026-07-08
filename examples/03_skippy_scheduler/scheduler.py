@@ -91,6 +91,20 @@ class InstrumentedSkippyScheduler(Scheduler):
         if env is not None and getattr(env, "metrics", None) is not None:
             self._log_candidate_snapshot(env, pod, nodes, feasible_nodes)
 
+        # 调度前 probe：用于和 invocations.csv 的 simtime 关联做 join 验证
+        simtime_before = float(getattr(env, "now", 0.0)) if env is not None else 0.0
+        if env is not None and getattr(env, "metrics", None) is not None:
+            env.metrics.log(
+                "schedule_probe",
+                {
+                    "simtime": simtime_before,
+                    "feasible_nodes_count": len(feasible_nodes),
+                    "all_nodes_count": len(nodes),
+                    "phase": "before",
+                },
+                pod_name=pod.name,
+            )
+
         # 调用 Skippy 原生 schedule。该调用会执行过滤、打分、选择节点，并写回 ClusterContext。
         result = super().schedule(pod)
 
@@ -105,6 +119,7 @@ class InstrumentedSkippyScheduler(Scheduler):
             needed_images,
         )
 
+        simtime_after = float(getattr(env, "now", 0.0)) if env is not None else 0.0
         if env is not None and getattr(env, "metrics", None) is not None:
             env.metrics.log(
                 "skippy_scheduler_result",
@@ -113,10 +128,24 @@ class InstrumentedSkippyScheduler(Scheduler):
                     "feasible_nodes_full": len(feasible_nodes),
                     "returned_feasible_nodes": result.feasible_nodes,
                     "needed_images_count": len(needed_images),
+                    "simtime": simtime_after,
                 },
                 pod_name=pod.name,
                 selected_node=selected_node,
                 needed_images=";".join(needed_images),
+            )
+            # 调度后 probe：携带最终 selected_node + needed_images_count
+            env.metrics.log(
+                "schedule_probe",
+                {
+                    "simtime": simtime_after,
+                    "feasible_nodes_count": len(feasible_nodes),
+                    "all_nodes_count": len(nodes),
+                    "selected_node": selected_node,
+                    "needed_images_count": len(needed_images),
+                    "phase": "after",
+                },
+                pod_name=pod.name,
             )
 
         return result

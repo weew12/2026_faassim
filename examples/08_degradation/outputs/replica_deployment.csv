@@ -1,13 +1,13 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-07 14:18:36.322284,deploy,degradation-python-pi,server_0,2590678451936
-2026-07-07 14:18:36.323082,deploy,degradation-python-pi,server_0,2590678143120
-2026-07-07 14:18:36.323093,startup,degradation-python-pi,server_0,2590678143120
-2026-07-07 14:18:36.323236,deploy,degradation-python-pi,server_0,2590678146960
-2026-07-07 14:18:36.323244,startup,degradation-python-pi,server_0,2590678146960
-2026-07-07 14:18:36.323320,setup,degradation-python-pi,server_0,2590678143120
-2026-07-07 14:18:36.323329,finish,degradation-python-pi,server_0,2590678143120
-2026-07-07 14:18:36.323339,setup,degradation-python-pi,server_0,2590678146960
-2026-07-07 14:18:36.323345,finish,degradation-python-pi,server_0,2590678146960
-2026-07-07 14:18:36.323414,startup,degradation-python-pi,server_0,2590678451936
-2026-07-07 14:18:36.323724,setup,degradation-python-pi,server_0,2590678451936
-2026-07-07 14:18:36.323731,finish,degradation-python-pi,server_0,2590678451936
+2026-07-07 21:43:53.945761,deploy,degradation-python-pi,server_0,1429163262368
+2026-07-07 21:43:53.946629,deploy,degradation-python-pi,server_0,1429163184912
+2026-07-07 21:43:53.946644,startup,degradation-python-pi,server_0,1429163184912
+2026-07-07 21:43:53.946858,deploy,degradation-python-pi,server_0,1429163188752
+2026-07-07 21:43:53.946872,startup,degradation-python-pi,server_0,1429163188752
+2026-07-07 21:43:53.947007,setup,degradation-python-pi,server_0,1429163184912
+2026-07-07 21:43:53.947027,finish,degradation-python-pi,server_0,1429163184912
+2026-07-07 21:43:53.947047,setup,degradation-python-pi,server_0,1429163188752
+2026-07-07 21:43:53.947058,finish,degradation-python-pi,server_0,1429163188752
+2026-07-07 21:43:53.954121,startup,degradation-python-pi,server_0,1429163262368
+2026-07-07 21:43:53.954444,setup,degradation-python-pi,server_0,1429163262368
+2026-07-07 21:43:53.954463,finish,degradation-python-pi,server_0,1429163262368

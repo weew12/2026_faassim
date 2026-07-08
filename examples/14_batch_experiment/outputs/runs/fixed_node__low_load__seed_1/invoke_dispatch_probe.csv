@@ -1,0 +1,13 @@
+﻿time,simtime,replica_id,request_id,expected_t_exec,case_id,policy,workload,function_name,node
+2026-07-08 00:36:55.137658,0.8333333333333333,1911726374992,73,0.19074913952899208,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.137740,1.1666666666666665,1911726374992,74,0.2477946989549786,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.137779,1.4999999999999998,1911726374992,75,0.24110196951812912,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.137810,1.833333333333333,1911726374992,76,0.20040552205915374,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.137917,2.1666666666666665,1911726374992,77,0.21963480696735527,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.137986,2.5,1911724664656,78,0.21595928518309904,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138029,2.8333333333333335,1911726374992,79,0.23212743781782103,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138093,3.166666666666667,1911724664656,80,0.24309786809084105,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138124,3.5000000000000004,1911726374992,81,0.1875087669419388,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138157,3.833333333333334,1911724664656,82,0.1822677981217605,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138220,4.166666666666667,1911726374992,83,0.24686120831358957,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0
+2026-07-08 00:36:55.138263,4.5,1911724664656,84,0.21462136543240426,fixed_node__low_load__seed_1,fixed_node,low_load,batch-exp-python-pi,server_0

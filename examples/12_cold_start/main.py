@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -51,16 +51,45 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 的内部状态污染
+# 12 之前直接用 UrbanSensingScenario；为了和 02-11 统一，改用最小 4-server 拓扑
+# 构造一次复用。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建 cold_start 样例使用的拓扑。
+    创建 cold_start 样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，并初始化 Docker Registry。
+    为什么不复用 UrbanSensingScenario：
+    ether.scenarios.urbansensing 在连续构造时会返回不同的节点集
+    （server_0..9、server_10..19、...、server_70..79），可能让 docker.pull 走不同
+    镜像拉取路径。这里用 ether.core 直接构造 4 个 server 节点 + Docker Registry，
+    构造一次复用。
+
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        # 镜像拉取链路：DockerRegistry -- internet_link -- switch -- link_server_X -- server_X
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 def wait_for_invocations(env, expected_count: int, max_wait: float = 30.0, poll_interval: float = 0.1):
@@ -205,15 +234,15 @@ def main():
 
     phase_summary_df = dfs.get("cold_start_phase_summary")
     if phase_summary_df is not None and len(phase_summary_df) > 0:
-        logger.info("cold start phase summary:\\n%s", phase_summary_df.to_string(index=False))
+        logger.info("cold start phase summary:\n%s", phase_summary_df.to_string(index=False))
 
     replica_path_df = dfs.get("cold_start_replica_path_summary")
     if replica_path_df is not None and len(replica_path_df) > 0:
-        logger.info("cold start replica path summary:\\n%s", replica_path_df.to_string(index=False))
+        logger.info("cold start replica path summary:\n%s", replica_path_df.to_string(index=False))
 
     warm_cold_df = dfs.get("cold_start_warm_cold_compare")
     if warm_cold_df is not None and len(warm_cold_df) > 0:
-        logger.info("cold start warm/cold compare:\\n%s", warm_cold_df.to_string(index=False))
+        logger.info("cold start warm/cold compare:\n%s", warm_cold_df.to_string(index=False))
 
     probe_inv_df = dfs.get("cold_start_probe_invocation_join")
     if probe_inv_df is not None and "duration_match" in probe_inv_df.columns:
@@ -222,6 +251,19 @@ def main():
             "probe × invocation join: %d rows, all duration_match=%s",
             len(probe_inv_df), all_match,
         )
+
+    paper_df = dfs.get("cold_start_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("cold_start_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

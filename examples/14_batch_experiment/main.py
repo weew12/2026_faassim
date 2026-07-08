@@ -64,6 +64,16 @@ def main():
     )
     log_self_check(self_check)
 
+    # data self-check 汇总（仿 02-13 模式）
+    n_pass = self_check.get("n_pass", 0)
+    n_fail = self_check.get("n_fail", 0)
+    n_total = n_pass + n_fail
+    logger.info("data self-check: %d / %d PASS", n_pass, n_total)
+    if n_fail > 0:
+        for c in self_check.get("checks") or []:
+            if c["status"] != "PASS":
+                logger.warning("  FAILED: %s", c["name"])
+
     batch_results_df = outputs.get("batch_results")
     if batch_results_df is not None and len(batch_results_df) > 0:
         logger.info("batch results:\n%s", batch_results_df.to_string(index=False))

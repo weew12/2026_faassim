@@ -1,0 +1,12 @@
+﻿metric,value,note
+trace_oracle_sample_events,28.0,trace_oracle_sample 总行数（应 == 28）
+invocation_events,28.0,实际函数调用事件数（应 == 28）
+duration_match_count,28.0,trace sample_duration 与 inv t_exec 一致的行数（应 == 28）
+duration_match_ratio,1.0,duration_match 比例（应 == 1.0，证明 oracle 行为正确）
+cycles_used_fast,2.0,fast 函数 cursor 循环次数（应 == 2）
+last_sample_id_fast,4.0,fast 函数最后一次取样的 sample_id（应 == 4，证明循环到第 4 个样本停止）
+fast_avg_duration_s,0.1,fast 函数平均执行时间（应 ≈ 0.10s）
+slow_avg_duration_s,0.53,slow 函数平均执行时间（应 ≈ 0.53s）
+invoke_dispatch_probe_events,28.0,invoke_dispatch_probe 探针行数（应 == invocation_events）
+probe_sample_match_ratio,1.0,invoke_dispatch_probe 与 trace_oracle_sample 的样本匹配比例
+probe_invocation_match_ratio,1.0,invoke_dispatch_probe 与 invocations 的时间/执行时长/节点匹配比例

@@ -6,10 +6,12 @@
 - 边缘-云星型拓扑；
 - 共享瓶颈链路拓扑；
 - 官方 UrbanSensingScenario 拓扑；
-- 节点、边、路由和摘要结果导出。
+- 节点、边、路由和摘要结果导出；
+- 论文 demo 关键摘要 + 数据自检。
 
 运行方式：
     python -u examples/09_topologies/main.py
+    python -u examples/09_topologies/plot.py
 """
 
 import logging
@@ -57,7 +59,20 @@ def main():
 
     summary_df = outputs.get("topology_summary")
     if summary_df is not None and len(summary_df) > 0:
-        logger.info("topology summary:\\n%s", summary_df.to_string(index=False))
+        logger.info("topology summary:\n%s", summary_df.to_string(index=False))
+
+    paper_df = outputs.get("topology_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = outputs.get("topology_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

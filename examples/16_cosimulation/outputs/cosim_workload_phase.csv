@@ -1,5 +1,5 @@
 ﻿time,start_time,duration,rps,runtime_factor,network_delay,max_requests,phase_name,controller_action,description
-2026-07-07 17:02:56.317799,0.0,2.0,3.0,1.0,0.0,6,normal,observe,稳定阶段，外部环境无明显扰动
-2026-07-07 17:02:56.320532,2.0,2.0,8.0,1.35,0.08,16,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
-2026-07-07 17:02:56.322786,4.0,2.0,5.0,1.1,0.25,10,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
-2026-07-07 17:02:56.323957,6.0,2.0,2.0,0.95,0.0,4,cooldown,release_attention,负载回落，外部控制器释放关注
+2026-07-08 01:11:33.979653,0.0,2.0,3.0,1.0,0.0,6,normal,observe,稳定阶段，外部环境无明显扰动
+2026-07-08 01:11:33.980830,2.0,2.0,8.0,1.35,0.08,16,edge_pressure,scale_attention,边缘节点压力升高，函数执行时间被放大
+2026-07-08 01:11:33.983420,4.0,2.0,5.0,1.1,0.25,10,network_slowdown,network_attention,外部网络退化，请求额外引入网络延迟
+2026-07-08 01:11:33.985061,6.0,2.0,2.0,0.95,0.0,4,cooldown,release_attention,负载回落，外部控制器释放关注

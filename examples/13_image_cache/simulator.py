@@ -138,7 +138,27 @@ class ImageCacheFunctionSimulator(FunctionSimulator):
         模拟一次函数调用。
 
         本样例重点是镜像缓存，调用阶段只保留极小固定耗时。
+        注意：13 默认不触发 invoke（main.py benchmark.run() 只部署不调用），
+        所以 invoke_dispatch_probe 实际为 0 行；保留这个探针是为了和 02-12 模式对齐，
+        方便其他场景复用 simulator。
+
+        关键探针（沿用 02-12 的 invoke_dispatch_probe 模式）：
+        入口 simtime + replica_id + request_id + expected_t_exec（按 0.05s 真实派发），
+        用于 probe×invocation join 自洽检查（如果 main.py 触发 invoke）。
         """
+        # 派发探针（沿用 02-12 模式）
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "expected_t_exec": 0.05,
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
+
         yield env.timeout(0.05)
 
     def teardown(self, env: Environment, replica: FunctionReplica):

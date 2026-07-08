@@ -1,0 +1,13 @@
+﻿simtime,function_name,function_image,node,replica_id,cpu,memory,cpu_util,mem_util
+4.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,1400.0,134217728.0,0.35,0.0625
+4.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,2800.0,268435456.0,0.7,0.125
+5.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,4200.0,402653184.0,1.05,0.1875
+5.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,2800.0,268435456.0,0.7,0.125
+6.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,2800.0,268435456.0,0.7,0.125
+6.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,4200.0,402653184.0,1.05,0.1875
+7.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,4200.0,402653184.0,1.05,0.1875
+7.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,2800.0,268435456.0,0.7,0.125
+8.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,1400.0,134217728.0,0.35,0.0625
+8.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,1400.0,134217728.0,0.35,0.0625
+9.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439060944,0.0,0.0,0.0,0.0
+9.0,resource-heavy-python-pi,resource-heavy-python-pi-cpu,server_0,1492439138720,0.0,0.0,0.0,0.0

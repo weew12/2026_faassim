@@ -82,12 +82,15 @@ class InstrumentedRoundRobinLoadBalancer(LoadBalancer):
         )
 
         # 记录负载均衡决策。后续 analysis.py 会导出 load_balancer.csv。
+        # simtime 字段塞到 value 字典里，extract_dataframe 后会作为 "simtime" 列存在，
+        # 便于按 (function_name, replica_id, simtime) 做 probe×invocation join。
         self.env.metrics.log(
             "load_balancer",
             {
                 "request_id": request.request_id,
                 "replica_index": index,
                 "running_replicas": len(running_replicas),
+                "simtime": float(self.env.now),
             },
             function_name=request.name,
             selected_node=replica.node.name,

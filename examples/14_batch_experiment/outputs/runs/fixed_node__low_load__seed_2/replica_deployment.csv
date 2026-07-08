@@ -1,9 +1,9 @@
 ﻿time,value,function_name,node_name,replica_id
-2026-07-07 16:45:57.463211,deploy,batch-exp-python-pi,server_0,3037141191088
-2026-07-07 16:45:57.463367,deploy,batch-exp-python-pi,server_0,3037141193728
-2026-07-07 16:45:57.463376,startup,batch-exp-python-pi,server_0,3037141193728
-2026-07-07 16:45:57.463409,setup,batch-exp-python-pi,server_0,3037141193728
-2026-07-07 16:45:57.463416,finish,batch-exp-python-pi,server_0,3037141193728
-2026-07-07 16:45:57.463608,startup,batch-exp-python-pi,server_0,3037141191088
-2026-07-07 16:45:57.463643,setup,batch-exp-python-pi,server_0,3037141191088
-2026-07-07 16:45:57.463648,finish,batch-exp-python-pi,server_0,3037141191088
+2026-07-08 00:36:55.186839,deploy,batch-exp-python-pi,server_0,1911725118464
+2026-07-08 00:36:55.187095,deploy,batch-exp-python-pi,server_0,1911725120144
+2026-07-08 00:36:55.187105,startup,batch-exp-python-pi,server_0,1911725120144
+2026-07-08 00:36:55.187138,setup,batch-exp-python-pi,server_0,1911725120144
+2026-07-08 00:36:55.187146,finish,batch-exp-python-pi,server_0,1911725120144
+2026-07-08 00:36:55.187399,startup,batch-exp-python-pi,server_0,1911725118464
+2026-07-08 00:36:55.187446,setup,batch-exp-python-pi,server_0,1911725118464
+2026-07-08 00:36:55.187455,finish,batch-exp-python-pi,server_0,1911725118464

@@ -184,7 +184,7 @@ def build_paper_highlight(
     result_candidate_join_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（含 note 列，沿用 02-21 模式）。
 
     edge_cache_scheduler 样例的论文 demo 关注的是：
     1. 三个缓存维度命中率（function / image / data）的差异
@@ -197,7 +197,7 @@ def build_paper_highlight(
     rows: List[Dict[str, Any]] = []
 
     if policy_summary_df.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     # 1. per-policy 关键指标
     for _, srow in policy_summary_df.iterrows():
@@ -205,30 +205,37 @@ def build_paper_highlight(
         rows.append({
             "metric": f"function_cache_hit_rate__{policy}",
             "value": float(srow["function_cache_hit_rate"]),
+            "note": f"{policy} 函数 warm 实例缓存命中率（论文 demo 关键指标）",
         })
         rows.append({
             "metric": f"image_cache_hit_rate__{policy}",
             "value": float(srow["image_cache_hit_rate"]),
+            "note": f"{policy} 镜像缓存命中率（避免镜像拉取）",
         })
         rows.append({
             "metric": f"data_cache_hit_rate__{policy}",
             "value": float(srow["data_cache_hit_rate"]),
+            "note": f"{policy} 数据缓存命中率（避免数据获取）",
         })
         rows.append({
             "metric": f"avg_estimated_latency__{policy}",
             "value": float(srow["avg_estimated_latency"]),
+            "note": f"{policy} 平均每次 invoke estimated_latency（warm=fast, cold=慢）",
         })
         rows.append({
             "metric": f"total_cold_start_penalty__{policy}",
             "value": float(srow["total_cold_start_penalty"]),
+            "note": f"{policy} 全部冷启动惩罚累加",
         })
         rows.append({
             "metric": f"total_image_pull_penalty__{policy}",
             "value": float(srow["total_image_pull_penalty"]),
+            "note": f"{policy} 全部镜像拉取惩罚累加",
         })
         rows.append({
             "metric": f"total_data_fetch_penalty__{policy}",
             "value": float(srow["total_data_fetch_penalty"]),
+            "note": f"{policy} 全部数据获取惩罚累加",
         })
 
     # 2. 策略相对提升（以 edge_round_robin 为 baseline）
@@ -260,40 +267,47 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"function_cache_hit_rate_improvement__{policy}_over_{baseline}",
                 "value": float(function_hit - base_function_hit),
+                "note": f"{policy} - {baseline} function 缓存命中率差值（论文 demo 关键数字）",
             })
             # image_cache_hit_rate 绝对差
             rows.append({
                 "metric": f"image_cache_hit_rate_improvement__{policy}_over_{baseline}",
                 "value": float(image_hit - base_image_hit),
+                "note": f"{policy} - {baseline} 镜像缓存命中率差值（论文 demo 关键数字）",
             })
             # data_cache_hit_rate 绝对差
             rows.append({
                 "metric": f"data_cache_hit_rate_improvement__{policy}_over_{baseline}",
                 "value": float(data_hit - base_data_hit),
+                "note": f"{policy} - {baseline} 数据缓存命中率差值（论文 demo 关键数字）",
             })
             # latency 相对降低
             if base_latency > 0:
                 rows.append({
                     "metric": f"avg_estimated_latency_reduction__{policy}_over_{baseline}",
                     "value": float((base_latency - latency) / base_latency),
+                    "note": f"{policy} 相对 {baseline} 平均延迟降低比例",
                 })
             # cold_start_penalty 相对降低
             if base_cold > 0:
                 rows.append({
                     "metric": f"cold_start_penalty_reduction__{policy}_over_{baseline}",
                     "value": float((base_cold - cold) / base_cold),
+                    "note": f"{policy} 相对 {baseline} 冷启动惩罚降低比例",
                 })
             # image_pull_penalty 相对降低
             if base_image > 0:
                 rows.append({
                     "metric": f"image_pull_penalty_reduction__{policy}_over_{baseline}",
                     "value": float((base_image - image) / base_image),
+                    "note": f"{policy} 相对 {baseline} 镜像拉取惩罚降低比例",
                 })
             # data_fetch_penalty 相对降低
             if base_data > 0:
                 rows.append({
                     "metric": f"data_fetch_penalty_reduction__{policy}_over_{baseline}",
                     "value": float((base_data - data) / base_data),
+                    "note": f"{policy} 相对 {baseline} 数据获取惩罚降低比例",
                 })
 
     # 3. result×candidate 一致性
@@ -303,17 +317,20 @@ def build_paper_highlight(
         rows.append({
             "metric": "result_candidate_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "result × candidate join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "result_candidate_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "result_candidate_total",
             "value": n,
+            "note": "join 总行数（应 == 2 policy × 15 request = 30）",
         })
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["metric", "value", "note"])
 
 
 def self_check(
@@ -326,7 +343,7 @@ def self_check(
     n_policies: int,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（edge_cache_scheduler 10 个不变量）。
+    数据自洽段（edge_cache_scheduler 25 个不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -347,7 +364,18 @@ def self_check(
         "detail": f"candidates={n_cand}, results={n_result}",
     })
 
-    # 3. policy_summary 行数 == n_policies
+    # 3. 每个 (policy, request) 的候选节点数一致
+    if not candidate_df.empty:
+        candidate_group_sizes = candidate_df.groupby(["policy_name", "request_id"]).size()
+        expected_candidates_per_request = int(candidate_group_sizes.iloc[0]) if not candidate_group_sizes.empty else 0
+        consistent = bool((candidate_group_sizes == expected_candidates_per_request).all())
+        checks.append({
+            "name": "candidate_count_per_request_consistent",
+            "status": "PASS" if consistent else "FAIL",
+            "detail": f"candidate groups={len(candidate_group_sizes)}, candidates per request={expected_candidates_per_request}",
+        })
+
+    # 4. policy_summary 行数 == n_policies
     n_summary = len(policy_summary_df)
     checks.append({
         "name": "policy_summary_row_count",
@@ -355,7 +383,7 @@ def self_check(
         "detail": f"summary rows={n_summary}, expected={n_policies}",
     })
 
-    # 4. policy_summary per-policy request_count == expected_request_count
+    # 5. policy_summary per-policy request_count == expected_request_count
     if not policy_summary_df.empty and "request_count" in policy_summary_df.columns:
         for _, srow in policy_summary_df.iterrows():
             policy = srow["policy_name"]
@@ -366,7 +394,7 @@ def self_check(
                 "detail": f"request_count={rc}, expected={expected_request_count}",
             })
 
-    # 5. 三个 cache hit rate 在 [0, 1] 范围内
+    # 6. 三个 cache hit rate 在 [0, 1] 范围内
     if not policy_summary_df.empty:
         for _, srow in policy_summary_df.iterrows():
             policy = srow["policy_name"]
@@ -378,7 +406,15 @@ def self_check(
                     "detail": f"{hit_metric}={v:.4f}",
                 })
 
-    # 6. result×candidate join 100% match
+    # 7. result×candidate join 行数和 result 行数一致
+    n_join = len(result_candidate_join_df)
+    checks.append({
+        "name": "result_candidate_join_row_count",
+        "status": "PASS" if n_join == n_result else "FAIL",
+        "detail": f"join rows={n_join}, results={n_result}",
+    })
+
+    # 8. result×candidate join 100% match
     if not result_candidate_join_df.empty and "match" in result_candidate_join_df.columns:
         n = len(result_candidate_join_df)
         matched = int(result_candidate_join_df["match"].sum())
@@ -388,7 +424,15 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 7. paper highlight 3 个 hit_rate 跟 summary 一致
+    # 9. paper highlight 行数应稳定为 24
+    n_paper = len(paper_highlight_df)
+    checks.append({
+        "name": "paper_highlight_metric_count",
+        "status": "PASS" if n_paper == 24 else "FAIL",
+        "detail": f"paper_highlight metrics={n_paper}, expected=24",
+    })
+
+    # 10. paper highlight 3 个 hit_rate 跟 summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         for _, srow in policy_summary_df.iterrows():
             policy = srow["policy_name"]
@@ -406,7 +450,7 @@ def self_check(
                     "detail": f"summary={summary_v:.6f}, highlight={hl_v:.6f}",
                 })
 
-    # 8. paper highlight 改善值跟 summary 一致
+    # 11. paper highlight 改善值跟 summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         aware = policy_summary_df[policy_summary_df.policy_name == "edge_cache_aware"]
         baseline_row = policy_summary_df[policy_summary_df.policy_name == "edge_round_robin"]
@@ -425,7 +469,7 @@ def self_check(
                     "detail": f"highlight={hl_v:.6f}, expected={expected_v:.6f}",
                 })
 
-    # 9. edge_cache_aware function_cache_hit_rate >= edge_round_robin
+    # 12. edge_cache_aware function_cache_hit_rate >= edge_round_robin
     if not policy_summary_df.empty and "policy_name" in policy_summary_df.columns:
         aware = policy_summary_df[policy_summary_df.policy_name == "edge_cache_aware"]
         baseline_row = policy_summary_df[policy_summary_df.policy_name == "edge_round_robin"]
@@ -438,7 +482,7 @@ def self_check(
                 "detail": f"edge_cache_aware={aware_hit:.4f}, edge_round_robin={baseline_hit:.4f}",
             })
 
-    # 10. paper highlight result_candidate_consistency == 1.0
+    # 13. paper highlight result_candidate_consistency == 1.0
     if not paper_highlight_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "result_candidate_consistency"
@@ -450,6 +494,27 @@ def self_check(
                 "status": "PASS" if v >= 0.999 else "FAIL",
                 "detail": f"result_candidate_consistency={v:.4f}",
             })
+
+    # 14. 导出的 DataFrame 不应包含 pandas 默认索引列
+    frames_to_check = {
+        "scheduling_result": result_df,
+        "candidate_score": candidate_df,
+        "policy_summary": policy_summary_df,
+        "result_candidate_join": result_candidate_join_df,
+        "paper_highlight": paper_highlight_df,
+    }
+    bad_columns = []
+    for name, df in frames_to_check.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -513,14 +578,25 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     )
     log_self_check(self_check_result)
 
+    # 导出 self_check 结果到 csv（沿用 02-21 模式）
+    self_check_path = output_dir / "edge_cache_scheduler_self_check.csv"
+    self_check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    self_check_df.to_csv(self_check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", self_check_path)
+
     outputs = dict(outputs)
     outputs["edge_cache_policy_summary"] = policy_summary_df
     outputs["edge_cache_node_summary"] = node_summary_df
     outputs["edge_cache_function_summary"] = function_summary_df
     outputs["edge_cache_result_candidate_join"] = result_candidate_join_df
     outputs["edge_cache_policy_paper_highlight"] = paper_highlight_df
+    outputs["edge_cache_scheduler_self_check"] = self_check_df
+    outputs["self_check_result"] = self_check_result
 
     for name, df in outputs.items():
+        # 跳过 self_check_result 字典（已通过 self_check_df 单独导出）
+        if not isinstance(df, pd.DataFrame):
+            continue
         path = output_dir / f"{name}.csv"
         df.to_csv(path, index=False, encoding="utf-8-sig")
         logger.info("saved %s", path)

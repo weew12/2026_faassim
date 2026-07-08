@@ -1,17 +1,17 @@
-﻿time,cache_hit,cache_hit_score,freshness_score,load_score,total_score,pod_count,avg_cold_start,function_name,pod_name,candidate_node,scheduler
-2026-07-07 17:27:28.636827,False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_0,cache_aware
-2026-07-07 17:27:28.636839,True,10.0,0.625,0.2,10.825,0,1.4,fft,pod-fft-2,server_1,cache_aware
-2026-07-07 17:27:28.636846,False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_2,cache_aware
-2026-07-07 17:27:28.636855,False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_3,cache_aware
-2026-07-07 17:27:28.637576,True,10.0,0.7692307692307692,0.2,10.96923076923077,0,0.8,img-resize,pod-img-resize-2,server_0,cache_aware
-2026-07-07 17:27:28.637588,False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_1,cache_aware
-2026-07-07 17:27:28.637595,False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_2,cache_aware
-2026-07-07 17:27:28.637600,False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_3,cache_aware
-2026-07-07 17:27:28.638143,True,10.0,0.5,0.2,10.7,0,0.35,json-parse,pod-json-parse-2,server_0,cache_aware
-2026-07-07 17:27:28.638152,False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_1,cache_aware
-2026-07-07 17:27:28.638159,False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_2,cache_aware
-2026-07-07 17:27:28.638166,False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_3,cache_aware
-2026-07-07 17:27:28.638745,False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_0,cache_aware
-2026-07-07 17:27:28.638755,False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_1,cache_aware
-2026-07-07 17:27:28.638767,True,10.0,0.7142857142857143,0.2,10.914285714285713,0,1.9,ml-infer,pod-ml-infer-2,server_2,cache_aware
-2026-07-07 17:27:28.638774,False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_3,cache_aware
+﻿cache_hit,cache_hit_score,freshness_score,load_score,total_score,pod_count,avg_cold_start,function_name,pod_name,candidate_node,scheduler
+False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_0,cache_aware
+True,10.0,0.625,0.2,10.825,0,1.4,fft,pod-fft-2,server_1,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_2,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,fft,pod-fft-2,server_3,cache_aware
+True,10.0,0.7692307692307692,0.2,10.96923076923077,0,0.8,img-resize,pod-img-resize-2,server_0,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_1,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_2,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,img-resize,pod-img-resize-2,server_3,cache_aware
+True,10.0,0.5,0.2,10.7,0,0.35,json-parse,pod-json-parse-2,server_0,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_1,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_2,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,json-parse,pod-json-parse-2,server_3,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_0,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_1,cache_aware
+True,10.0,0.7142857142857143,0.2,10.914285714285713,0,1.9,ml-infer,pod-ml-infer-2,server_2,cache_aware
+False,0.0,0.0,0.2,0.2,0,0.0,ml-infer,pod-ml-infer-2,server_3,cache_aware

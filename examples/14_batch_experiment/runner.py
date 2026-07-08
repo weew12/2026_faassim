@@ -41,9 +41,9 @@ def build_topology() -> Topology:
     - server_1：8 CPU 核（高 capacity，default_skippy 优先选这个）
     - server_2、server_3：4 CPU 核（备选）
 
-    这样 default_skippy 选高 capacity 节点 → 单次 invoke t_exec ≈ base_duration
-    而 fixed_node 强制选 server_0 低 capacity 节点 → simulator.cpu_millis 占用比例
-    不会变，但节点层排队效应会放大 t_exec（如果高 rps 时多请求挤在小节点）。
+    这样 default_skippy 选高 capacity 节点、fixed_node 强制选 server_0 低 capacity 节点，
+    能稳定展示两个策略的实际节点选择差异。当前 simulator 的 single-invoke t_exec
+    由 base_duration + jitter 决定，不把 capacity 映射为执行时间差异。
 
     返回：所有 8 个 case 共享同一份 Topology 对象。
     """

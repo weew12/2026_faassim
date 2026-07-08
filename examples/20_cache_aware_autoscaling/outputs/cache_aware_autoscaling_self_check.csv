@@ -1,0 +1,14 @@
+﻿name,status,detail
+decision_plan_count_match,PASS,"decisions=20, plans=20"
+decision_count,PASS,decisions=20
+r_desired_equals_max_r_cache_r_load,PASS,"all 20 decisions satisfy r_desired=max(r_cache, r_load)"
+cache_budget_within_limit,PASS,"per-time violations=0, max selected memory per time=4, budget=5"
+decision_plan_join_row_count,PASS,"join rows=20, decisions=20"
+decision_plan_join_match,PASS,matched=20/20
+action_values_valid,PASS,"observed=['observe', 'protect', 'scale_in', 'scale_out'], invalid=[]"
+r_desired_in_clamp_range,PASS,"r_desired range=[0, 4], expected subset of [0, 5]"
+paper_highlight_action_count_sum,PASS,"sum of action_count metrics=20, decisions=20"
+paper_highlight_decision_plan_consistency,PASS,decision_plan_consistency=1.0000
+paper_highlight_cache_budget_utilization,PASS,"highlight=0.800000, expected=0.800000"
+scale_in_in_flight_not_safe,PASS,unsafe scale_in rows with in_flight>0: 0
+export_tables_have_no_index_column,PASS,no pandas index columns

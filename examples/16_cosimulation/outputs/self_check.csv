@@ -1,0 +1,19 @@
+﻿name,status,detail,passed,warned
+cosim_invoke_probe_count,PASS,"probe rows=36, expected=36",True,False
+invocations_count,PASS,"inv rows=36, expected=36",True,False
+cosim_exchange_count,PASS,exchange rows=18,True,False
+cosim_phase_count,PASS,"phase rows=4, trace rows=4",True,False
+cosim_invoke_probe_has_simtime,PASS,simtime column present,True,False
+probe_invocation_join_row_count,PASS,"join rows=36, probe rows=36, inv rows=36, expected=36",True,False
+probe_invocation_duration_match,PASS,duration_match=36/36,True,False
+probe_invocation_simtime_match,PASS,simtime_match=36/36,True,False
+phase_invoke_count__cooldown,PASS,"actual=7, trace_max=4 (phase 边界 lag 可能让 ±100% 范围内都算合理)",True,False
+phase_invoke_count__edge_pressure,PASS,"actual=13, trace_max=16 (phase 边界 lag 可能让 ±100% 范围内都算合理)",True,False
+phase_invoke_count__network_slowdown,PASS,"actual=12, trace_max=10 (phase 边界 lag 可能让 ±100% 范围内都算合理)",True,False
+phase_invoke_count__normal,PASS,"actual=4, trace_max=6 (phase 边界 lag 可能让 ±100% 范围内都算合理)",True,False
+paper_highlight_invoke_events__cooldown__release_attention,PASS,"phase_summary=7, paper_highlight=7",True,False
+paper_highlight_invoke_events__edge_pressure__scale_attention,PASS,"phase_summary=13, paper_highlight=13",True,False
+paper_highlight_invoke_events__network_slowdown__network_attention,PASS,"phase_summary=12, paper_highlight=12",True,False
+paper_highlight_invoke_events__normal__observe,PASS,"phase_summary=4, paper_highlight=4",True,False
+phase_coverage_probe_vs_exchange,PASS,"probe phases=['cooldown', 'edge_pressure', 'network_slowdown', 'normal'], exchange phases=['cooldown', 'edge_pressure', 'idle', 'network_slowdown', 'normal'], missing=[]",True,False
+cosim_invoke_probe_has_controller_action,PASS,36/36 probe rows have controller_action,True,False

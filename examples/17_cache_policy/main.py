@@ -91,6 +91,23 @@ def main():
             elif metric.startswith("hit_rate__") or metric.startswith("total_cold_start_penalty__"):
                 logger.info("paper highlight: %s = %s", metric, value)
 
+    # data self-check 汇总（仿 02-16 模式）
+    self_check_df = outputs.get("cache_policy_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        if "passed" in self_check_df.columns:
+            n_pass = int(self_check_df["passed"].sum())
+        else:
+            n_pass = 0
+        if "status" in self_check_df.columns:
+            n_fail = int((self_check_df["status"] == "FAIL").sum())
+        else:
+            n_fail = 0
+        n_total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", n_pass, n_total)
+        if n_fail > 0:
+            for _, row in self_check_df[self_check_df.get("status") == "FAIL"].iterrows():
+                logger.warning("  FAILED: %s", row.get("name", ""))
+
     logger.info("outputs saved to %s", output_dir)
 
 

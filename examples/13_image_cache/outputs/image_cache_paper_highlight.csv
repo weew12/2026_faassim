@@ -1,8 +1,12 @@
-﻿metric,value
-same_node_total_pull_seconds,5.317350515463917
-different_node_total_pull_seconds,10.634701030927834
-same_node_cold_pull_count,1.0
-different_node_cold_pull_count,2.0
-saved_pull_seconds_by_cache,5.317350515463917
-saved_bytes_by_cache,128000000.0
-speedup_ratio_cold_over_reuse,2.0
+﻿metric,value,note
+same_node_total_pull_seconds,5.3174,same_node_cache_reuse 场景下的总 docker.pull 耗时（含一次 cold pull）
+different_node_total_pull_seconds,10.6347,different_node_cold_pull 场景下的总 docker.pull 耗时（含两次 cold pull）
+same_node_cache_hit_before_count,1.0,same_node 场景下第二次部署的 cache 命中次数（应 == 1）
+different_node_cache_hit_before_count,0.0,different_node 场景下的 cache 命中次数（应 == 0，两节点均首次拉取）
+same_node_cold_pull_count,1.0,same_node 场景下的 cold pull 次数（应 == 1）
+different_node_cold_pull_count,2.0,different_node 场景下的 cold pull 次数（应 == 2）
+same_node_docker_pull_flow_events,1.0,same_node 场景下 flow.csv 中 docker_pull 流数（应 == 1）
+different_node_docker_pull_flow_events,2.0,different_node 场景下 flow.csv 中 docker_pull 流数（应 == 2）
+saved_pull_seconds_by_cache,5.3174,缓存命中节省的 docker.pull 耗时（cold - reuse，应 == 一次 cold pull 时长）
+saved_bytes_by_cache,128000000.0,缓存命中节省的网络流量（cold - reuse bytes，应 == 镜像大小 128MB）
+speedup_ratio_cold_over_reuse,2.0,不同节点 vs 同节点 cold pull 耗时比（应 == 2.0，论文 demo 关键数字）

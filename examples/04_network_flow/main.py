@@ -6,10 +6,12 @@
 - 查询节点之间的 Route；
 - 启动单个 Flow；
 - 启动多个共享瓶颈链路的并发 Flow；
-- 导出网络传输耗时和路由信息。
+- 导出网络传输耗时和路由信息；
+- 论文 demo 关键摘要 + 数据自检。
 
 运行方式：
     python -u examples/04_network_flow/main.py
+    python -u examples/04_network_flow/plot.py
 """
 
 import logging
@@ -67,11 +69,24 @@ def main():
 
     summary_df = dfs.get("network_flow_summary")
     if summary_df is not None and len(summary_df) > 0:
-        logger.info("network flow summary:\\n%s", summary_df.to_string(index=False))
+        logger.info("network flow summary:\n%s", summary_df.to_string(index=False))
 
     bottleneck_df = dfs.get("network_bottleneck_summary")
     if bottleneck_df is not None and len(bottleneck_df) > 0:
-        logger.info("network bottleneck summary:\\n%s", bottleneck_df.to_string(index=False))
+        logger.info("network bottleneck summary:\n%s", bottleneck_df.to_string(index=False))
+
+    paper_df = dfs.get("network_flow_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("network_flow_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

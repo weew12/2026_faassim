@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from typing import List, Callable
 
+import pandas as pd
+
 from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
@@ -246,22 +248,29 @@ def main():
     )
     scenario_summaries.append(different_node_dfs["image_cache_summary"])
 
-    comparison_df = export_comparison(output_dir, scenario_summaries)
+    comparison_result = export_comparison(
+        output_dir,
+        scenario_summaries,
+        same_node_probe_flow_df=same_node_dfs.get("probe_flow_join", pd.DataFrame()),
+        different_node_probe_flow_df=different_node_dfs.get("probe_flow_join", pd.DataFrame()),
+    )
 
+    comparison_df = comparison_result.get("comparison", pd.DataFrame())
     if comparison_df is not None and len(comparison_df) > 0:
         logger.info("image cache comparison:\n%s", comparison_df.to_string(index=False))
 
-    # 论文 demo 关键摘要
-    highlight_path = output_dir / "image_cache_paper_highlight.csv"
-    if highlight_path.exists():
-        import pandas as _pd
-        hl = _pd.read_csv(highlight_path)
-        saved_row = hl[hl.metric == "saved_pull_seconds_by_cache"]
-        if not saved_row.empty:
-            logger.info(
-                "paper highlight: cache reuse saved %.2f simtime seconds of cold pull",
-                float(saved_row["value"].iloc[0]),
-            )
+    paper_df = comparison_result.get("paper_highlight", pd.DataFrame())
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = comparison_result.get("self_check", pd.DataFrame())
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

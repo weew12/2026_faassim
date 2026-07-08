@@ -1,4 +1,4 @@
-﻿function_name,selected_node,selected_image,selected_replica_id,policy,routed_requests
-load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2195847745360,instrumented_round_robin,10
-load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2195847749520,instrumented_round_robin,10
-load-balanced-python-pi,server_0,load-balanced-python-pi-cpu,2195847957200,instrumented_round_robin,10
+﻿function_name,replica_index,selected_node,selected_image,selected_replica_id,policy,routed_requests
+load-balanced-python-pi,0,server_0,load-balanced-python-pi-cpu,1923387507104,instrumented_round_robin,10
+load-balanced-python-pi,1,server_0,load-balanced-python-pi-cpu,1923387413264,instrumented_round_robin,10
+load-balanced-python-pi,2,server_0,load-balanced-python-pi-cpu,1923387417424,instrumented_round_robin,10

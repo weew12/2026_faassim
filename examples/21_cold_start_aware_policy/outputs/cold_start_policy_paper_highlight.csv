@@ -1,22 +1,22 @@
-﻿metric,value
-hit_rate__cold_start_aware,0.23333333333333334
-avg_latency__cold_start_aware,1.0479999999999998
-total_cold_start_penalty__cold_start_aware,26.7
-avg_keep_alive_window__cold_start_aware,2.5786666666666664
-eviction_count__cold_start_aware,22.0
-hit_rate__fixed_keep_alive,0.13333333333333333
-avg_latency__fixed_keep_alive,1.1280000000000001
-total_cold_start_penalty__fixed_keep_alive,29.1
-avg_keep_alive_window__fixed_keep_alive,2.0
-eviction_count__fixed_keep_alive,24.0
-hit_rate_improvement__cold_start_aware_over_fixed_keep_alive,0.1
-hit_rate_ratio__cold_start_aware_over_fixed_keep_alive,1.75
-latency_reduction__cold_start_aware_over_fixed_keep_alive,0.07092198581560309
-cold_start_penalty_reduction__cold_start_aware_over_fixed_keep_alive,0.08247422680412378
-avg_keep_alive_window_diff__cold_start_aware_over_fixed_keep_alive,0.5786666666666664
-request_decision_consistency,1.0
-request_decision_matched,60.0
-request_decision_total,60.0
-eviction_state_consistency,1.0
-eviction_state_matched,46.0
-eviction_state_total,46.0
+﻿metric,value,note
+hit_rate__cold_start_aware,0.23333333333333334,cold_start_aware 命中率（论文 demo 关键指标）
+avg_latency__cold_start_aware,1.0479999999999998,"cold_start_aware 平均每次 invoke latency（warm=fast, cold=慢）"
+total_cold_start_penalty__cold_start_aware,26.7,cold_start_aware 全部请求 cold_start_penalty 累加（论文冷启动代价 metric）
+avg_keep_alive_window__cold_start_aware,2.5786666666666664,cold_start_aware 平均 keep-alive window（cold_start_aware 动态 ≥ fixed 固定 2.0）
+eviction_count__cold_start_aware,22.0,cold_start_aware 全部 evict 事件数
+hit_rate__fixed_keep_alive,0.13333333333333333,fixed_keep_alive 命中率（论文 demo 关键指标）
+avg_latency__fixed_keep_alive,1.1280000000000001,"fixed_keep_alive 平均每次 invoke latency（warm=fast, cold=慢）"
+total_cold_start_penalty__fixed_keep_alive,29.1,fixed_keep_alive 全部请求 cold_start_penalty 累加（论文冷启动代价 metric）
+avg_keep_alive_window__fixed_keep_alive,2.0,fixed_keep_alive 平均 keep-alive window（cold_start_aware 动态 ≥ fixed 固定 2.0）
+eviction_count__fixed_keep_alive,24.0,fixed_keep_alive 全部 evict 事件数
+hit_rate_improvement__cold_start_aware_over_fixed_keep_alive,0.1,cold_start_aware - fixed_keep_alive 命中率差值（论文 demo 关键数字）
+hit_rate_ratio__cold_start_aware_over_fixed_keep_alive,1.75,cold_start_aware / fixed_keep_alive 命中率倍数（论文 demo 关键数字）
+latency_reduction__cold_start_aware_over_fixed_keep_alive,0.07092198581560309,cold_start_aware 相对 fixed_keep_alive 平均延迟降低比例
+cold_start_penalty_reduction__cold_start_aware_over_fixed_keep_alive,0.08247422680412378,cold_start_aware 相对 fixed_keep_alive 冷启动惩罚降低比例
+avg_keep_alive_window_diff__cold_start_aware_over_fixed_keep_alive,0.5786666666666664,cold_start_aware - fixed_keep_alive 平均 keep-alive window 差（论文 demo 关键证据：cold_start_aware 真的给高频函数更长的窗口）
+request_decision_consistency,1.0,request × policy_decision join match 占比（论文 demo 关键证据，应 1.0）
+request_decision_matched,60.0,matched 行数
+request_decision_total,60.0,request×decision join 总行数（应 = 2 policy × 30 request = 60）
+eviction_state_consistency,1.0,eviction × policy_decision warm_keys join match 占比（论文 demo 关键证据，应 1.0）
+eviction_state_matched,46.0,matched 行数
+eviction_state_total,46.0,eviction×state join 总行数（应 = 2 policy 全部 eviction）

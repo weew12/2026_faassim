@@ -211,7 +211,7 @@ def build_paper_highlight(
     config: Any,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（沿用 02-17 的 metric/value/note 三列模式）。
 
     cache_decision 样例跟前几个不一样：它不跑 faas-sim Simulation，也不是
     trace 驱动的缓存模拟（17），而是**静态画像驱动的决策**。
@@ -226,12 +226,32 @@ def build_paper_highlight(
     if decision_df.empty:
         return pd.DataFrame(rows)
 
+    # 0. 跨函数聚合 metric
+    rows.append({
+        "metric": "total_functions",
+        "value": int(len(decision_df)),
+        "note": "输入函数画像数（应 == profile snapshot 行数）",
+    })
+    if "decision" in decision_df.columns:
+        rows.append({
+            "metric": "total_decision_types_observed",
+            "value": int(decision_df["decision"].nunique()),
+            "note": "出现的决策类型数（最多 4 类：keep_warm / prewarm_candidate / eviction_candidate / observe）",
+        })
+        if "selected_by_budget" in decision_df.columns:
+            rows.append({
+                "metric": "total_selected_by_budget",
+                "value": int(decision_df["selected_by_budget"].sum()),
+                "note": "被 capacity budget 选中的函数数（keep_warm + prewarm_candidate）",
+            })
+
     # 1. 决策分布
     for decision in ["keep_warm", "prewarm_candidate", "eviction_candidate", "observe"]:
         n = int((decision_df["decision"] == decision).sum())
         rows.append({
             "metric": f"decision_count__{decision}",
             "value": n,
+            "note": f"{decision} 决策的函数数（论文 demo 关键数字：决策分布）",
         })
 
     # 2. utility_score 排序（top-3）
@@ -241,12 +261,14 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"top_utility_rank_{i}__{row['function_name']}",
                 "value": float(row["utility_score"]),
+                "note": f"按 utility_score 排序第 {i} 名的函数（论文 demo 关键数字：cache 价值）",
             })
         # 最低 utility_score
         lowest = sorted_df.iloc[-1]
         rows.append({
             "metric": f"lowest_utility__{lowest['function_name']}",
             "value": float(lowest["utility_score"]),
+            "note": f"utility_score 最低的函数（应 == eviction_candidate）",
         })
 
     # 3. capacity budget 利用
@@ -256,14 +278,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "capacity_budget_used",
             "value": selected_mem,
+            "note": "被 budget 选中的 keep_warm/prewarm 实际占用 memory_units",
         })
         rows.append({
             "metric": "capacity_budget_total",
             "value": int(config.capacity_budget_units),
+            "note": "总 capacity budget 配置值",
         })
         rows.append({
             "metric": "capacity_budget_utilization",
             "value": float(selected_mem / config.capacity_budget_units) if config.capacity_budget_units > 0 else 0.0,
+            "note": "capacity budget 利用率（= used / total，应 = 1.0 for greedy 选满）",
         })
 
     # 4. decision→hint 一致性
@@ -273,14 +298,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "decision_hint_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "decision × control_hint 关联 100% 一致的比例（论文 demo 关键数字：应 = 1.0）",
         })
         rows.append({
             "metric": "decision_hint_matched",
             "value": matched,
+            "note": "matched 行数（= match 列求和）",
         })
         rows.append({
             "metric": "decision_hint_total",
             "value": n,
+            "note": "join 总行数（应 == profiles 行数）",
         })
 
     # 5. eviction_candidate 理由分布
@@ -291,6 +319,7 @@ def build_paper_highlight(
                 rows.append({
                     "metric": f"eviction_reason__{row['function_name']}",
                     "value": row["reason"],
+                    "note": f"{row['function_name']} 被判定为 eviction_candidate 的理由",
                 })
 
     return pd.DataFrame(rows)
@@ -304,7 +333,7 @@ def self_check(
     config: Any,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（cache_decision 10 个不变量）。
+    数据自洽段（cache_decision 不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -325,7 +354,15 @@ def self_check(
         "detail": f"hint rows={n_hints}, decision rows={n_profiles}",
     })
 
-    # 3. decision_hint_join 全 True
+    # 3. decision_hint_join 行数 == decision 行数
+    n_join = len(decision_hint_join_df)
+    checks.append({
+        "name": "decision_hint_join_row_count",
+        "status": "PASS" if n_join == n_profiles else "FAIL",
+        "detail": f"join rows={n_join}, decision rows={n_profiles}",
+    })
+
+    # 4. decision_hint_join 全 True
     if not decision_hint_join_df.empty and "match" in decision_hint_join_df.columns:
         n = len(decision_hint_join_df)
         matched = int(decision_hint_join_df["match"].sum())
@@ -335,7 +372,7 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 4. 4 类决策都有有效值
+    # 5. 4 类决策都有有效值
     if "decision" in decision_df.columns:
         decisions = set(decision_df["decision"].dropna().unique())
         expected = {"keep_warm", "prewarm_candidate", "eviction_candidate", "observe"}
@@ -347,7 +384,7 @@ def self_check(
             "detail": f"observed decisions={sorted(decisions)}, invalid={sorted(invalid)}",
         })
 
-    # 5. 容量预算不超 capacity_budget_units
+    # 6. 容量预算不超 capacity_budget_units
     if "selected_by_budget" in decision_df.columns and "memory_units" in decision_df.columns:
         selected_mem = int(
             decision_df[decision_df["selected_by_budget"] == True]["memory_units"].sum()  # noqa: E712
@@ -358,7 +395,7 @@ def self_check(
             "detail": f"selected memory={selected_mem}, capacity_budget={config.capacity_budget_units}",
         })
 
-    # 6. 选中 keep_warm 的函数 selected_by_budget=True
+    # 7. 选中 keep_warm 的函数 selected_by_budget=True
     if (
         "decision" in decision_df.columns
         and "selected_by_budget" in decision_df.columns
@@ -372,7 +409,7 @@ def self_check(
                 "detail": f"all keep_warm selected_by_budget: {all_selected}",
             })
 
-    # 7. eviction_candidate 不能有 in_flight_requests > 0
+    # 8. eviction_candidate 不能有 in_flight_requests > 0
     if (
         "decision" in decision_df.columns
         and "in_flight_requests" in decision_df.columns
@@ -386,7 +423,7 @@ def self_check(
                 "detail": f"eviction with in_flight>0: {len(bad)}",
             })
 
-    # 8. 选中 keep_warm 函数 memory 之和 == capacity_budget
+    # 9. 选中 keep_warm 函数 memory 之和 == capacity_budget
     if "selected_by_budget" in decision_df.columns and "memory_units" in decision_df.columns:
         kw_selected_mem = int(
             decision_df[
@@ -406,7 +443,27 @@ def self_check(
                       f"capacity_budget={config.capacity_budget_units}",
         })
 
-    # 9. paper highlight 里 decision_count 加总 == n_profiles
+    # 10. hint action 必须覆盖 4 类 decision 的期望映射
+    if not decision_hint_join_df.empty and "decision" in decision_hint_join_df.columns:
+        expected_action = {
+            "keep_warm": "protect_current_replica",
+            "prewarm_candidate": "scale_to_one_if_selected",
+            "eviction_candidate": "scale_to_zero_candidate",
+            "observe": "observe",
+        }
+        mismatches = []
+        for _, row in decision_hint_join_df.iterrows():
+            decision = row["decision"]
+            expected = expected_action.get(decision)
+            if expected is not None and row.get("hint_action") != expected:
+                mismatches.append(f"{row['function_name']}:{decision}->{row.get('hint_action')}")
+        checks.append({
+            "name": "hint_action_mapping_valid",
+            "status": "PASS" if not mismatches else "FAIL",
+            "detail": "all hint actions match decision mapping" if not mismatches else "; ".join(mismatches),
+        })
+
+    # 11. paper highlight 里 decision_count 加总 == n_profiles
     if not paper_highlight_df.empty:
         decision_counts = paper_highlight_df[
             paper_highlight_df.metric.str.startswith("decision_count__")
@@ -419,7 +476,7 @@ def self_check(
                 "detail": f"sum of decision_count metrics={total}, profiles={n_profiles}",
             })
 
-    # 10. paper highlight 里 decision_hint_consistency == 1.0
+    # 12. paper highlight 里 decision_hint_consistency == 1.0
     if not paper_highlight_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "decision_hint_consistency"
@@ -431,6 +488,26 @@ def self_check(
                 "status": "PASS" if v >= 0.999 else "FAIL",
                 "detail": f"decision_hint_consistency={v:.4f}",
             })
+
+    # 13. 导出的表结构不应包含 pandas 默认索引列
+    frames_to_export = {
+        "cache_decision_detail": decision_df,
+        "cache_control_hint": hint_df,
+        "cache_decision_hint_join": decision_hint_join_df,
+        "cache_decision_paper_highlight": paper_highlight_df,
+    }
+    bad_columns = []
+    for name, df in frames_to_export.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -497,6 +574,12 @@ def export_outputs(
         "cache_decision_hint_join": decision_hint_join_df,
         "cache_decision_paper_highlight": paper_highlight_df,
     }
+
+    # 写 self_check.csv（仿 02-17 模式）
+    check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    if "status" in check_df.columns:
+        check_df["passed"] = check_df["status"] == "PASS"
+    outputs["cache_decision_self_check"] = check_df
 
     for name, df in outputs.items():
         path = output_dir / f"{name}.csv"

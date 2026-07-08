@@ -1,0 +1,19 @@
+﻿metric,value,note
+request_events,30.0,仿 06 触发请求事件总数（应 == 30）
+success_count,23.0,成功请求数（应 == normal + network_degradation）
+failure_count,7.0,失败请求总数（应 == node_outage + replica_error）
+failure_rate,0.2333,失败率（failure_count / request_events）
+node_outage_failures,4.0,节点不可用窗口导致的失败数（应 > 0）
+replica_error_failures,3.0,"周期性副本错误失败数（4 个候选 id 7,14,21,28 中归到 replica_error 的数量；其余可能被 node_outage 抢先判定）"
+replica_error_candidates_classified,4.0,"4 个候选 id (7,14,21,28) 中归到 replica_error 或 node_outage 的总数（应 == 4）"
+network_degradation_count,7.0,网络退化软故障数（应 > 0）
+normal_count,16.0,正常请求数
+avg_final_duration,0.3037,平均 final_duration（含故障延长）
+max_final_duration,0.7,最大 final_duration（应 = base_duration + extra_delay）
+node_outage_window_match_rate,1.0,node_outage 探针全部落在窗口内的比例（应 = 1.0）
+network_degradation_window_match_rate,1.0,network_degradation 探针全部落在窗口内的比例（应 = 1.0）
+normal_window_match_rate,1.0,normal 探针全部落在窗口外的比例（应 = 1.0）
+probe_invocation_t_exec_match_rate,1.0,probe final_duration 与 invocations.t_exec 完全一致的比例（应 = 1.0）
+fault_event_total,2.0,故障事件总数（节点 + 网络 两条）
+fault_window_total_seconds,2.2,故障窗口总时长（节点 0.8s + 网络 1.4s = 2.2s）
+dispatch_probe_count,30.0,invoke_dispatch_probe 行数（应 == request_events）

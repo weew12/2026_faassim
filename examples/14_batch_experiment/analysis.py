@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 METRIC_NAMES = [
     "batch_invoke_probe",
+    "invoke_dispatch_probe",
     "invocations",
     "schedule",
     "function_deployments",
@@ -170,10 +171,21 @@ def build_case_result(case: ExperimentCase, dfs: Dict[str, pd.DataFrame]) -> Dic
         result["max_probe_duration"] = float(probe_df["duration"].max())
         result["p95_probe_duration"] = float(probe_df["duration"].quantile(0.95))
 
-    if not invocations_df.empty and "duration" in invocations_df.columns:
-        result["avg_invocation_duration"] = float(invocations_df["duration"].mean())
-        result["max_invocation_duration"] = float(invocations_df["duration"].max())
-        result["p95_invocation_duration"] = float(invocations_df["duration"].quantile(0.95))
+    invocation_duration_col = None
+    if not invocations_df.empty:
+        if "t_exec" in invocations_df.columns:
+            invocation_duration_col = "t_exec"
+        elif "duration" in invocations_df.columns:
+            invocation_duration_col = "duration"
+
+    if invocation_duration_col is not None:
+        invocation_duration = pd.to_numeric(
+            invocations_df[invocation_duration_col],
+            errors="coerce",
+        )
+        result["avg_invocation_duration"] = float(invocation_duration.mean())
+        result["max_invocation_duration"] = float(invocation_duration.max())
+        result["p95_invocation_duration"] = float(invocation_duration.quantile(0.95))
 
     if not flow_df.empty and "bytes" in flow_df.columns:
         result["flow_total_bytes"] = int(flow_df["bytes"].sum())
@@ -225,18 +237,28 @@ def self_check_batch_results(
        duration_match 必须 100% True。
     2. batch_results 行数 = 实际 case 数（避免 silent case 被丢）。
     3. paper highlight 的 high_capacity_hit_ratio 必须跟 batch_results 一致。
+
+    返回的 dict 包含：
+    - checks：list[dict]（name/status/detail）
+    - n_pass / n_fail：统计
+    - output_path：batch_self_check.csv 路径
     """
     if not case_results:
-        return {"checks": []}
+        return {"checks": [], "n_pass": 0, "n_fail": 0}
 
     checks = []
 
     # 1. probe×invocation join 自洽
-    case_dirs = sorted([d for d in output_dir.glob("runs/*") if d.is_dir()])
-    if case_dirs:
-        for case_dir in case_dirs:
+    case_ids = []
+    if not batch_results_df.empty and "case_id" in batch_results_df.columns:
+        case_ids = batch_results_df["case_id"].astype(str).tolist()
+    else:
+        case_ids = [d.name for d in sorted(output_dir.glob("runs/*")) if d.is_dir()]
+
+    if case_ids:
+        for case_id in case_ids:
+            case_dir = output_dir / "runs" / case_id
             join_path = case_dir / "batch_probe_invocation_join.csv"
-            case_id = case_dir.name
             if not join_path.exists():
                 checks.append({
                     "name": f"probe_join_exists__{case_id}",
@@ -246,13 +268,24 @@ def self_check_batch_results(
                 continue
 
             join_df = pd.read_csv(join_path, encoding="utf-8-sig")
+            probe_path = case_dir / "batch_invoke_probe.csv"
+            inv_path = case_dir / "invocations.csv"
+            probe_rows = len(pd.read_csv(probe_path, encoding="utf-8-sig")) if probe_path.exists() else -1
+            inv_rows = len(pd.read_csv(inv_path, encoding="utf-8-sig")) if inv_path.exists() else -1
+
             total = len(join_df)
-            matched = int(join_df.get("duration_match", pd.Series(dtype=bool)).sum()) if total else 0
-            ok = (total > 0) and (matched == total)
+            match_series = join_df.get("duration_match", pd.Series(dtype=bool))
+            matched = int(match_series.sum()) if total else 0
+            ok = (
+                total > 0
+                and probe_rows == inv_rows == total
+                and match_series.notna().all()
+                and matched == total
+            )
             checks.append({
                 "name": f"probe_invocation_join_match__{case_id}",
                 "status": "PASS" if ok else "FAIL",
-                "detail": f"duration_match={matched}/{total}",
+                "detail": f"duration_match={matched}/{total}, probe_rows={probe_rows}, invocation_rows={inv_rows}",
             })
 
     # 2. batch_results 行数 == case 数
@@ -265,19 +298,46 @@ def self_check_batch_results(
     })
 
     # 3. paper highlight 命中率
+    expected_high_capacity_ratio = {
+        "default_skippy": 1.0,
+        "fixed_node": 0.0,
+    }
     if not batch_results_df.empty and "scheduled_node" in batch_results_df.columns:
         for policy in batch_results_df["policy"].unique():
             sub = batch_results_df[batch_results_df.policy == policy]
             total = len(sub)
             high = int((sub["scheduled_node"] == "server_1").sum())
             ratio = (high / total) if total > 0 else 0.0
+            expected_ratio = expected_high_capacity_ratio.get(policy)
+            if expected_ratio is None:
+                ok = total > 0
+                expected_text = "not fixed"
+            else:
+                ok = abs(ratio - expected_ratio) < 1e-9
+                expected_text = f"{expected_ratio:.2f}"
             checks.append({
                 "name": f"high_capacity_hit_ratio__{policy}",
-                "status": "PASS",
-                "detail": f"hit {high}/{total} = {ratio:.2f}",
+                "status": "PASS" if ok else "FAIL",
+                "detail": f"hit {high}/{total} = {ratio:.2f}, expected={expected_text}",
             })
 
-    return {"checks": checks}
+    # 写到 batch_self_check.csv
+    check_df = pd.DataFrame(checks)
+    if "status" in check_df.columns:
+        check_df["passed"] = check_df["status"] == "PASS"
+    output_path = output_dir / "batch_self_check.csv"
+    check_df.to_csv(output_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", output_path)
+
+    n_pass = sum(1 for c in checks if c["status"] == "PASS")
+    n_fail = sum(1 for c in checks if c["status"] == "FAIL")
+
+    return {
+        "checks": checks,
+        "n_pass": n_pass,
+        "n_fail": n_fail,
+        "output_path": output_path,
+    }
 
 
 def log_self_check(self_check: Dict[str, Any]) -> None:
@@ -336,7 +396,7 @@ def build_batch_summary(batch_results_df: pd.DataFrame) -> pd.DataFrame:
 
 def build_paper_highlight(batch_results_df: pd.DataFrame) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（沿用 02-13 的 paper_highlight 模式：metric/value/note 三列）。
 
     在当前最小 4-server topology 里：
     - server_0 1cpu（small）
@@ -353,11 +413,51 @@ def build_paper_highlight(batch_results_df: pd.DataFrame) -> pd.DataFrame:
     - per-policy scheduled_nodes 列表
     - per-policy scheduled_node==server_1 的比例（"容量感知命中率"）
     - per-workload policy 命中率对比
+    - 跨 case 聚合（total_invocations / total_policies / total_workloads）
     """
     if batch_results_df.empty:
         return pd.DataFrame()
 
     rows = []
+
+    # 跨 case 聚合 metric
+    total_cases = int(len(batch_results_df))
+    rows.append({
+        "metric": "total_cases",
+        "value": total_cases,
+        "note": "批量实验总 case 数（= policies × workloads × seeds）",
+    })
+
+    if "policy" in batch_results_df.columns:
+        rows.append({
+            "metric": "total_policies",
+            "value": int(batch_results_df["policy"].nunique()),
+            "note": "策略数",
+        })
+    if "workload" in batch_results_df.columns:
+        rows.append({
+            "metric": "total_workloads",
+            "value": int(batch_results_df["workload"].nunique()),
+            "note": "负载数",
+        })
+    if "seed" in batch_results_df.columns:
+        rows.append({
+            "metric": "total_seeds",
+            "value": int(batch_results_df["seed"].nunique()),
+            "note": "随机种子数",
+        })
+    if "invocation_events" in batch_results_df.columns:
+        total_invocations = int(batch_results_df["invocation_events"].sum())
+        rows.append({
+            "metric": "total_invocations",
+            "value": total_invocations,
+            "note": "跨所有 case 的总 invoke 次数",
+        })
+        rows.append({
+            "metric": "avg_invocations_per_case",
+            "value": round(total_invocations / total_cases, 4) if total_cases > 0 else 0.0,
+            "note": "每个 case 平均 invoke 次数（= total_invocations / total_cases）",
+        })
 
     # 每个 policy 实际选过的节点
     if "scheduled_node" in batch_results_df.columns:
@@ -367,14 +467,22 @@ def build_paper_highlight(batch_results_df: pd.DataFrame) -> pd.DataFrame:
             rows.append({
                 "metric": f"scheduled_nodes__{policy}",
                 "value": ",".join(nodes),
+                "note": f"{policy} 策略实际选过的节点集合",
             })
             # 命中率：选到 capacity 最大的 server_1 的比例
             total = len(sub)
             high = int((sub["scheduled_node"] == "server_1").sum())
             ratio = (high / total) if total > 0 else 0.0
+            if policy == "default_skippy":
+                expected_note = "应 = 1.0，表示 capacity-aware 策略全部选中 server_1"
+            elif policy == "fixed_node":
+                expected_note = "应 = 0.0，表示 fixed_node 策略不会选中 server_1"
+            else:
+                expected_note = "按策略定义解释"
             rows.append({
                 "metric": f"high_capacity_hit_ratio__{policy}",
                 "value": float(ratio),
+                "note": f"{policy} 策略选中 capacity 最大的 server_1 的比例（{expected_note}）",
             })
 
     # 节点层 probe duration（= simulator.base_duration, sim 不可分；保留作 sanity check）
@@ -390,6 +498,7 @@ def build_paper_highlight(batch_results_df: pd.DataFrame) -> pd.DataFrame:
                     rows.append({
                         "metric": f"{policy}__avg_probe_seconds__{workload}",
                         "value": float(v),
+                        "note": f"{policy} 策略在 {workload} 下的 avg_probe_seconds（sim 模型诚实特性：capacity 不改 single-invoke duration）",
                     })
 
     return pd.DataFrame(rows)

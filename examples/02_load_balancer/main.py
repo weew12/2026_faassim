@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-import ether.scenarios.urbansensing as scenario
+from ether.core import Node, Link, Connection, Capacity
 from skippy.core.utils import parse_size_string
 
 from sim import docker
@@ -56,16 +56,45 @@ def configure_logging():
     )
 
 
+# 全局复用：避免 ether.scenarios.urbansensing 的内部状态污染
+# （13_image_cache / 14 / 19 已经踩过这个坑 —— 连续两次 UrbanSensingScenario() 产生不同节点集）
+# 02 只跑一次 sim，目前未踩坑，但为了与其他样例保持一致，统一改用最小 4-server 拓扑。
+_SHARED_TOPOLOGY: Topology = None
+
+
 def example_topology() -> Topology:
     """
-    创建负载均衡样例使用的拓扑。
+    创建负载均衡样例使用的最小 4-server 拓扑。
 
-    当前复用 UrbanSensingScenario，保持与官方样例风格一致。
+    为什么不复用 UrbanSensingScenario：
+    ether.scenarios.urbansensing 在连续构造时会返回不同的节点集
+    （server_0..9、server_10..19、...、server_70..79），可能导致后续扩展
+    时把同一份 topology 跑两次出现节点不匹配。这里用 ether.core 直接
+    构造 4 个 server 节点 + Docker Registry，构造一次复用。
+
+    返回：每次调用都返回同一份 Topology 对象。
     """
-    topology = Topology()
-    scenario.UrbanSensingScenario().materialize(topology)
-    topology.init_docker_registry()
-    return topology
+    global _SHARED_TOPOLOGY
+    if _SHARED_TOPOLOGY is None:
+        topology = Topology()
+
+        cap = Capacity(cpu_millis=4000, memory=2 * 1024 * 1024 * 1024)
+
+        # 镜像拉取链路：DockerRegistry -- internet_link -- switch -- link_server_X -- server_X
+        registry_link = Link(bandwidth=200, tags={"name": "registry_link", "type": "registry_access"})
+        topology.add_connection(Connection("internet", registry_link, latency=5))
+        topology.add_connection(Connection(registry_link, "switch", latency=5))
+
+        for i in range(4):
+            node = Node(f"server_{i}", capacity=cap, arch="x86")
+            link = Link(bandwidth=200, tags={"name": f"link_server_{i}", "type": "node_access"})
+            topology.add_connection(Connection(node, link, latency=2))
+            topology.add_connection(Connection(link, "switch", latency=1))
+
+        topology.init_docker_registry()
+        _SHARED_TOPOLOGY = topology
+
+    return _SHARED_TOPOLOGY
 
 
 class LoadBalancerBenchmark(Benchmark):
@@ -213,11 +242,24 @@ def main():
 
     summary_df = dfs.get("load_balancer_summary")
     if summary_df is not None:
-        logger.info("load balancer summary:\\n%s", summary_df.to_string(index=False))
+        logger.info("load balancer summary:\n%s", summary_df.to_string(index=False))
 
     distribution_df = dfs.get("load_balancer_replica_distribution")
     if distribution_df is not None and len(distribution_df) > 0:
-        logger.info("load balancer distribution:\\n%s", distribution_df.to_string(index=False))
+        logger.info("load balancer distribution:\n%s", distribution_df.to_string(index=False))
+
+    paper_df = dfs.get("load_balancer_paper_highlight")
+    if paper_df is not None and len(paper_df) > 0:
+        logger.info("paper highlight:\n%s", paper_df.to_string(index=False))
+
+    self_check_df = dfs.get("load_balancer_self_check")
+    if self_check_df is not None and len(self_check_df) > 0:
+        passed = int(self_check_df["passed"].sum())
+        total = len(self_check_df)
+        logger.info("data self-check: %d / %d PASS", passed, total)
+        if passed < total:
+            for _, row in self_check_df[~self_check_df["passed"]].iterrows():
+                logger.warning("  FAILED: %s", row["check_id"])
 
     logger.info("outputs saved to %s", output_dir)
 

@@ -1,4 +1,4 @@
-﻿function_name,image,node_name,image_pull_duration,startup_simtime,setup_simtime,deploy_to_finish_simtime
-image-pull-large-cold,image-pull-large-cpu,server_0,1.5879013206136934,0.1,0.0,1.6879013206136935
-image-pull-small-cold,image-pull-small-cpu,server_0,0.26830308783423285,0.1,0.0,0.3683030878342328
-image-pull-small-warm,image-pull-small-cpu,server_0,0.0,0.1,0.0,0.1
+﻿function_name,image,node_name,cache_hit_like,image_pull_duration,startup_simtime,setup_simtime,deploy_to_finish_simtime
+image-pull-large-cold,image-pull-large-cpu,server_0,False,1.622505154639175,0.1,0.0,1.7225051546391752
+image-pull-small-cold,image-pull-small-cpu,server_0,False,0.30291752577319586,0.1,0.0,0.40291752577319584
+image-pull-small-warm,image-pull-small-cpu,server_0,True,0.0,0.1,0.0,0.1

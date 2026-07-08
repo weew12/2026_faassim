@@ -1,0 +1,21 @@
+﻿metric,value,note
+phase_events_total,6.0,cold_start_probe 阶段事件总数（5 phase：deploy/startup/setup/first_invoke/warm_invoke×2）
+deploy_events,1.0,deploy 阶段事件数（应 == 1）
+startup_events,1.0,startup 阶段事件数（应 == 1）
+setup_events,1.0,setup 阶段事件数（应 == 1）
+first_invoke_events,1.0,first_invoke 阶段事件数（应 == 1）
+warm_invoke_events,2.0,warm_invoke 阶段事件数（应 == 2：第 2/3 个请求）
+deploy_total_duration,3.9978,deploy 总耗时（含 docker.pull 实际拉取时间）
+startup_total_duration,0.75,startup 总耗时（应 = 0.75s）
+setup_total_duration,0.55,setup 总耗时（应 = 0.55s）
+first_invoke_total_duration,0.3,first_invoke 总耗时（应 = 0.30s）
+warm_invoke_total_duration,0.16,warm_invoke 总耗时（2 个请求，应 = 0.16s）
+cold_activation_duration,5.2978,冷启动激活时长 = deploy + startup + setup（deploy 受镜像大小和拓扑影响）
+first_request_path_duration,5.5978,首次请求路径时长 = cold_activation + first_invoke（受 deploy 影响）
+first_invoke_avg,0.3,first_invoke 平均耗时（应 = 0.30s）
+warm_invoke_avg,0.08,warm_invoke 平均耗时（应 = 0.08s）
+first_warm_speedup_ratio,3.75,first/warm speedup 比值（应 = 3.75x，论文 demo 关键数字）
+cold_warm_speedup_ratio,66.2225,cold_activation/warm speedup 比值（受 deploy 影响，通常 > 25x）
+probe_invocation_t_exec_match_rate,1.0,probe 派发时长与 invocations.t_exec 完全一致的比例（应 = 1.0）
+dispatch_probe_count,3.0,invoke_dispatch_probe 行数（应 == invocations 行数 == 3）
+invocation_count,3.0,invocations 行数（应 == 3）

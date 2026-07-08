@@ -8,6 +8,7 @@ main.py 在仿真结束后调用本文件中的函数，将 faas-sim 内部 metr
 - autoscaling_rps_replicas_timeline.csv：按 1s 窗口聚合 RPS 与当前 replicas 数，
   这是论文 demo 最关键的 "RPS vs Replicas 时间线" 图的数据源。
 - autoscaling_invoke_probe.csv：simulator 派发的 invoke probe（含 simtime 字段）。
+- autoscaling_scale_probe.csv：自动伸缩事件 probe（含 simtime、delta、replicas）。
 - autoscaling_probe_invocation_join.csv：probe × invocations 关联（论文 demo 关键证据）。
 - autoscaling_paper_highlight.csv：论文 demo 关键摘要。
 """
@@ -29,6 +30,7 @@ METRIC_NAMES = [
     "invocations",
     "flow",
     "autoscaling_invoke_probe",
+    "autoscaling_scale_probe",
 ]
 
 
@@ -50,7 +52,7 @@ def extract_metrics(sim) -> Dict[str, pd.DataFrame]:
 
 def _build_rps_replicas_timeline(
     invocations_df: pd.DataFrame,
-    scale_df: pd.DataFrame,
+    scale_probe_df: pd.DataFrame,
     window: float = 1.0,
 ) -> pd.DataFrame:
     """
@@ -61,62 +63,61 @@ def _build_rps_replicas_timeline(
 
     参数：
     - invocations_df：faas-sim invocations 指标，至少包含 t_start 和 t_exec 列；
-    - scale_df：faas-sim scale 指标，至少包含 value 列；
+    - scale_probe_df：autoscaling_scale_probe 指标，至少包含 simtime 和 replicas 列；
     - window：时间窗口（仿真秒），默认 1s。
 
     返回：
     - DataFrame：列 [simtime, window, invocation_count, rps, replicas]。
 
-    关于 replicas 字段的近似说明：
-    scale.csv 的 time 字段是 wall clock，不是 simtime，无法直接做时间对齐。
-    但样例 01 的扩容是单调的（不会缩容），所以"取所有 scale 事件中 value 的
-    累计最大值"是合理近似。读者使用时，可以根据 simtime 与 scale 事件的
-    wall clock 顺序手动对齐。
+    replicas 字段来自 autoscaling_scale_probe.csv 的 simtime 对齐事件。
+    scale.csv 保留为 faas-sim 原始指标，但其 time 是 wall clock，不能和
+    invocations.t_start 直接对齐。
     """
     if invocations_df.empty or "t_start" not in invocations_df.columns:
         return pd.DataFrame(columns=["simtime", "window", "invocation_count", "rps", "replicas"])
 
     starts = invocations_df["t_start"].astype(float)
     sim_end = float(starts.max()) if len(starts) else 0.0
+    scale_events = pd.DataFrame()
+    if (
+        scale_probe_df is not None
+        and not scale_probe_df.empty
+        and {"simtime", "replicas"}.issubset(scale_probe_df.columns)
+    ):
+        scale_events = scale_probe_df.sort_values("simtime").reset_index(drop=True)
+        sim_end = max(sim_end, float(scale_events["simtime"].astype(float).max()))
+
     if sim_end <= 0:
         return pd.DataFrame(columns=["simtime", "window", "invocation_count", "rps", "replicas"])
 
     n_windows = int(sim_end // window) + 1
-    edges = [i * window for i in range(n_windows + 1)]
 
-    # 按 t_start 落入哪个窗口统计 invocation 数
-    counts, _ = pd.cut(starts, bins=edges, right=False, retbins=True, include_lowest=True)
-    grouped = pd.Series(counts).value_counts().sort_index()
-
-    # 算 replicas: 按 scale 事件顺序算 cumulative
-    # scale.csv 的 value 是 delta: 正数表示 scale_up 多少个, 负数表示 scale_down 多少个
-    # cumulative sum 给出"如果全部成功部署"的累计副本数 (实际可能被 scale_max 截断)
-    # 对 01 样例: value=[1, 7] -> cumulative=[1, 8] (实际被 scale_max=8 截断到 7 个)
-    if not scale_df.empty and "value" in scale_df.columns and len(scale_df) > 0:
-        cumulative_series = scale_df["value"].astype(int).cumsum()
-        # 用最后一个 cumulative 值 (即扩容后的"目标"副本数)
-        # 这是论文图最直观的 "replicas" 值
-        final_cumulative = int(cumulative_series.iloc[-1])
-    else:
-        final_cumulative = 1
-
-    # 由于扩容是单调的（样例 01 不会缩容），任何 simtime 时刻的
-    # "当前 replicas" 都等于最终的 cumulative。
-    # 严格说 0 时刻应该是 scale_min=1, 但为了论文图清晰展示最终值,
-    # 这里统一用 final_cumulative。
-    replicas_at = final_cumulative
+    # 按 t_start 落入哪个窗口统计 invocation 数。floor 分组比 pd.cut 更直观，
+    # 也避免边界 Interval 查找导致的缺口。
+    window_starts = (starts // window).astype(int) * window
+    grouped = window_starts.value_counts().to_dict()
 
     rows = []
+    current_replicas = 0
+    event_idx = 0
     for i in range(n_windows):
         simtime = i * window
-        inv_count = int(grouped.get(pd.Interval(left=edges[i], right=edges[i+1], closed="left"), 0))
+
+        while event_idx < len(scale_events):
+            event = scale_events.iloc[event_idx]
+            if float(event["simtime"]) > simtime + 1e-9:
+                break
+            current_replicas = int(event["replicas"])
+            event_idx += 1
+
+        inv_count = int(grouped.get(simtime, 0))
         rps = inv_count / window
         rows.append({
             "simtime": simtime,
             "window": window,
             "invocation_count": inv_count,
             "rps": rps,
-            "replicas": replicas_at,
+            "replicas": current_replicas,
         })
 
     return pd.DataFrame(rows)
@@ -182,35 +183,31 @@ def build_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     - total_simtime（仿真总时长）
     """
     scale_df = dfs.get("scale", pd.DataFrame())
+    scale_probe_df = dfs.get("autoscaling_scale_probe", pd.DataFrame())
     invocations_df = dfs.get("invocations", pd.DataFrame())
     schedule_df = dfs.get("schedule", pd.DataFrame())
     replica_deployment_df = dfs.get("replica_deployment", pd.DataFrame())
 
-    # 拆分 scale_up / scale_down
-    scale_up_events = 0
-    scale_down_events = 0
-    if not scale_df.empty and "value" in scale_df.columns:
-        for v in scale_df["value"]:
-            if int(v) > 0:
-                scale_up_events += 1
-            elif int(v) < 0:
-                scale_down_events += 1
-            else:
-                # value=0 也是一种事件，记为 down
-                scale_down_events += 1
-
-    # 副本数 min/max
-    # scale.csv 的 value 是 delta: 正数表示本次 scale_up 多少个, 负数表示 scale_down 多少个
-    # 当前总副本数 = scale value 的 cumulative sum (假设扩容是单调的)
-    # max_replicas = cumulative sum 的最后一个值 (即扩容后的最终副本数)
-    # min_replicas = scale_min (初始副本数)
-    if not scale_df.empty and "value" in scale_df.columns and len(scale_df) > 0:
+    if not scale_probe_df.empty and {"delta", "replicas"}.issubset(scale_probe_df.columns):
+        deltas = scale_probe_df["delta"].astype(int)
+        replicas = scale_probe_df["replicas"].astype(int)
+        scale_events = int((deltas != 0).sum())
+        scale_up_events = int((deltas > 0).sum())
+        scale_down_events = int((deltas < 0).sum())
+        max_replicas = int(replicas.max())
+        min_replicas = int(replicas.min())
+    elif not scale_df.empty and "value" in scale_df.columns and len(scale_df) > 0:
         values = scale_df["value"].astype(int)
         cumulative = values.cumsum()
-        max_replicas = int(cumulative.iloc[-1])
-        # 最小副本数取 scale_min（部署后的初始值）
-        min_replicas = int(cumulative.iloc[0]) if len(cumulative) > 0 else 1
+        scale_events = int((values != 0).sum())
+        scale_up_events = int((values > 0).sum())
+        scale_down_events = int((values < 0).sum())
+        max_replicas = int(cumulative.max())
+        min_replicas = int(cumulative.min())
     else:
+        scale_events = 0
+        scale_up_events = 0
+        scale_down_events = 0
         max_replicas = None
         min_replicas = None
 
@@ -224,7 +221,7 @@ def build_summary(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
         total_simtime = float(invocations_df["t_start"].max())
 
     summary = {
-        "scale_events": len(scale_df),
+        "scale_events": scale_events,
         "scale_up_events": scale_up_events,
         "scale_down_events": scale_down_events,
         "max_replicas": max_replicas,
@@ -318,9 +315,14 @@ def build_paper_highlight(
                     "metric": "first_reach_max_replicas_simtime",
                     "value": reach_max_simtime,
                 })
-                # 扩容耗时
-                if peak_idx is not None and peak_idx < reach_max_idx:
-                    scale_up_time = reach_max_simtime - float(rps_replicas_df.loc[peak_idx, "simtime"])
+                non_zero_rps = rps_replicas_df[rps_replicas_df["rps"] > 0]
+                if not non_zero_rps.empty:
+                    first_load_simtime = float(non_zero_rps["simtime"].iloc[0])
+                    rows.append({
+                        "metric": "first_load_window_simtime",
+                        "value": first_load_simtime,
+                    })
+                    scale_up_time = max(reach_max_simtime - first_load_simtime, 0.0)
                     rows.append({
                         "metric": "scale_up_response_time",
                         "value": float(scale_up_time),
@@ -402,6 +404,18 @@ def self_check(
             "name": "rps_replicas_timeline_non_zero_windows",
             "status": "PASS" if non_zero > 0 else "FAIL",
             "detail": f"non-zero windows={non_zero}",
+        })
+        timeline_min = int(rps_replicas_df["replicas"].min())
+        timeline_max = int(rps_replicas_df["replicas"].max())
+        checks.append({
+            "name": "timeline_min_replicas_matches_summary",
+            "status": "PASS" if timeline_min == min_replicas else "FAIL",
+            "detail": f"timeline_min={timeline_min}, summary_min={min_replicas}",
+        })
+        checks.append({
+            "name": "timeline_max_replicas_matches_summary",
+            "status": "PASS" if timeline_max == max_replicas else "FAIL",
+            "detail": f"timeline_max={timeline_max}, summary_max={max_replicas}",
         })
 
     # 5. probe×invocation join 100% match
@@ -497,7 +511,7 @@ def export_outputs(sim, output_dir: Path, expected_max_requests: int = 2000) -> 
     导出仿真输出指标。
 
     输出：
-    - 7 个 faas-sim / probe metric 的 CSV
+    - faas-sim 原始 metric 与示例 probe metric 的 CSV
     - autoscaling_rps_replicas_timeline.csv：1s 窗口聚合的 RPS 与 replicas 数
     - autoscaling_probe_invocation_join.csv：probe × invocations 关联
     - autoscaling_paper_highlight.csv：论文 demo 关键摘要
@@ -515,7 +529,7 @@ def export_outputs(sim, output_dir: Path, expected_max_requests: int = 2000) -> 
     # 新增：RPS vs Replicas 时间线
     rps_replicas_df = _build_rps_replicas_timeline(
         dfs.get("invocations", pd.DataFrame()),
-        dfs.get("scale", pd.DataFrame()),
+        dfs.get("autoscaling_scale_probe", pd.DataFrame()),
     )
     rps_replicas_path = output_dir / "autoscaling_rps_replicas_timeline.csv"
     rps_replicas_df.to_csv(rps_replicas_path, index=False, encoding="utf-8-sig")

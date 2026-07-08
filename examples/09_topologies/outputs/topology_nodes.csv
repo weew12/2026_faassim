@@ -35,9 +35,14 @@ urban_sensing,link_rpi3_2,link,,1000.0,"{'name': 'link_rpi3_2', 'type': 'node'}"
 urban_sensing,switch_lan_1,switch,,,
 urban_sensing,rpi3_3,node,arm32,,
 urban_sensing,link_rpi3_3,link,,1000.0,"{'name': 'link_rpi3_3', 'type': 'node'}"
+urban_sensing,rpi3_4,node,arm32,,
+urban_sensing,link_rpi3_4,link,,1000.0,"{'name': 'link_rpi3_4', 'type': 'node'}"
+urban_sensing,switch_lan_2,switch,,,
+urban_sensing,rpi3_5,node,arm32,,
+urban_sensing,link_rpi3_5,link,,1000.0,"{'name': 'link_rpi3_5', 'type': 'node'}"
 urban_sensing,nuc_0,node,x86,,
 urban_sensing,link_nuc_0,link,,1000.0,"{'name': 'link_nuc_0', 'type': 'node'}"
-urban_sensing,switch_lan_2,switch,,,
+urban_sensing,switch_lan_3,switch,,,
 urban_sensing,tx2_0,node,aarch64,,
 urban_sensing,link_tx2_0,link,,1000.0,"{'name': 'link_tx2_0', 'type': 'node'}"
 urban_sensing,tx2_1,node,aarch64,,
@@ -46,32 +51,32 @@ urban_sensing,tx2_2,node,aarch64,,
 urban_sensing,link_tx2_2,link,,1000.0,"{'name': 'link_tx2_2', 'type': 'node'}"
 urban_sensing,tx2_3,node,aarch64,,
 urban_sensing,link_tx2_3,link,,1000.0,"{'name': 'link_tx2_3', 'type': 'node'}"
+urban_sensing,tx2_4,node,aarch64,,
+urban_sensing,link_tx2_4,link,,1000.0,"{'name': 'link_tx2_4', 'type': 'node'}"
+urban_sensing,tx2_5,node,aarch64,,
+urban_sensing,link_tx2_5,link,,1000.0,"{'name': 'link_tx2_5', 'type': 'node'}"
 urban_sensing,up_shared_0,link,,25.0,"{'type': 'uplink', 'name': 'up_shared_0'}"
 urban_sensing,down_shared_0,link,,125.0,"{'type': 'downlink', 'name': 'down_shared_0'}"
 urban_sensing,internet,switch,,,
-urban_sensing,rpi3_4,node,arm32,,
-urban_sensing,link_rpi3_4,link,,1000.0,"{'name': 'link_rpi3_4', 'type': 'node'}"
-urban_sensing,switch_lan_3,switch,,,
-urban_sensing,rpi3_5,node,arm32,,
-urban_sensing,link_rpi3_5,link,,1000.0,"{'name': 'link_rpi3_5', 'type': 'node'}"
-urban_sensing,shared_1,link,,500.0,"{'name': 'shared_1', 'type': 'shared'}"
 urban_sensing,rpi3_6,node,arm32,,
 urban_sensing,link_rpi3_6,link,,1000.0,"{'name': 'link_rpi3_6', 'type': 'node'}"
 urban_sensing,switch_lan_4,switch,,,
 urban_sensing,rpi3_7,node,arm32,,
 urban_sensing,link_rpi3_7,link,,1000.0,"{'name': 'link_rpi3_7', 'type': 'node'}"
+urban_sensing,shared_1,link,,500.0,"{'name': 'shared_1', 'type': 'shared'}"
 urban_sensing,rpi3_8,node,arm32,,
 urban_sensing,link_rpi3_8,link,,1000.0,"{'name': 'link_rpi3_8', 'type': 'node'}"
 urban_sensing,switch_lan_5,switch,,,
 urban_sensing,rpi3_9,node,arm32,,
 urban_sensing,link_rpi3_9,link,,1000.0,"{'name': 'link_rpi3_9', 'type': 'node'}"
+urban_sensing,rpi3_10,node,arm32,,
+urban_sensing,link_rpi3_10,link,,1000.0,"{'name': 'link_rpi3_10', 'type': 'node'}"
+urban_sensing,switch_lan_6,switch,,,
+urban_sensing,rpi3_11,node,arm32,,
+urban_sensing,link_rpi3_11,link,,1000.0,"{'name': 'link_rpi3_11', 'type': 'node'}"
 urban_sensing,nuc_1,node,x86,,
 urban_sensing,link_nuc_1,link,,1000.0,"{'name': 'link_nuc_1', 'type': 'node'}"
-urban_sensing,switch_lan_6,switch,,,
-urban_sensing,tx2_4,node,aarch64,,
-urban_sensing,link_tx2_4,link,,1000.0,"{'name': 'link_tx2_4', 'type': 'node'}"
-urban_sensing,tx2_5,node,aarch64,,
-urban_sensing,link_tx2_5,link,,1000.0,"{'name': 'link_tx2_5', 'type': 'node'}"
+urban_sensing,switch_lan_7,switch,,,
 urban_sensing,tx2_6,node,aarch64,,
 urban_sensing,link_tx2_6,link,,1000.0,"{'name': 'link_tx2_6', 'type': 'node'}"
 urban_sensing,tx2_7,node,aarch64,,
@@ -80,19 +85,18 @@ urban_sensing,tx2_8,node,aarch64,,
 urban_sensing,link_tx2_8,link,,1000.0,"{'name': 'link_tx2_8', 'type': 'node'}"
 urban_sensing,tx2_9,node,aarch64,,
 urban_sensing,link_tx2_9,link,,1000.0,"{'name': 'link_tx2_9', 'type': 'node'}"
+urban_sensing,tx2_10,node,aarch64,,
+urban_sensing,link_tx2_10,link,,1000.0,"{'name': 'link_tx2_10', 'type': 'node'}"
+urban_sensing,tx2_11,node,aarch64,,
+urban_sensing,link_tx2_11,link,,1000.0,"{'name': 'link_tx2_11', 'type': 'node'}"
 urban_sensing,up_shared_1,link,,25.0,"{'type': 'uplink', 'name': 'up_shared_1'}"
 urban_sensing,down_shared_1,link,,125.0,"{'type': 'downlink', 'name': 'down_shared_1'}"
-urban_sensing,rpi3_10,node,arm32,,
-urban_sensing,link_rpi3_10,link,,1000.0,"{'name': 'link_rpi3_10', 'type': 'node'}"
-urban_sensing,switch_lan_7,switch,,,
-urban_sensing,rpi3_11,node,arm32,,
-urban_sensing,link_rpi3_11,link,,1000.0,"{'name': 'link_rpi3_11', 'type': 'node'}"
-urban_sensing,shared_2,link,,500.0,"{'name': 'shared_2', 'type': 'shared'}"
 urban_sensing,rpi3_12,node,arm32,,
 urban_sensing,link_rpi3_12,link,,1000.0,"{'name': 'link_rpi3_12', 'type': 'node'}"
 urban_sensing,switch_lan_8,switch,,,
 urban_sensing,rpi3_13,node,arm32,,
 urban_sensing,link_rpi3_13,link,,1000.0,"{'name': 'link_rpi3_13', 'type': 'node'}"
+urban_sensing,shared_2,link,,500.0,"{'name': 'shared_2', 'type': 'shared'}"
 urban_sensing,rpi3_14,node,arm32,,
 urban_sensing,link_rpi3_14,link,,1000.0,"{'name': 'link_rpi3_14', 'type': 'node'}"
 urban_sensing,switch_lan_9,switch,,,
@@ -101,10 +105,6 @@ urban_sensing,link_rpi3_15,link,,1000.0,"{'name': 'link_rpi3_15', 'type': 'node'
 urban_sensing,nuc_2,node,x86,,
 urban_sensing,link_nuc_2,link,,1000.0,"{'name': 'link_nuc_2', 'type': 'node'}"
 urban_sensing,switch_lan_10,switch,,,
-urban_sensing,tx2_10,node,aarch64,,
-urban_sensing,link_tx2_10,link,,1000.0,"{'name': 'link_tx2_10', 'type': 'node'}"
-urban_sensing,tx2_11,node,aarch64,,
-urban_sensing,link_tx2_11,link,,1000.0,"{'name': 'link_tx2_11', 'type': 'node'}"
 urban_sensing,tx2_12,node,aarch64,,
 urban_sensing,link_tx2_12,link,,1000.0,"{'name': 'link_tx2_12', 'type': 'node'}"
 urban_sensing,tx2_13,node,aarch64,,

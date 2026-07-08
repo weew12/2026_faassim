@@ -25,7 +25,7 @@ class SequenceNodeScheduler:
 
     业务职责：
     - 按调度调用次数依次选择 target_node_names 中的目标节点；
-    - 如果目标节点不存在，则回退到第一个 server 开头的节点；
+    - 如果目标节点不存在，则直接抛 RuntimeError，避免静默改变实验语义；
     - 调度时同步调用 cluster_context.place_pod_on_node()；
     - 计算 needed_images，便于 schedule 指标展示镜像是否需要拉取。
     """
@@ -115,16 +115,6 @@ class SequenceNodeScheduler:
             if node.name == target_name:
                 return node
         return None
-
-    @staticmethod
-    def _fallback_node(nodes):
-        """
-        选择回退节点。
-        """
-        for node in nodes:
-            if node.name.startswith("server"):
-                return node
-        return nodes[0]
 
     def _needed_images(self, pod: Pod, selected_node) -> List[str]:
         """

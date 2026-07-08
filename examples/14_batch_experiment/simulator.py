@@ -84,10 +84,32 @@ class BatchExperimentFunctionSimulator(FunctionSimulator):
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         """
         模拟一次函数调用。
+
+        关键探针（沿用 02-13 的 invoke_dispatch_probe 模式）：
+        入口 simtime + replica_id + request_id + expected_t_exec（按 batch_invoke
+        真实派发值）一并写两条探针（dispatch_probe + batch_invoke_probe），
+        便于 probe×invocation join 自洽检查（虽然 14 的 simulator 已经有
+        batch_invoke_probe，但 invoke_dispatch_probe 提供更简洁的 join 接口）。
         """
         base_duration = 0.18
         jitter = self.rng.uniform(0.0, 0.08)
         duration = base_duration + jitter
+
+        # 派发探针（沿用 02-13 模式）：simtime + replica_id + request_id + expected_t_exec
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "request_id": request.request_id,
+                "expected_t_exec": float(duration),
+            },
+            case_id=self.case.case_id,
+            policy=self.case.policy.name,
+            workload=self.case.workload.name,
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
 
         cpu_millis = replica.node.capacity.cpu_millis * 0.12
 

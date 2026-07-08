@@ -77,12 +77,28 @@ class ResourceMonitorFunctionSimulator(FunctionSimulator):
         - 执行时间保持 1.5 个仿真时间单位；
         - 执行结束后释放资源。
 
+        同时向 metrics 写 invoke_dispatch_probe（仿 02/03/05 模式），
+        便于后续做 probe×invocation join 验证。
+
         这样 ResourceMonitor 在请求执行期间能够采集到明显的资源变化。
         """
         node = replica.node
 
         cpu_millis = node.capacity.cpu_millis * 0.35
         memory_bytes = 128 * 1024 * 1024
+
+        # 派发 probe：simtime + replica_id 关键标识
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "cpu_millis": float(cpu_millis),
+                "memory_bytes": float(memory_bytes),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
 
         logger.info(
             "[simtime=%.2f] invoke request=%s function=%s node=%s cpu=%.2f memory=%d",

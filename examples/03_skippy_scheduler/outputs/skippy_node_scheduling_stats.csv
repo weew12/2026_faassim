@@ -1,2 +1,5 @@
-﻿node_name,arch,node_type,scheduled_pod_count
-server_0,x86,server,4
+﻿node_name,arch,node_type,scheduled_pod_count,pods
+server_3,x86,,2,pod-skippy-small-1;pod-skippy-small-2
+server_0,x86,,1,pod-skippy-large-1
+server_1,x86,,1,pod-skippy-medium-1
+server_2,x86,,1,pod-skippy-medium-2

@@ -1,0 +1,14 @@
+﻿metric,value,note
+probe_count,40,degradation_probe 总采样数（应 == invocation_events）
+invocation_events,40,实际函数调用事件数（应 == 40）
+base_duration,0.4,无竞争基础执行时间（simtime 秒）
+alpha,0.35,每个并发请求引入的执行时间放大系数
+max_active_requests_before,29,peak 并发负载（峰值 29 = 40 - 11 个 in-flight）
+max_degradation_factor,11.15,peak 退化因子（应 == 1 + alpha * max_active = 11.15）
+max_final_duration,4.46,peak 退化后执行时间（应 ≈ 4.46s，证明退化生效）
+avg_final_duration,2.535,平均退化后执行时间（由并发分布决定）
+duration_match_count,40,degradation_probe.final_duration 与 inv t_exec 一致的行数（应 == 40）
+duration_match_ratio,1.0,duration_match 比例（应 == 1.0，证明 simulator 与 faas-sim 完全一致）
+max_abs_diff,0.0,退化公式 final = base * (1 + alpha * active) 的 max abs diff（应 == 0）
+concurrency_levels,30,degradation_concurrency_distribution 的不同 active_before 值数量
+probe_equals_invocations,True,probe_count == invocation_events（probe×invocation 一致）

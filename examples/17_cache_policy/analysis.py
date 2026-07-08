@@ -151,7 +151,7 @@ def build_paper_highlight(
     function_summary_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（沿用 02-16 的 metric/value/note 三列模式）。
 
     cache_policy 样例跟前 3 个不一样：它不跑 faas-sim Simulation，是 in-memory
     缓存算法实验。论文 demo 关注的是：
@@ -160,12 +160,42 @@ def build_paper_highlight(
     3. 总冷启动惩罚（total_cold_start_penalty）
     4. **策略对比**：以 fifo 为 baseline，其他策略的相对提升
 
-    输出格式与 14/15/16 风格一致：metric / value。
+    输出格式与 02-16 风格一致：metric / value / note 三列。
     """
     rows: List[Dict[str, Any]] = []
 
     if policy_summary_df.empty:
         return pd.DataFrame(rows)
+
+    # 0. 跨策略聚合 metric
+    rows.append({
+        "metric": "total_policies",
+        "value": int(policy_summary_df["policy_name"].nunique()),
+        "note": "策略数（fifo / lru / utility_aware）",
+    })
+    if "request_count" in policy_summary_df.columns:
+        rows.append({
+            "metric": "total_requests_per_policy",
+            "value": int(policy_summary_df["request_count"].iloc[0]) if len(policy_summary_df) > 0 else 0,
+            "note": "每个 policy 的 request 数（应一致，因为 trace 共享）",
+        })
+    if not function_summary_df.empty and "function_name" in function_summary_df.columns:
+        rows.append({
+            "metric": "total_functions",
+            "value": int(function_summary_df["function_name"].nunique()),
+            "note": "函数规格数（5 个：img-resize / json-parse / fft / video-transcode / ml-infer）",
+        })
+        rows.append({
+            "metric": "total_function_summary_rows",
+            "value": int(len(function_summary_df)),
+            "note": "function_summary 总行数（应 == policies × functions = 15）",
+        })
+
+    rows.append({
+        "metric": "policy_summary_count",
+        "value": int(len(policy_summary_df)),
+        "note": "policy_summary 总行数（应 == policies 数）",
+    })
 
     # 1. 每 policy 关键指标
     for _, srow in policy_summary_df.iterrows():
@@ -173,22 +203,27 @@ def build_paper_highlight(
         rows.append({
             "metric": f"hit_rate__{policy}",
             "value": float(srow["hit_rate"]),
+            "note": f"{policy} 策略命中率（应 == hit_count / request_count）",
         })
         rows.append({
             "metric": f"avg_latency__{policy}",
             "value": float(srow["avg_latency"]),
+            "note": f"{policy} 策略平均延迟（含冷启动惩罚）",
         })
         rows.append({
             "metric": f"total_cold_start_penalty__{policy}",
             "value": float(srow["total_cold_start_penalty"]),
+            "note": f"{policy} 策略累计冷启动惩罚（命中率越低，惩罚越大）",
         })
         rows.append({
             "metric": f"avg_cache_used_after__{policy}",
             "value": float(srow["avg_cache_used_after"]),
+            "note": f"{policy} 策略平均缓存占用（应 <= capacity=4）",
         })
         rows.append({
             "metric": f"miss_count__{policy}",
             "value": int(srow["miss_count"]),
+            "note": f"{policy} 策略 miss 次数（= request_count - hit_count）",
         })
 
     # 2. 策略相对提升（以 fifo 为 baseline）
@@ -212,24 +247,28 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"hit_rate_improvement__{policy}_over_{baseline}",
                 "value": float(hit_rate - base_hit_rate),
+                "note": f"{policy} vs {baseline} 命中率绝对差（论文 demo 关键数字）",
             })
             # 命中率倍数
             if base_hit_rate > 0:
                 rows.append({
                     "metric": f"hit_rate_ratio__{policy}_over_{baseline}",
                     "value": float(hit_rate / base_hit_rate),
+                    "note": f"{policy} vs {baseline} 命中率倍数（论文 demo 一句话核心：utility_aware=2.5x）",
                 })
             # 平均延迟相对降低
             if base_latency > 0:
                 rows.append({
                     "metric": f"latency_reduction__{policy}_over_{baseline}",
                     "value": float((base_latency - latency) / base_latency),
+                    "note": f"{policy} vs {baseline} 平均延迟相对降低",
                 })
             # 冷启动惩罚相对降低
             if base_cold > 0:
                 rows.append({
                     "metric": f"cold_start_penalty_reduction__{policy}_over_{baseline}",
                     "value": float((base_cold - cold) / base_cold),
+                    "note": f"{policy} vs {baseline} 冷启动惩罚相对降低",
                 })
 
     # 3. per-function summary 的最高 hit_rate（哪条函数最能受益）
@@ -242,6 +281,7 @@ def build_paper_highlight(
             rows.append({
                 "metric": f"best_function_hit_rate__{policy}__{best['function_name']}",
                 "value": float(best["hit_rate"]),
+                "note": f"{policy} 策略下命中率最高的函数（img-resize 最频繁，最受益）",
             })
 
     return pd.DataFrame(rows)
@@ -257,7 +297,7 @@ def self_check(
     n_policies: int,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（cache_policy 9 个不变量）。
+    数据自洽段（cache_policy 不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -312,7 +352,16 @@ def self_check(
                 "detail": f"sum of function request_count={total}, expected={expected_request_count}",
             })
 
-    # 6. eviction 跟 cache_state 一致（state_cache_used_after + evicted_memory_total <= capacity）
+    # 6. eviction×state join 行数必须覆盖全部 eviction
+    n_eviction = len(eviction_df)
+    n_eviction_join = len(eviction_state_join_df)
+    checks.append({
+        "name": "eviction_state_join_row_count",
+        "status": "PASS" if n_eviction_join == n_eviction else "FAIL",
+        "detail": f"join rows={n_eviction_join}, eviction rows={n_eviction}",
+    })
+
+    # 7. eviction 跟 cache_state 一致（evicted_function 不应出现在驱逐后 state cache_keys 中）
     if not eviction_state_join_df.empty and "eviction_state_match" in eviction_state_join_df.columns:
         n = len(eviction_state_join_df)
         matched = int(eviction_state_join_df["eviction_state_match"].sum())
@@ -322,7 +371,7 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 7. paper highlight 里 hit_rate__<policy> 跟 policy_summary 一致
+    # 8. paper highlight 里 hit_rate__<policy> 跟 policy_summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         for _, srow in policy_summary_df.iterrows():
             policy = srow["policy_name"]
@@ -339,7 +388,7 @@ def self_check(
                 "detail": f"summary={summary_v:.6f}, highlight={hl_v:.6f}",
             })
 
-    # 8. utility_aware 命中率应 >= fifo（论文核心结论）
+    # 9. utility_aware 命中率应 >= fifo（论文核心结论）
     if not policy_summary_df.empty and "policy_name" in policy_summary_df.columns:
         u_row = policy_summary_df[policy_summary_df.policy_name == "utility_aware"]
         f_row = policy_summary_df[policy_summary_df.policy_name == "fifo"]
@@ -352,7 +401,7 @@ def self_check(
                 "detail": f"utility_aware={u_hit:.4f}, fifo={f_hit:.4f} (utility_aware 应 >= fifo)",
             })
 
-    # 9. paper highlight 里 hit_rate_improvement__utility_aware_over_fifo 跟 summary 一致
+    # 10. paper highlight 里 hit_rate_improvement__utility_aware_over_fifo 跟 summary 一致
     if not paper_highlight_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "hit_rate_improvement__utility_aware_over_fifo"
@@ -368,6 +417,27 @@ def self_check(
                     "status": "PASS" if abs(hl_v - expected_v) < 1e-6 else "FAIL",
                     "detail": f"highlight={hl_v:.6f}, expected={expected_v:.6f}",
                 })
+
+    # 11. 导出的表结构不应包含 pandas 默认索引列
+    frames_to_export = dict(outputs)
+    frames_to_export.update({
+        "cache_policy_summary": policy_summary_df,
+        "cache_function_summary": function_summary_df,
+        "cache_eviction_state_join": eviction_state_join_df,
+        "cache_policy_paper_highlight": paper_highlight_df,
+    })
+    bad_columns = []
+    for name, df in frames_to_export.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -428,6 +498,12 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     outputs["cache_eviction_summary"] = eviction_summary_df
     outputs["cache_eviction_state_join"] = eviction_state_join_df
     outputs["cache_policy_paper_highlight"] = paper_highlight_df
+
+    # 写 self_check.csv（仿 02-16 模式）
+    check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    if "status" in check_df.columns:
+        check_df["passed"] = check_df["status"] == "PASS"
+    outputs["cache_policy_self_check"] = check_df
 
     for name, df in outputs.items():
         path = output_dir / f"{name}.csv"

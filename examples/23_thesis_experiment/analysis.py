@@ -7,7 +7,7 @@
 - thesis_baseline_comparison（以 LoadOnly 为 baseline 的相对改进）
 - thesis_result_candidate_join（论文 demo 关键证据）
 - thesis_paper_highlight（论文 demo 关键摘要）
-- 数据自洽段（13 个不变量）
+- 数据自洽段（23 个不变量）
 """
 
 import logging
@@ -360,7 +360,7 @@ def build_paper_highlight(
     request_decision_join_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    论文 demo 关键摘要。
+    论文 demo 关键摘要（含 note 列，沿用 02-22 模式）。
 
     thesis_experiment 是论文实验的最终 demo，论文 demo 关注的是：
     1. CacheAwareJoint vs FaasCache vs LoadOnly 三方对比
@@ -372,7 +372,7 @@ def build_paper_highlight(
     rows: List[Dict[str, Any]] = []
 
     if policy_summary_df.empty:
-        return pd.DataFrame(rows)
+        return pd.DataFrame(columns=["metric", "value", "note"])
 
     # 1. per-case 关键指标
     for _, srow in policy_summary_df.iterrows():
@@ -381,42 +381,52 @@ def build_paper_highlight(
         rows.append({
             "metric": f"warm_hit_rate__{case}",
             "value": float(srow["warm_hit_rate"]),
+            "note": f"{case} ({policy}) 函数 warm 实例命中率（论文 demo 关键指标）",
         })
         rows.append({
             "metric": f"image_cache_hit_rate__{case}",
             "value": float(srow["image_cache_hit_rate"]),
+            "note": f"{case} 镜像缓存命中率（避免镜像拉取）",
         })
         rows.append({
             "metric": f"data_cache_hit_rate__{case}",
             "value": float(srow["data_cache_hit_rate"]),
+            "note": f"{case} 数据缓存命中率（避免数据获取）",
         })
         rows.append({
             "metric": f"avg_latency__{case}",
             "value": float(srow["avg_latency"]),
+            "note": f"{case} 平均每次 invoke latency",
         })
         rows.append({
             "metric": f"p95_latency__{case}",
             "value": float(srow["p95_latency"]),
+            "note": f"{case} p95 latency（论文 demo 重要 tail-latency 指标）",
         })
         rows.append({
             "metric": f"total_cold_start_penalty__{case}",
             "value": float(srow["total_cold_start_penalty"]),
+            "note": f"{case} 全部冷启动惩罚累加",
         })
         rows.append({
             "metric": f"avg_r_cache__{case}",
             "value": float(srow["avg_r_cache"]),
+            "note": f"{case} 平均 R_cache（cache 驱动的副本需求）",
         })
         rows.append({
             "metric": f"avg_r_load__{case}",
             "value": float(srow["avg_r_load"]),
+            "note": f"{case} 平均 R_load（负载驱动的副本需求）",
         })
         rows.append({
             "metric": f"avg_r_desired__{case}",
             "value": float(srow["avg_r_desired"]),
+            "note": f"{case} 平均 R_desired = max(R_cache, R_load)",
         })
         rows.append({
             "metric": f"eviction_count__{case}",
             "value": int(srow["eviction_count"]),
+            "note": f"{case} 全部 evict 事件数",
         })
 
     # 2. CacheAwareJoint vs LoadOnly / FaasCache
@@ -432,22 +442,26 @@ def build_paper_highlight(
             rows.append({
                 "metric": "avg_latency_reduction__cache_aware_joint_vs_load_only",
                 "value": float((float(lo_row["avg_latency"]) - float(ca_row["avg_latency"])) / float(lo_row["avg_latency"])),
+                "note": "CacheAwareJoint 相对 LoadOnly 平均延迟降低比例（论文 demo 关键数字）",
             })
         # cold_start 相对降低
         if float(lo_row["total_cold_start_penalty"]) > 0:
             rows.append({
                 "metric": "cold_start_penalty_reduction__cache_aware_joint_vs_load_only",
                 "value": float((float(lo_row["total_cold_start_penalty"]) - float(ca_row["total_cold_start_penalty"])) / float(lo_row["total_cold_start_penalty"])),
+                "note": "CacheAwareJoint 相对 LoadOnly 冷启动惩罚降低比例（论文 demo 关键数字）",
             })
         # image_cache_hit_rate 提升
         rows.append({
             "metric": "image_cache_hit_rate_improvement__cache_aware_joint_vs_load_only",
             "value": float(float(ca_row["image_cache_hit_rate"]) - float(lo_row["image_cache_hit_rate"])),
+            "note": "CacheAwareJoint 相对 LoadOnly 镜像缓存命中率提升",
         })
         # data_cache_hit_rate 提升
         rows.append({
             "metric": "data_cache_hit_rate_improvement__cache_aware_joint_vs_load_only",
             "value": float(float(ca_row["data_cache_hit_rate"]) - float(lo_row["data_cache_hit_rate"])),
+            "note": "CacheAwareJoint 相对 LoadOnly 数据缓存命中率提升",
         })
 
     if not cache_aware.empty and not faascache.empty:
@@ -458,54 +472,63 @@ def build_paper_highlight(
             rows.append({
                 "metric": "avg_latency_reduction__cache_aware_joint_vs_faascache",
                 "value": float((float(fc_row["avg_latency"]) - float(ca_row["avg_latency"])) / float(fc_row["avg_latency"])),
+                "note": "CacheAwareJoint 相对 FaasCache 平均延迟降低比例（论文 demo 关键证据：cache-aware 调度胜出）",
             })
         rows.append({
             "metric": "image_cache_hit_rate_improvement__cache_aware_joint_vs_faascache",
             "value": float(float(ca_row["image_cache_hit_rate"]) - float(fc_row["image_cache_hit_rate"])),
+            "note": "CacheAwareJoint 相对 FaasCache 镜像缓存命中率提升",
         })
         rows.append({
             "metric": "data_cache_hit_rate_improvement__cache_aware_joint_vs_faascache",
             "value": float(float(ca_row["data_cache_hit_rate"]) - float(fc_row["data_cache_hit_rate"])),
+            "note": "CacheAwareJoint 相对 FaasCache 数据缓存命中率提升",
         })
 
-    # 3. R_cache vs R_load 主导分析
+    # 3. R_cache vs R_load 主导分析（数值 metric，便于 fig04 解析；字符串描述由 avg_r_cache/r_load/desired 三个 metric 共同提供）
     if not cache_aware.empty:
         ca_row = cache_aware.iloc[0]
         r_cache = float(ca_row["avg_r_cache"])
         r_load = float(ca_row["avg_r_load"])
-        r_desired = float(ca_row["avg_r_desired"])
         rows.append({
-            "metric": "r_dominant_summary__cache_aware_joint",
-            "value": (
-                f"r_cache={r_cache:.3f}, r_load={r_load:.3f}, r_desired={r_desired:.3f}; "
-                f"max={max(r_cache, r_load):.3f}"
-            ),
+            "metric": "r_dominant_max__cache_aware_joint",
+            "value": float(max(r_cache, r_load)),
+            "note": "CacheAwareJoint R_dominant = max(avg_r_cache, avg_r_load)",
+        })
+        rows.append({
+            "metric": "r_dominant_source__cache_aware_joint",
+            "value": float(1.0 if r_load >= r_cache else 0.0),
+            "note": "CacheAwareJoint R_dominant 来源（1=R_load, 0=R_cache）",
         })
 
     if not load_only.empty:
         lo_row = load_only.iloc[0]
         r_cache = float(lo_row["avg_r_cache"])
         r_load = float(lo_row["avg_r_load"])
-        r_desired = float(lo_row["avg_r_desired"])
         rows.append({
-            "metric": "r_dominant_summary__load_only",
-            "value": (
-                f"r_cache={r_cache:.3f}, r_load={r_load:.3f}, r_desired={r_desired:.3f}; "
-                f"max={max(r_cache, r_load):.3f}"
-            ),
+            "metric": "r_dominant_max__load_only",
+            "value": float(max(r_cache, r_load)),
+            "note": "LoadOnly R_dominant = max(avg_r_cache, avg_r_load)（应 = avg_r_load）",
+        })
+        rows.append({
+            "metric": "r_dominant_source__load_only",
+            "value": float(1.0 if r_load >= r_cache else 0.0),
+            "note": "LoadOnly R_dominant 来源（应 = 1 R_load）",
         })
 
     if not faascache.empty:
         fc_row = faascache.iloc[0]
         r_cache = float(fc_row["avg_r_cache"])
         r_load = float(fc_row["avg_r_load"])
-        r_desired = float(fc_row["avg_r_desired"])
         rows.append({
-            "metric": "r_dominant_summary__faascache",
-            "value": (
-                f"r_cache={r_cache:.3f}, r_load={r_load:.3f}, r_desired={r_desired:.3f}; "
-                f"max={max(r_cache, r_load):.3f}"
-            ),
+            "metric": "r_dominant_max__faascache",
+            "value": float(max(r_cache, r_load)),
+            "note": "FaasCache R_dominant = max(avg_r_cache, avg_r_load)（应 = avg_r_cache）",
+        })
+        rows.append({
+            "metric": "r_dominant_source__faascache",
+            "value": float(1.0 if r_load >= r_cache else 0.0),
+            "note": "FaasCache R_dominant 来源（应 = 0 R_cache）",
         })
 
     # 4. result×candidate 一致性
@@ -515,14 +538,17 @@ def build_paper_highlight(
         rows.append({
             "metric": "result_candidate_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "result × candidate join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "result_candidate_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "result_candidate_total",
             "value": n,
+            "note": "join 总行数（应 == 3 case × 35 request = 105）",
         })
 
     # 5. request×decision 一致性
@@ -532,17 +558,20 @@ def build_paper_highlight(
         rows.append({
             "metric": "request_decision_consistency",
             "value": float(matched / n) if n > 0 else 0.0,
+            "note": "request × decision join match 占比（论文 demo 关键证据，应 1.0）",
         })
         rows.append({
             "metric": "request_decision_matched",
             "value": matched,
+            "note": "matched 行数",
         })
         rows.append({
             "metric": "request_decision_total",
             "value": n,
+            "note": "join 总行数（应 == 3 case × 35 request = 105）",
         })
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["metric", "value", "note"])
 
 
 def self_check(
@@ -556,7 +585,7 @@ def self_check(
     n_cases: int,
 ) -> Dict[str, Any]:
     """
-    数据自洽段（thesis_experiment 13 个不变量）。
+    数据自洽段（thesis_experiment 23 个不变量）。
     """
     checks: List[Dict[str, str]] = []
 
@@ -581,7 +610,18 @@ def self_check(
         "detail": f"candidates={n_cand}, requests={n_result}",
     })
 
-    # 3. policy_summary 行数 = n_cases
+    # 3. 每个 (case, policy, request) 的候选节点数一致
+    if not candidate_df.empty:
+        candidate_group_sizes = candidate_df.groupby(["case_id", "policy_name", "request_id"]).size()
+        expected_candidates_per_request = int(candidate_group_sizes.iloc[0]) if not candidate_group_sizes.empty else 0
+        consistent = bool((candidate_group_sizes == expected_candidates_per_request).all())
+        checks.append({
+            "name": "candidate_count_per_request_consistent",
+            "status": "PASS" if consistent else "FAIL",
+            "detail": f"candidate groups={len(candidate_group_sizes)}, candidates per request={expected_candidates_per_request}",
+        })
+
+    # 4. policy_summary 行数 = n_cases
     n_summary = len(policy_summary_df)
     checks.append({
         "name": "policy_summary_row_count",
@@ -589,7 +629,7 @@ def self_check(
         "detail": f"summary rows={n_summary}, expected={n_cases}",
     })
 
-    # 4. policy_summary per-case request_count == expected_request_count
+    # 5. policy_summary per-case request_count == expected_request_count
     if not policy_summary_df.empty and "request_count" in policy_summary_df.columns:
         for _, srow in policy_summary_df.iterrows():
             case = srow["case_id"]
@@ -600,7 +640,7 @@ def self_check(
                 "detail": f"request_count={rc}, expected={expected_request_count}",
             })
 
-    # 5. baseline_comparison 行数 = n_cases
+    # 6. baseline_comparison 行数 = n_cases
     n_baseline = len(baseline_comparison_df)
     checks.append({
         "name": "baseline_comparison_row_count",
@@ -608,7 +648,7 @@ def self_check(
         "detail": f"baseline rows={n_baseline}, expected={n_cases}",
     })
 
-    # 6. baseline_comparison 必须包含 load_only 行
+    # 7. baseline_comparison 必须包含 load_only 行
     if not baseline_comparison_df.empty and "case_id" in baseline_comparison_df.columns:
         has_load_only = "load_only" in set(baseline_comparison_df["case_id"])
         checks.append({
@@ -617,7 +657,15 @@ def self_check(
             "detail": f"case_ids={list(baseline_comparison_df['case_id'])}",
         })
 
-    # 7. result×candidate join 100% match（faascache / load_only 不要求 max-score，只 cache_aware_joint 要求）
+    # 8. result×candidate join 行数和 request_result 行数一致
+    n_result_join = len(result_candidate_join_df)
+    checks.append({
+        "name": "result_candidate_join_row_count",
+        "status": "PASS" if n_result_join == n_result else "FAIL",
+        "detail": f"join rows={n_result_join}, requests={n_result}",
+    })
+
+    # 9. result×candidate join 100% match（faascache / load_only 不要求 max-score，只 cache_aware_joint 要求）
     if not result_candidate_join_df.empty and "match" in result_candidate_join_df.columns:
         n = len(result_candidate_join_df)
         matched = int(result_candidate_join_df["match"].sum())
@@ -627,7 +675,7 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 7b. cache_aware_joint 的 candidate 是 max-score（核心检查）
+    # 10. cache_aware_joint 的 candidate 是 max-score（核心检查）
     if not result_candidate_join_df.empty and "case_id" in result_candidate_join_df.columns:
         ca = result_candidate_join_df[result_candidate_join_df.case_id == "cache_aware_joint"]
         if not ca.empty:
@@ -639,7 +687,15 @@ def self_check(
                 "detail": f"cache_aware_joint matched={matched}/{n} (must be max-score)",
             })
 
-    # 8. request×decision join 100% match
+    # 11. request×decision join 行数和 request_result 行数一致
+    n_decision_join = len(request_decision_join_df)
+    checks.append({
+        "name": "request_decision_join_row_count",
+        "status": "PASS" if n_decision_join == n_result else "FAIL",
+        "detail": f"join rows={n_decision_join}, requests={n_result}",
+    })
+
+    # 12. request×decision join 100% match
     if not request_decision_join_df.empty and "match" in request_decision_join_df.columns:
         n = len(request_decision_join_df)
         matched = int(request_decision_join_df["match"].sum())
@@ -649,7 +705,15 @@ def self_check(
             "detail": f"matched={matched}/{n}",
         })
 
-    # 9. paper highlight 3 个 warm_hit_rate 跟 policy_summary 一致
+    # 13. paper highlight 行数应稳定为 49
+    n_paper = len(paper_highlight_df)
+    checks.append({
+        "name": "paper_highlight_metric_count",
+        "status": "PASS" if n_paper == 49 else "FAIL",
+        "detail": f"paper_highlight metrics={n_paper}, expected=49",
+    })
+
+    # 14. paper highlight 3 个 warm_hit_rate 跟 policy_summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         for _, srow in policy_summary_df.iterrows():
             case = srow["case_id"]
@@ -666,7 +730,7 @@ def self_check(
                 "detail": f"summary={summary_v:.6f}, highlight={hl_v:.6f}",
             })
 
-    # 10. paper highlight cache_aware_joint vs load_only 改善值跟 summary 一致
+    # 15. paper highlight cache_aware_joint vs load_only 改善值跟 summary 一致
     if not paper_highlight_df.empty and not policy_summary_df.empty:
         ca = policy_summary_df[policy_summary_df.case_id == "cache_aware_joint"]
         lo = policy_summary_df[policy_summary_df.case_id == "load_only"]
@@ -683,7 +747,7 @@ def self_check(
                     "detail": f"highlight={hl_v:.6f}, expected={expected_v:.6f}",
                 })
 
-    # 11. cache_aware_joint 命中率 >= faascache >= load_only
+    # 16. cache_aware_joint 命中率 >= faascache >= load_only
     if not policy_summary_df.empty:
         ca = policy_summary_df[policy_summary_df.case_id == "cache_aware_joint"]
         fc = policy_summary_df[policy_summary_df.case_id == "faascache"]
@@ -699,7 +763,7 @@ def self_check(
                 "detail": f"ca={ca_warm:.4f}, fc={fc_warm:.4f}, lo={lo_warm:.4f} (ca >= fc >= lo 期望)",
             })
 
-    # 12. paper highlight result_candidate_consistency == 1.0
+    # 17. paper highlight result_candidate_consistency == 1.0
     if not paper_highlight_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "result_candidate_consistency"
@@ -712,7 +776,7 @@ def self_check(
                 "detail": f"result_candidate_consistency={v:.4f}",
             })
 
-    # 13. paper highlight request_decision_consistency == 1.0
+    # 18. paper highlight request_decision_consistency == 1.0
     if not paper_highlight_df.empty:
         hl_rows = paper_highlight_df[
             paper_highlight_df.metric == "request_decision_consistency"
@@ -724,6 +788,30 @@ def self_check(
                 "status": "PASS" if v >= 0.999 else "FAIL",
                 "detail": f"request_decision_consistency={v:.4f}",
             })
+
+    # 19. 导出的 DataFrame 不应包含 pandas 默认索引列
+    frames_to_check = {
+        "request_result": result_df,
+        "candidate_score": candidate_df,
+        "control_decision": decision_df,
+        "policy_summary": policy_summary_df,
+        "baseline_comparison": baseline_comparison_df,
+        "result_candidate_join": result_candidate_join_df,
+        "request_decision_join": request_decision_join_df,
+        "paper_highlight": paper_highlight_df,
+    }
+    bad_columns = []
+    for name, df in frames_to_check.items():
+        if df is None or df.empty:
+            continue
+        unnamed = [col for col in df.columns if str(col).startswith("Unnamed")]
+        if unnamed:
+            bad_columns.append(f"{name}:{','.join(unnamed)}")
+    checks.append({
+        "name": "export_tables_have_no_index_column",
+        "status": "PASS" if not bad_columns else "FAIL",
+        "detail": "no pandas index columns" if not bad_columns else "; ".join(bad_columns),
+    })
 
     n_pass = sum(1 for c in checks if c["status"] == "PASS")
     n_fail = sum(1 for c in checks if c["status"] == "FAIL")
@@ -798,6 +886,12 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     )
     log_self_check(self_check_result)
 
+    # 导出 self_check 结果到 csv（沿用 02-21 模式）
+    self_check_path = output_dir / "thesis_experiment_self_check.csv"
+    self_check_df = pd.DataFrame(self_check_result.get("checks") or [])
+    self_check_df.to_csv(self_check_path, index=False, encoding="utf-8-sig")
+    logger.info("saved %s", self_check_path)
+
     outputs = dict(outputs)
     outputs["thesis_policy_summary"] = policy_summary_df
     outputs["thesis_function_summary"] = function_summary_df
@@ -807,8 +901,13 @@ def export_outputs(outputs: Dict[str, pd.DataFrame], output_dir: Path) -> Dict[s
     outputs["thesis_result_candidate_join"] = result_candidate_join_df
     outputs["thesis_request_decision_join"] = request_decision_join_df
     outputs["thesis_paper_highlight"] = paper_highlight_df
+    outputs["thesis_experiment_self_check"] = self_check_df
+    outputs["self_check_result"] = self_check_result
 
     for name, df in outputs.items():
+        # 跳过 self_check_result 字典（已通过 self_check_df 单独导出）
+        if not isinstance(df, pd.DataFrame):
+            continue
         path = output_dir / f"{name}.csv"
         df.to_csv(path, index=False, encoding="utf-8-sig")
         logger.info("saved %s", path)

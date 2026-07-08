@@ -68,7 +68,23 @@ class SkippySchedulerFunctionSimulator(FunctionSimulator):
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         """
         模拟一次函数调用。
+
+        在 invoke 开始时写 invoke_dispatch_probe（simtime + replica_id），
+        后续 analysis.py 用 probe×invocation join 验证：
+        每个 invoke 派发事件都能从 invocations.csv 找到匹配的
+        (function, replica, simtime) 调用记录。
         """
+        # 派发 probe：simtime + replica_id 关键标识，方便后续 join
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+            },
+            function_name=replica.function.name,
+            node=replica.node.name,
+        )
+
         cpu_millis = replica.node.capacity.cpu_millis * 0.1
         node = replica.node
 

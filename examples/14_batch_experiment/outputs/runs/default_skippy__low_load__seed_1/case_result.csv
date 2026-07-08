@@ -1,2 +1,2 @@
-﻿case_id,policy,scheduler,workload,rps,max_requests,seed,probe_events,invocation_events,schedule_events,flow_events,scheduled_node,scheduled_node_count,avg_probe_duration,max_probe_duration,p95_probe_duration,flow_total_bytes
-default_skippy__low_load__seed_1,default_skippy,default_skippy,low_load,3,12,1,12,12,6,1,server_1,1,0.21851082224417193,0.2477946989549786,0.24728127910221465,48000000
+﻿case_id,policy,scheduler,workload,rps,max_requests,seed,probe_events,invocation_events,schedule_events,flow_events,scheduled_node,scheduled_node_count,avg_probe_duration,max_probe_duration,p95_probe_duration,avg_invocation_duration,max_invocation_duration,p95_invocation_duration,flow_total_bytes
+default_skippy__low_load__seed_1,default_skippy,default_skippy,low_load,3,12,1,12,12,6,1,server_1,1,0.21851082224417193,0.2477946989549786,0.24728127910221465,0.21851082224417187,0.24779469895497863,0.2472812791022146,48000000

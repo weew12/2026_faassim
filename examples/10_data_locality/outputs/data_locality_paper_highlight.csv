@@ -1,8 +1,12 @@
-﻿metric,value
-aware_download_seconds,2.654175257731959
-forced_download_seconds,52.879505154639176
-speedup_ratio_forced_over_aware,19.923139966207685
-aware_theoretical_seconds,2.44140625
-forced_theoretical_seconds,48.828125
-aware_actual_vs_theoretical_diff,0.21276900773195884
-forced_actual_vs_theoretical_diff,4.051380154639176
+﻿metric,value,note
+aware_download_seconds,2.6542,data_locality_aware 场景的实际下载耗时（edge_near）
+forced_download_seconds,52.8795,forced_remote 场景的实际下载耗时（edge_far）
+speedup_ratio_forced_over_aware,19.9231,forced / aware 的延迟放大倍数（论文 demo 关键数字）
+aware_selected_node,edge_near,data_locality_aware 场景 Skippy 默认调度选择的节点
+forced_selected_node,edge_far,forced_remote 场景 ForcedNodeScheduler 强制选择的节点
+aware_theoretical_seconds,2.56,aware 场景理论下载时间（按 near_link=200Mbps 反算）
+forced_theoretical_seconds,51.2,forced 场景理论下载时间（按 far_link=10Mbps 反算）
+aware_actual_vs_theoretical_diff,0.0942,aware 场景实际 - 理论下载时间（越小越好，验证 faas-sim 网络模型）
+forced_actual_vs_theoretical_diff,1.6795,forced 场景实际 - 理论下载时间
+edge_near_match_tolerance_5pct,True,edge_near 行的 Skippy 估算 vs 实际下载误差 < 5%
+data_size_bytes,64000000,输入对象 video-bucket/frame-seq-001 大小（64M）

@@ -1,0 +1,12 @@
+﻿metric,value,note
+single_flow_throughput_mbps,9.6532,单流吞吐量（Mbps），应接近 bottleneck 链路标称带宽
+single_flow_duration_s,24.8623,单流 30M 传输耗时（秒），无竞争基线
+concurrent_flow_count,3,并发瓶颈场景的 flow 数量
+concurrent_flow_throughput_mbps,3.2281,并发场景下每个 flow 平均吞吐量（Mbps）
+concurrent_flow_duration_s,74.3468,3 条 30M 并发 flow 的平均传输耗时（秒）
+scaling_factor,2.9903,同大小 flow 下，并发相对单流的延迟放大倍数
+bottleneck_bandwidth_mbps,10.0,共享瓶颈链路标称带宽（Mbps）
+bottleneck_share_per_flow_mbps,3.3333,理想公平共享下每个 flow 应分到的带宽
+fair_share_utilization_ratio,0.9684,并发实际吞吐 / 公平份额，越接近 1 越接近理想公平共享
+concurrent_throughput_std,0.0,3 个并发 flow 的吞吐量标准差（越小越公平）
+all_flows_share_bottleneck,True,所有 flow 是否走同一 bottleneck 链路

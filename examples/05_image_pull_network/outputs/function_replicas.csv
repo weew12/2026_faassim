@@ -1,4 +1,4 @@
 ﻿time,name,pod,image,replica_id
-2026-07-07 00:09:05.368041,image-pull-small-cold,pod-image-pull-small-cold-1,image-pull-small-cpu,2491676379856
-2026-07-07 00:09:05.369923,image-pull-small-warm,pod-image-pull-small-warm-1,image-pull-small-cpu,2491676094096
-2026-07-07 00:09:05.370373,image-pull-large-cold,pod-image-pull-large-cold-1,image-pull-large-cpu,2491676097296
+2026-07-07 19:39:36.662538,image-pull-small-cold,pod-image-pull-small-cold-1,image-pull-small-cpu,2388392280480
+2026-07-07 19:39:36.663811,image-pull-small-warm,pod-image-pull-small-warm-1,image-pull-small-cpu,2388392210384
+2026-07-07 19:39:36.664350,image-pull-large-cold,pod-image-pull-large-cold-1,image-pull-large-cpu,2388392213584

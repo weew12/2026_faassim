@@ -1,0 +1,14 @@
+﻿metric,value,note
+total_pods_scheduled,5,被 Skippy 调度的 pod 总数
+invocation_events,40,实际函数调用事件总数
+selected_node_count,4,被选中的不同 node 数量
+all_nodes,4,调度器看到的候选 node 总数
+max_feasible_nodes,4,pod 的最大可行节点数
+min_feasible_nodes,1,pod 的最小可行节点数
+avg_feasible_nodes_full,2.4,pod 平均可行节点数
+pods_with_filtered_nodes,3,至少过滤掉 1 个候选节点的 pod 数
+filtered_candidate_nodes,8,被资源谓词过滤掉的候选节点总次数
+pods_with_needed_images,4,目标节点尚无镜像、需要拉取的 pod 数
+pods_with_cached_image,1,目标节点已有镜像、可复用缓存的 pod 数
+schedule_entropy,1.9219,调度分布香农熵（越大越分散）
+probe_invocation_consistent,True,schedule_probe × invocations 时序一致性

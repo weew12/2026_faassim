@@ -93,6 +93,8 @@ class TraceOracleFunctionSimulator(FunctionSimulator):
         模拟一次函数调用。
 
         执行时间来自 trace oracle，而不是固定常数。
+        同时向 metrics 写 invoke_dispatch_probe（仿 02/03/05/06 模式），
+        便于后续做 probe×invocation join 验证。
         """
         function_name = replica.function.name
         sample = self.oracle.sample(function_name)
@@ -112,6 +114,19 @@ class TraceOracleFunctionSimulator(FunctionSimulator):
 
         env.resource_state.put_resource(replica, "cpu", cpu_millis)
         node.current_requests.add(request)
+
+        # 派发 probe：simtime + replica_id 关键标识
+        env.metrics.log(
+            "invoke_dispatch_probe",
+            {
+                "simtime": float(env.now),
+                "replica_id": id(replica),
+                "trace_sample_id": int(sample.sample_id),
+                "trace_duration": float(sample.duration),
+            },
+            function_name=function_name,
+            node=replica.node.name,
+        )
 
         env.metrics.log(
             "trace_oracle_sample",
