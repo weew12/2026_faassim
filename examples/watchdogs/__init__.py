@@ -1,5 +1,8 @@
 """
-文件作用：faas-sim 示例代码，展示某一类仿真组件如何被装配、运行和分析。
-在整体架构中的位置：属于示例层，演示用户如何组合核心组件完成实验。
+OpenFaaS watchdog 执行模型示例包。
+
+该包演示如何为不同函数绑定不同的 FunctionSimulator：
+- ForkingWatchdog：适合训练、批处理等每次请求独立执行的任务。
+- HTTPWatchdog：适合推理、Web handler 等通过固定 worker 池处理请求的任务。
 """
 

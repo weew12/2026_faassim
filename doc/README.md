@@ -272,7 +272,7 @@ Simulation 的 Environment 中包含一个 `Metrics` 对象。该对象贯穿整
 
 ### 默认日志
 
-`FaasSystem` 的默认实现 `DefaultFaasSystem` 会记录以下过程的事件。这些事件可以使用对应名称提取为 DataFrame。
+`FaasSystem` 的默认实现 `DefaultFaasSystem` 会记录以下过程的事件。这些事件可以使用对应名称提取为 DataFrame。(默认有14个 DataFrame)
 
 | 过程 | DataFrame 名称 |
 | --- | --- |

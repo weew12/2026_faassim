@@ -1,7 +1,12 @@
 """
-文件作用：结果分析示例，读取仿真输出指标并计算/展示关键实验结果。
-主要函数：main。
-在整体架构中的位置：属于示例层，演示用户如何组合核心组件完成实验。
+仿真结果分析示例。
+
+本示例复用 ``examples.basic`` 的拓扑和 benchmark，并使用
+``examples.custom_function_sim`` 中的自定义函数模拟器运行一次完整仿真。仿真结束后，
+从 ``env.metrics`` 提取常见指标表，并计算一次简单的调用执行时间均值。
+
+这个示例的重点不是实现新的调度器或工作负载，而是展示如何从一次 Simulation 中
+读取 Metrics 数据并开始做后处理分析。
 """
 
 import logging
@@ -10,28 +15,30 @@ import examples.basic.main as basic
 from examples.custom_function_sim.main import CustomSimulatorFactory
 from sim.faassim import Simulation
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 def main():
     """
-    函数作用：处理 main 相关业务逻辑。
-    关键流程：
-    - 把关键事件写入 Metrics，便于实验结束后统计部署、调度、调用或资源指标。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    运行基础仿真并提取指标表。
+
+    流程：
+    1. 创建基础拓扑和基础 benchmark。
+    2. 使用 ``CustomSimulatorFactory`` 替换默认函数模拟器。
+    3. 运行仿真。
+    4. 从 ``sim.env.metrics`` 中提取部署、调度、调用、网络和资源相关表。
+    5. 对 ``invocations`` 表中的 ``t_exec`` 做一个最小统计示例。
     """
     logging.basicConfig(level=logging.INFO)
 
-    # 业务说明：这里将仿真事件写入指标/日志，供实验分析使用。
     sim = Simulation(basic.example_topology(), basic.ExampleBenchmark())
 
-    
+    # 复用 custom_function_sim 示例里的函数执行模型，让 invocations 表产生 t_exec。
     sim.create_simulator_factory = CustomSimulatorFactory
 
-    
     sim.run()
 
+    # Metrics.extract_dataframe(name) 会把仿真过程中记录的结构化事件转成 DataFrame。
     dfs = {
         'allocation_df': sim.env.metrics.extract_dataframe('allocation'),
         'invocations_df': sim.env.metrics.extract_dataframe('invocations'),
@@ -49,7 +56,7 @@ def main():
         'fets_df': sim.env.metrics.extract_dataframe('fets')
     }
 
-    logger.info('Mean exec time %d', dfs['invocations_df']['t_exec'].mean())
+    logger.info('Mean exec time %.6f', dfs['invocations_df']['t_exec'].mean())
 
 
 if __name__ == '__main__':
