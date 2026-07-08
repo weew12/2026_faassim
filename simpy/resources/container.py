@@ -98,7 +98,9 @@ class Container(base.BaseResource):
             self, amount: ContainerAmount
         ) -> ContainerPut:
             """
-            执行 ``Container.put`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建向容器增加 ``amount`` 水位的事件。
+
+            事件可能立即成功，也可能因剩余容量不足而排队等待。
             """
             return ContainerPut(self, amount)
 
@@ -106,7 +108,9 @@ class Container(base.BaseResource):
             self, amount: ContainerAmount
         ) -> ContainerGet:
             """
-            执行 ``Container.get`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建从容器消耗 ``amount`` 水位的事件。
+
+            事件可能立即成功，也可能因当前水位不足而排队等待。
             """
             return ContainerGet(self, amount)
 

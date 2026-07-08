@@ -1,158 +1,92 @@
 # 02 · 核心引擎 core
 
-> 对应源码：`simpy/core.py`（258 行）
+对应源码：`simpy/core.py`
 
-## 1. 职责
+## 1. 文件定位
 
-`core.py` 实现 faas-sim 运行时最关键的离散事件仿真环境。它只关心三件事：
+`core.py` 实现离散事件仿真的时间轴。它只做底层调度，不理解 FaaS、网络、函数或资源语义。
 
-1. **维护仿真时间**（`_now`）和**事件优先队列**（`_queue`）。
-2. **推进事件**：每次 `step()` 取出下一个事件并触发回调。
-3. **驱动整体仿真**：`run()` 持续推进直到队列耗尽、到达指定时间或指定事件完成。
+核心职责：
 
-faas-sim 中"函数副本部署、镜像拉取、启动 setup、请求执行、资源监控、自动伸缩器"
-都以 SimPy 进程/事件挂载到该环境，因此本文件是整个仿真系统的**时间轴与调度循环**。
+- 保存当前仿真时间 `Environment._now`
+- 保存待处理事件堆 `Environment._queue`
+- 按时间、优先级和事件编号推进事件
+- 提供 `process`、`timeout`、`event`、`all_of`、`any_of` 这些常用构造器
 
-## 2. 公开符号一览
+## 2. 事件队列排序
 
-| 符号 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| `Infinity` | 常量 | `float('inf')`，表示事件队列已无下一个事件 |
-| `SimTime` | 类型别名 | `Union[int, float]` |
-| `BoundClass` | 描述符工具 | 把事件/请求类绑定成环境或资源上的方法 |
-| `EmptySchedule` | 异常 | 事件队列为空时抛出 |
-| `StopSimulation` | 异常 | `run(until=...)` 用它跳出事件循环并携带返回值 |
-| `Environment` | 类 | 离散事件仿真环境 |
-
-## 3. `BoundClass`（描述符工具）
+事件以四元组进入堆：
 
 ```python
-class BoundClass(Generic[T]):
-    def __init__(self, cls: Type[T])
-    def __get__(self, instance, owner=None) -> Union[Type[T], MethodType]
-    @staticmethod
-    def bind_early(instance) -> None
+(time, priority, eid, event)
 ```
 
-- 把事件类（或请求类）包装成一个描述符，挂到 `Environment` 或 `Resource` 实例上，
-  调用 `env.timeout(...)`、`env.process(...)` 时实际就是通过描述符返回
-  `MethodType(cls, instance)`，**省去显式传 `env` 的样板**。
-- `bind_early(instance)` 在实例化时立即把所有 `BoundClass` 字段绑定成 `MethodType`
-  并写回实例属性，从而**减少仿真循环中反复解析描述符的开销**。`Environment.__init__`
-  与所有 `BaseResource.__init__` 都会调用它。
+排序规则：
 
-## 4. `EmptySchedule` / `StopSimulation`
+1. `time` 小的先执行。
+2. 同一时间下，`priority` 小的先执行。`URGENT=0`，`NORMAL=1`。
+3. 同一时间同一优先级下，`eid` 小的先执行，保证确定性 FIFO。
 
-### 4.1 `EmptySchedule`
+这就是 SimPy 能复现仿真结果的关键之一。
 
-事件队列为空时 `step()` 会抛出。`run()` 捕获后认为仿真自然结束：
+## 3. `BoundClass`
+
+`BoundClass` 是一个描述符，用来把事件类绑定成实例方法。例如：
 
 ```python
-except EmptySchedule:
-    if until is not None:
-        # 给了 until 但还没触发 ⇒ 异常退出
-        raise RuntimeError(...)
+env.timeout(5)
 ```
 
-### 4.2 `StopSimulation`
-
-`run(until=event)` 时，框架会把 `StopSimulation.callback` 挂到该事件上。事件完成
-时 callback 抛 `StopSimulation(event.value)`，从而跳出 `while step()` 循环，并把
-事件结果作为 `run` 的返回值。
+运行时等价于：
 
 ```python
-@classmethod
-def callback(cls, event):
-    if event.ok:
-        raise cls(event.value)
-    else:
-        raise event._value
+Timeout(env, 5)
 ```
 
-## 5. `Environment`（核心）
+资源对象也复用同一机制，例如 `resource.request()`、`store.put(item)`。`bind_early()` 会在实例创建时提前绑定这些方法，减少仿真循环中的描述符解析开销。
 
-### 5.1 字段
+## 4. `Environment.step()`
 
-| 字段 | 类型 | 作用 |
-| ---- | ---- | ---- |
-| `_now` | `SimTime` | 当前仿真时间，由 `step()` 推进 |
-| `_queue` | `List[Tuple[SimTime, EventPriority, int, Event]]` | 事件堆队列 |
-| `_eid` | `count()` | 单调递增事件编号，决定同时间同优先级下的确定性顺序 |
-| `_active_proc` | `Optional[Process]` | 当前正在执行的进程 |
+`step()` 只推进一个事件：
 
-### 5.2 动态绑定方法（`process` / `timeout` / `event` / `all_of` / `any_of`）
+```text
+heappop(_queue)
+  -> _now = event_time
+  -> 取出 event.callbacks 并置空
+  -> 依次调用 callback(event)
+  -> 若事件失败且未 defused，抛出异常副本
+```
 
-通过 `BoundClass` 把 5 个常用构造器绑定到环境实例上：
+两个细节很重要：
 
-| 方法 | 返回类型 | 说明 |
-| ---- | -------- | ---- |
-| `env.process(generator)` | `Process` | 把生成器包装成 Process 并启动 |
-| `env.timeout(delay, value=None)` | `Timeout` | 延时事件，表示冷启动、执行等耗时 |
-| `env.event()` | `Event` | 手动触发事件，供进程间同步 |
-| `env.all_of(events)` | `AllOf` | 等待所有事件完成 |
-| `env.any_of(events)` | `AnyOf` | 等待任一事件完成 |
+- `callbacks` 会在执行前置为 `None`，这表示事件已被处理，也能防止回调执行期间重复修改列表。
+- 失败事件如果没有 `_defused` 标记，环境会重新构造同类型异常再抛出，避免多个事件共享同一个 traceback。
 
-> 在 `TYPE_CHECKING` 分支里还提供了带类型签名的同名方法，作用是给 IDE / 类型检查器
-> 显示正确的参数和返回值；运行时走 `else` 分支使用 `BoundClass` 形式。
+## 5. `Environment.run()`
 
-### 5.3 `schedule(event, priority=NORMAL, delay=0)`
+`run()` 是反复调用 `step()` 的循环。`until` 有三种用法：
 
-把事件按"目标时间 = `now + delay`、优先级、递增编号"压入堆队列：
+| 用法 | 行为 |
+| --- | --- |
+| `run()` | 运行到事件队列耗尽 |
+| `run(until=10)` | 在仿真时间 10 处创建一个紧急终止事件 |
+| `run(until=event)` | 运行到指定事件完成，并返回事件值 |
+
+`run(until=number)` 要求 `number > env.now`，否则会抛 `ValueError`。
+
+## 6. 停止机制
+
+`StopSimulation` 不是错误，而是内部控制流。`run(until=event)` 会把 `StopSimulation.callback` 挂到目标事件上。目标事件成功后 callback 抛出 `StopSimulation(event.value)`，`run()` 捕获它并返回结果。
+
+## 7. 与 faas-sim 的关系
+
+faas-sim 的 `sim.core.Environment` 继承这里的 `Environment`。因此所有业务流程最终都归结为：
 
 ```python
-heappush(self._queue, (self._now + delay, priority, next(self._eid), event))
+yield env.timeout(...)
+yield env.process(...)
+yield resource.request()
 ```
 
-事件以三元组 `(time, priority, eid)` 排序，确保同时间同优先级下按事件编号（即创建
-顺序）处理。
+这些 yield 不是线程阻塞，而是把当前进程挂到事件回调列表，等待未来某个 `step()` 恢复。
 
-### 5.4 `peek() -> SimTime`
-
-返回下一个事件的仿真时间；队列为空时返回 `Infinity`。该方法不弹出事件，只读取堆顶。
-
-### 5.5 `step()`
-
-推进**一个**离散事件：
-
-1. `heappop` 取出队首事件，更新 `_now`。
-2. 把 `event.callbacks` 暂存到局部变量并清空（防止处理过程中再次被修改）。
-3. 依次执行回调。
-4. 如果回调抛出 `StopSimulation`，把剩余未执行的回调重新挂回事件并以优先级 `-1`
-   调度到队列，等待后续恢复运行。
-5. 事件失败且异常未被消解（无 `_defused` 标记）时，由环境抛出**复制过**的异常
-   （避免多个环境共享同一回溯）。
-
-### 5.6 `run(until=None) -> Optional[Any]`
-
-主循环：
-
-```python
-try:
-    while True:
-        self.step()
-except StopSimulation as exc:
-    return exc.args[0]
-except EmptySchedule:
-    ...
-```
-
-支持三种 `until` 形态：
-
-| `until` 形态 | 行为 |
-| ------------ | ---- |
-| `None` | 跑到队列耗尽为止 |
-| 数值（int/float） | 内部创建一个 `URGENT` 事件，在 `until` 时刻成功触发，从而通过 `StopSimulation` 退出 |
-| `Event` | 挂 `StopSimulation.callback` 到该事件，事件完成后立即返回其 `value` |
-
-`until` 是数值时必须 `> self.now`，否则 `raise ValueError`。
-
-## 6. faas-sim 的衔接点
-
-faas-sim 的 `sim.core.Environment` 继承本类并扩展：
-
-- 维护 FaaS 资源池、函数副本、调度器。
-- 通过 `env.process(...)` 启动副本生命周期、`env.timeout(...)` 推进冷启动和执行。
-- 通过 `Resource` / `Store` / `Container` 表达请求并发和资源争用（详见 08-11）。
-
-由于 `Environment` 的语义在子类中保持不变，faas-sim 的调用方可以无差别使用
-`env.now`、`env.timeout`、`env.process` 等接口。

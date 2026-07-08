@@ -95,13 +95,17 @@ class Store(base.BaseResource):
             self, item: Any
         ) -> StorePut:
             """
-            执行 ``Store.put`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建把 ``item`` 放入队列的事件。
+
+            队列容量未满时立即成功；容量已满时排队等待。
             """
             return StorePut(self, item)
 
         def get(self) -> StoreGet:  # type: ignore[override]
             """
-            执行 ``Store.get`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建从队列取出一个对象的事件。
+
+            队列非空时立即返回队首对象；为空时排队等待。
             """
             return StoreGet(self)
 
@@ -188,7 +192,9 @@ class FilterStore(Store):
             self, filter: Callable[[Any], bool] = lambda item: True
         ) -> FilterStoreGet:
             """
-            执行 ``FilterStore.get`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建带过滤条件的取对象事件。
+
+            队列中存在满足 ``filter`` 的对象时立即成功，否则等待后续 put。
             """
             return FilterStoreGet(self, filter)
 

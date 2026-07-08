@@ -150,12 +150,12 @@ class BaseResource(Generic[PutType, GetType]):
     都来自本类的 ``_trigger_put`` / ``_trigger_get``。
     """
 
-    # 字段说明：put 请求队列类型，子类可替换为排序队列等实现。
+    # put 请求队列类型，子类可替换为排序队列等实现。
     # 例如 ``PriorityResource`` 把 PutQueue 替换为 ``SortedQueue``，使等待请求
     # 自动按 key 排序。ClassVar 让所有子类共享一份默认值。
     PutQueue: ClassVar[Type[MutableSequence]] = list
 
-    # 字段说明：get 请求队列类型，子类可替换为排序队列等实现。
+    # get 请求队列类型，子类可替换为排序队列等实现。
     GetQueue: ClassVar[Type[MutableSequence]] = list
 
     def __init__(self, env: Environment, capacity: Union[float, int]):

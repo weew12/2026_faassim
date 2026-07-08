@@ -232,9 +232,8 @@ class PriorityResource(Resource):
 
     # 把 put_queue 替换为 SortedQueue，让等待请求按 PriorityRequest.key 排序。
     PutQueue = SortedQueue
-    # 字段说明：put 请求队列类型，子类可替换为排序队列等实现。
+    # get 请求仍使用普通 FIFO 列表；释放资源不需要排序。
     GetQueue = list
-    # 字段说明：get 请求队列类型，子类可替换为排序队列等实现。
 
     def __init__(self, env: Environment, capacity: int = 1):
         super().__init__(env, capacity)
@@ -243,7 +242,9 @@ class PriorityResource(Resource):
 
         def request(self, priority: int = 0, preempt: bool = True) -> PriorityRequest:
             """
-            执行 ``PriorityResource.request`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建带优先级的资源申请事件。
+
+            ``priority`` 越小越先获得资源；``preempt`` 仅在抢占式子类中生效。
             """
             return PriorityRequest(self, priority, preempt)
 
@@ -251,7 +252,7 @@ class PriorityResource(Resource):
             self, request: PriorityRequest
         ) -> Release:
             """
-            执行 ``PriorityResource.release`` 对应的仿真辅助操作，服务于事件调度、资源管理或进程编排流程。
+            创建释放已获得资源槽的事件。
             """
             return Release(self, request)
 
