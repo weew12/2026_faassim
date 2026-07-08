@@ -20,24 +20,14 @@ from sim.faas import FunctionDeployment, FunctionRequest, Function, FunctionImag
 from sim.faassim import Simulation
 from sim.topology import Topology
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 def main():
-    """
-    函数作用：处理 main 相关业务逻辑。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
-    """
     logging.basicConfig(level=logging.DEBUG)
 
-    # 业务说明：这里将仿真事件写入指标/日志，供实验分析使用。
     topology = example_topology()
-
-    
-    # 业务说明：这里处理函数请求生成、调用执行或调用指标记录。
     benchmark = ExampleBenchmark()
-
     
     sim = Simulation(topology, benchmark)
     sim.run()
@@ -46,9 +36,6 @@ def main():
 def example_topology() -> Topology:
     """
     函数作用：处理 example、topology 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
     """
     t = Topology()
     scenario.UrbanSensingScenario().materialize(t)
@@ -61,8 +48,6 @@ class ExampleBenchmark(Benchmark):
 
     """
     类作用：ExampleBenchmark 实验场景类，组织镜像、函数部署和请求负载。
-    继承关系：Benchmark。
-    核心方法：setup、run、prepare_deployments、prepare_python_pi_deployment、prepare_resnet_inference_deployment。
     """
     def setup(self, env: Environment):
         """
@@ -85,7 +70,6 @@ class ExampleBenchmark(Benchmark):
         containers.put(ImageProperties('resnet50-inference-gpu', parse_size_string('56M'), arch='x86'))
         containers.put(ImageProperties('resnet50-inference-gpu', parse_size_string('56M'), arch='aarch64'))
 
-        # 业务说明：这里将仿真事件写入指标/日志，供实验分析使用。
         for name, tag_dict in containers.images.items():
             for tag, images in tag_dict.items():
                 logger.info('%s, %s, %s', name, tag, images)
@@ -135,9 +119,6 @@ class ExampleBenchmark(Benchmark):
     def prepare_deployments(self) -> List[FunctionDeployment]:
         """
         函数作用：准备实验所需的函数、镜像或部署配置。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
         """
         resnet_fd = self.prepare_resnet_inference_deployment()
 
@@ -147,13 +128,6 @@ class ExampleBenchmark(Benchmark):
 
     def prepare_python_pi_deployment(self):
         
-
-        """
-        函数作用：准备实验所需的函数、镜像或部署配置。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
-        """
         python_pi = 'python-pi'
         python_pi_cpu = FunctionImage(image='python-pi-cpu')
         python_pi_fn = Function(python_pi, fn_images=[python_pi_cpu])
@@ -172,13 +146,6 @@ class ExampleBenchmark(Benchmark):
 
     def prepare_resnet_inference_deployment(self):
         
-
-        """
-        函数作用：准备实验所需的函数、镜像或部署配置。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
-        """
         resnet_inference = 'resnet50-inference'
         inference_cpu = 'resnet50-inference-cpu'
         inference_gpu = 'resnet50-inference-gpu'
@@ -189,10 +156,8 @@ class ExampleBenchmark(Benchmark):
 
         
 
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
         resnet_cpu_container = FunctionContainer(resnet_inference_cpu)
 
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
         request = KubernetesResourceConfiguration.create_from_str(cpu='100m', memory='1024Mi')
         resnet_gpu_container = FunctionContainer(resnet_inference_gpu, resource_config=request)
 
