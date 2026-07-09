@@ -1,8 +1,10 @@
 """
-文件作用：仿真运行环境和节点状态文件，集中保存 SimPy 环境、拓扑、FaaS 系统、调度器、资源状态、指标记录器和节点运行时状态。
-主要类：NodeState、SimulationTimeoutError、Environment。
-主要函数：timeout_listener。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+仿真全局环境与节点运行时状态。
+
+本模块在 SimPy Environment 之上增加 faas-sim 所需的业务上下文：拓扑、FaaS 系统、调度器、容器仓库、资源状态、指标系统、节点状态和后台进程列表。
+NodeState 负责记录单个节点上的镜像缓存、正在执行的请求、历史请求以及性能退化模型输入。
+
+阅读建议：先看 Environment 如何挂载组件，再看 NodeState 如何支持镜像缓存、请求历史和性能退化。
 """
 
 import time
@@ -16,60 +18,65 @@ from sklearn.base import RegressorMixin
 from .degradation import create_degradation_model_input
 from .oracle.oracle import ResourceOracle
 
-# 字段说明：Node：表示 node，在当前业务流程中作为输入参数、状态字段或计算结果使用。
 Node = EtherNode
 
 
 class NodeState:
     """
-    类作用：节点运行时状态，记录镜像缓存、当前调用、历史调用和性能退化模型。
-    核心字段：docker_images：节点上已经缓存的容器镜像集合，用于避免重复拉取镜像。；current_requests：节点当前正在执行的函数调用记录，用于并发和干扰计算。；all_requests：节点历史函数调用记录，用于窗口查询和指标分析。；performance_degradation：节点级性能退化模型，用于估计多租户资源竞争造成的执行时间放大。。
-    核心方法：__init__、estimate_degradation、clean_up、set_end、name、arch、capacity、get_calls_in_timeframe。
+    单个仿真节点的运行时状态。
+
+    保存 Ether 节点、Skippy 节点、已缓存镜像、当前请求、历史请求和性能退化模型。性能退化估计会读取时间窗口内的并发调用并构造模型输入。
+
+    重要字段：
+    - docker_images: 当前节点已经缓存的镜像集合；镜像拉取时会先查这里避免重复传输。
+    - current_requests: 当前正在该节点上执行的函数请求集合。
+    - all_requests: 节点历史请求列表，性能退化模型会按时间窗口读取这里的并发请求。
+    - performance_degradation: 可选的 sklearn 回归模型，用于根据并发和资源画像预测性能退化。
+    - ether_node: 原始 Ether 节点对象，保存网络拓扑和容量信息。
+    - skippy_node: Skippy 节点视图，供调度器读取容量、标签和可分配资源。
+    - buffer_size: 历史请求缓存的当前计数，用于触发清理逻辑。
+    - buffer_limit: 历史请求缓存清理阈值。
+    - cache: 性能退化估计缓存，避免重复计算同一时间窗口。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：docker_images：节点上已经缓存的容器镜像集合，用于避免重复拉取镜像。
     docker_images: Set
-    # 字段说明：current_requests：节点当前正在执行的函数调用记录，用于并发和干扰计算。
     current_requests: Set
-    # 字段说明：all_requests：节点历史函数调用记录，用于窗口查询和指标分析。
     all_requests: List[any]
-    # 字段说明：performance_degradation：节点级性能退化模型，用于估计多租户资源竞争造成的执行时间放大。
     performance_degradation: Optional[RegressorMixin]
 
     def __init__(self) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：all_requests、buffer_limit、buffer_size、cache、current_requests、docker_images、ether_node、performance_degradation、skippy_node。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 NodeState 对象。
+
+        主要建立字段：ether_node、skippy_node、docker_images、current_requests、all_requests、performance_degradation、buffer_size、buffer_limit、cache。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.ether_node：Ether 拓扑中的节点对象，保存网络和容量属性。
         self.ether_node = None
-        # 字段说明：self.skippy_node：Skippy 调度器中的节点表示，与 Ether 节点一一对应。
         self.skippy_node = None
-        # 字段说明：self.docker_images：节点上已经缓存的容器镜像集合，用于避免重复拉取镜像。
         self.docker_images = set()
-        # 字段说明：self.current_requests：节点当前正在执行的函数调用记录，用于并发和干扰计算。
         self.current_requests = set()
-        # 字段说明：self.all_requests：节点历史函数调用记录，用于窗口查询和指标分析。
         self.all_requests = []
-        # 字段说明：self.performance_degradation：节点级性能退化模型，用于估计多租户资源竞争造成的执行时间放大。
         self.performance_degradation = None
-        # 字段说明：self.buffer_size：缓冲区大小，用于网络、日志或资源窗口数据暂存。
         self.buffer_size = 0
-        # 字段说明：self.buffer_limit：缓冲区上限，限制记录或数据暂存规模。
         self.buffer_limit = 50
-        # 字段说明：self.cache：缓存表，避免重复构造昂贵对象或重复计算调度/网络结果。
         self.cache = {}
 
     def estimate_degradation(self, resource_oracle: ResourceOracle,
                              start_ts: int, end_ts: int) -> float:
         """
-        函数作用：基于节点并发调用状态估计当前函数执行的性能退化倍数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。；start_ts：表示 start、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。；end_ts：表示 end、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        估计当前节点在给定时间窗口内的性能退化比例。
+
+        方法会先按四舍五入后的起止时间查缓存；缓存未命中时，收集窗口内重叠的历史请求，构造成退化模型输入，再调用 performance_degradation.predict。没有模型或没有有效特征时返回 0。
+
+        参数说明：
+        - resource_oracle: 资源 Oracle，用于查询函数在不同节点上的资源画像。 类型标注：ResourceOracle。
+        - start_ts: 统计或估计窗口的开始仿真时间。 类型标注：int。
+        - end_ts: 统计或估计窗口的结束仿真时间。 类型标注：int。
+
+        返回说明：返回值类型标注为 float，通常作为后续调度、执行、统计或查询流程的输入。
         """
         if self.performance_degradation is not None:
             rounded_start = round(start_ts, 1)
@@ -93,10 +100,11 @@ class NodeState:
 
     def clean_up(self):
         """
-        函数作用：移除已结束的历史调用，避免旧调用影响后续退化估计。
-        关键流程：
-        - 写入对象字段：buffer_size。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        压缩节点历史请求缓存。
+
+        当缓存达到上限时，删除已经结束且不会再被未完成请求窗口依赖的历史请求，避免退化模型的历史数据无限增长。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         if self.buffer_size >= self.buffer_limit:
             remove_candidates = [x for x in self.all_requests if x.end is not None]
@@ -111,15 +119,20 @@ class NodeState:
                 remove_candidates.remove(req)
             for req in remove_candidates:
                 self.all_requests.remove(req)
-            # 字段说明：self.buffer_size：缓冲区大小，用于网络、日志或资源窗口数据暂存。
             self.buffer_size = self.buffer_size - len(remove_candidates)
         self.buffer_size += 1
 
     def set_end(self, request_id, end):
         """
-        函数作用：给指定请求对应的调用记录写入结束时间。
-        参数：request_id：函数调用请求的唯一编号。；end：函数调用结束时间。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为指定请求记录结束时间。
+
+        调用执行结束后根据 request_id 找到历史请求并写入 end，然后触发 clean_up 清理旧请求。
+
+        参数说明：
+        - request_id: 请求唯一编号，用于在历史请求中定位对应调用。
+        - end: 请求结束的仿真时间。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         for call in self.all_requests:
             if call.request_id == request_id:
@@ -130,40 +143,41 @@ class NodeState:
     @property
     def name(self):
         """
-        函数作用：返回对象在业务域中的稳定名称。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回对象的名称字段。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self.ether_node.name
 
     @property
     def arch(self):
         """
-        函数作用：处理 arch 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回节点 CPU 架构，用于镜像兼容性和调度判断。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self.ether_node.arch
 
     @property
     def capacity(self) -> Capacity:
         """
-        函数作用：处理 capacity 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回 Ether 节点容量对象，包含 CPU、内存等资源上限。
+
+        返回说明：返回值类型标注为 Capacity，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return self.ether_node.capacity
 
     def get_calls_in_timeframe(self, start_ts, end_ts) -> List:
         """
-        函数作用：查询指定时间窗口内仍相关的函数调用记录。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：start_ts：表示 start、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。；end_ts：表示 end、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        查询与时间窗口发生重叠的请求。
+
+        只要请求在 start_ts 前已经开始且窗口开始时仍未结束，或请求在窗口内部开始，都会被认为会影响该窗口的并发退化估计。
+
+        参数说明：
+        - start_ts: 统计或估计窗口的开始仿真时间。
+        - end_ts: 统计或估计窗口的结束仿真时间。
+
+        返回说明：返回值类型标注为 List，通常作为后续调度、执行、统计或查询流程的输入。
         """
         calls = []
         for call in self.all_requests:
@@ -180,71 +194,81 @@ class NodeState:
 
 class SimulationTimeoutError(BaseException):
     """
-    类作用：SimulationTimeoutError 类，封装 simulation、timeout、error 相关状态和业务操作。
-    继承关系：BaseException。
+    仿真超时控制异常。
+
+    timeout_listener 在达到最大仿真时长后抛出该异常，用于从运行循环中显式退出。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     pass
 
 
 class Environment(simpy.Environment):
     """
-    类作用：仿真全局上下文，持有 SimPy 环境、拓扑、FaaS 系统、调度器、资源状态、指标器等组件引用。
-    继承关系：simpy.Environment。
-    核心字段：cluster：调度上下文，向调度器暴露节点、资源和镜像缓存状态。；faas：FaaS 系统实例，负责函数部署、调用、扩缩容和副本生命周期管理。。
-    核心方法：__init__、get_node_state。
+    faas-sim 全局仿真环境。
+
+    继承 SimPy Environment，并挂载拓扑、FaaS 系统、调度器、容器仓库、资源状态、指标器、监控器、Benchmark 和节点状态表等业务组件。
+
+    重要字段：
+    - cluster: Skippy 集群上下文适配器，把 faas-sim 的拓扑和资源状态暴露给调度器。
+    - faas: FaaS 平台实现，负责部署、调用、扩缩容和副本生命周期管理。
+    - simulator_factory: 函数模拟器工厂，用于为每个新副本创建生命周期模拟器。
+    - topology: Ether 拓扑对象，描述节点、链路和路由关系。
+    - storage_index: Skippy 存储索引，用于描述数据所在节点。
+    - benchmark: 实验场景对象，负责注册镜像、部署函数并产生请求负载。
+    - container_registry: 容器镜像仓库，按镜像名、tag 和架构保存镜像大小等元数据。
+    - metrics: 指标中心，用于记录部署、调度、调用、网络和资源利用率事件。
+    - scheduler: Skippy 调度器，负责为待启动 Pod 选择运行节点。
+    - node_states: 节点名到 NodeState 的缓存，用于保存镜像缓存、运行请求和退化模型状态。
+    - metrics_server: 资源窗口服务，保存周期性资源采样并计算平均利用率。
+    - resource_state: 全局资源占用表，记录每个节点上各函数副本占用的 CPU、内存等资源。
+    - resource_monitor: 资源监控后台进程，周期性读取 resource_state 并写入 metrics_server。
+    - background_processes: 需要随 FaaS 系统一起启动的后台 SimPy 进程列表。
+    - degradation_models: 节点名到性能退化模型的映射，用于执行时间退化估计。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：cluster：调度上下文，向调度器暴露节点、资源和镜像缓存状态。
     cluster: 'SimulationClusterContext'
-    # 字段说明：faas：FaaS 系统实例，负责函数部署、调用、扩缩容和副本生命周期管理。
     faas: 'FaasSystem'
 
     def __init__(self, initial_time=0):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：background_processes、benchmark、cluster、container_registry、degradation_models、faas、metrics、metrics_server、node_states、resource_monitor、resource_state、scheduler、simulator_factory、storage_index、topology。
-        参数：initial_time：表示 initial、time，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 Environment 对象。
+
+        主要建立字段：faas、simulator_factory、topology、storage_index、benchmark、cluster、container_registry、metrics、scheduler、node_states、metrics_server、resource_state、resource_monitor、background_processes、degradation_models。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - initial_time: SimPy 环境的初始仿真时间。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__(initial_time)
-        # 字段说明：self.faas：FaaS 系统实例，负责函数部署、调用、扩缩容和副本生命周期管理。
         self.faas = None
-        # 字段说明：self.simulator_factory：函数模拟器工厂，根据函数定义创建具体 FunctionSimulator。
         self.simulator_factory = None
-        # 字段说明：self.topology：Ether 拓扑对象，描述节点、链路、路由和容器仓库位置。
         self.topology = None
-        # 字段说明：self.storage_index：存储节点索引，用于模拟函数输入/输出数据传输。
         self.storage_index = None
-        # 字段说明：self.benchmark：实验场景对象，定义镜像注册、函数部署和请求生成逻辑。
         self.benchmark = None
-        # 字段说明：self.cluster：调度上下文，向调度器暴露节点、资源和镜像缓存状态。
         self.cluster = None
-        # 字段说明：self.container_registry：容器镜像仓库，保存可拉取镜像及其大小、架构信息。
         self.container_registry = None
-        # 字段说明：self.metrics：结构化指标记录器。
         self.metrics = None
-        # 字段说明：self.scheduler：函数副本调度器，决定副本放置到哪个节点。
         self.scheduler = None
-        # 字段说明：self.node_states：按节点名称索引的运行时状态表。
         self.node_states = dict()
-        # 字段说明：self.metrics_server：资源窗口指标服务器，提供平均 CPU/资源利用率查询。
         self.metrics_server = None
-        # 字段说明：self.resource_state：全局资源状态表，记录副本在节点上的资源占用。
         self.resource_state = None
-        # 字段说明：self.resource_monitor：资源监控后台进程对象。
         self.resource_monitor = None
-        # 字段说明：self.background_processes：后台 SimPy 进程列表，例如资源监控器和自动伸缩器。
         self.background_processes: List[Callable[[Environment], Generator[simpy.events.Event, Any, Any]]] = []
-        # 字段说明：self.degradation_models：节点级性能退化模型集合，用于多租户干扰预测。
         self.degradation_models: Dict[str, Optional[RegressorMixin]] = {}
 
     def get_node_state(self, name: str) -> Optional[NodeState]:
         """
-        函数作用：读取或创建指定节点的运行时状态对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：name：对象名称。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回指定节点名对应的 NodeState。
+
+        节点状态在 Environment 初始化拓扑时建立，后续部署、镜像缓存、请求执行和退化估计都通过该入口访问。
+
+        参数说明：
+        - name: name 参数，参与当前方法的计算、查询、状态更新或流程控制。 类型标注：str。
+
+        返回说明：返回值类型标注为 Optional[NodeState]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         if name in self.node_states:
             return self.node_states[name]
@@ -267,15 +291,19 @@ class Environment(simpy.Environment):
 
 def timeout_listener(env, started, max_time, interval=1):
     """
-    函数作用：监听仿真超时事件，到达时间上限后停止仿真。
-    关键流程：
-    - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-    - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-    参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；started：表示 started，在当前业务流程中作为输入参数、状态字段或计算结果使用。；max_time：表示 max、time，在当前业务流程中作为输入参数、状态字段或计算结果使用。；interval：轮询或采样间隔。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    仿真超时监听进程。
+
+    该协程等待 timeout 秒后抛出 SimulationTimeoutError，用于让长时间实验可以被显式截断。
+
+    参数说明：
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+    - started: 实验开始时的真实墙钟时间。
+    - max_time: 允许实验运行的最大墙钟秒数。
+    - interval: 轮询或后台循环间隔，单位为仿真时间。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     while True:
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(interval)
 
         if (time.time() - started) > max_time:

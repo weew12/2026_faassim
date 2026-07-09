@@ -1,7 +1,8 @@
 """
-文件作用：性能退化模型输入构造文件，将当前并发函数的资源向量汇总成固定长度特征，供机器学习退化模型预测使用。
-主要函数：create_degradation_model_input。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+性能退化模型输入构造。
+
+本模块把某个时间窗口内并发函数调用的资源占用整理成固定顺序的数值特征，供节点级回归模型预测执行时间放大倍数。
+它不负责训练模型，只负责从当前仿真状态和 ResourceOracle 中构造模型输入。
 """
 
 import logging
@@ -17,32 +18,32 @@ def create_degradation_model_input(calls: List, start_ts, end_ts, node_name: str
                                    ram_capacity: float,
                                    resource_oracle: ResourceOracle) -> np.ndarray:
     
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
-    # 业务说明：这里将仿真事件写入指标/日志，供实验分析使用。
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     
     
     
     
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     
     
     
     
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     
     
     
     
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：calls：表示 calls，在当前业务流程中作为输入参数、状态字段或计算结果使用。；start_ts：表示 start、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。；end_ts：表示 end、ts，在当前业务流程中作为输入参数、状态字段或计算结果使用。；node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。；ram_capacity：表示 ram、capacity，在当前业务流程中作为输入参数、状态字段或计算结果使用。；resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    构造性能退化模型输入特征。
+
+    方法根据时间窗口内并发调用、节点资源和资源 Oracle 生成特征向量，供 NodeState.estimate_degradation 调用模型预测。
+
+    参数说明：
+    - calls: 时间窗口内可能并发的历史请求列表。 类型标注：List。
+    - start_ts: 统计或估计窗口的开始仿真时间。
+    - end_ts: 统计或估计窗口的结束仿真时间。
+    - node_name: 节点名称。 类型标注：str。
+    - ram_capacity: 目标节点总内存容量，用于把内存占用转成相对特征。 类型标注：float。
+    - resource_oracle: 资源 Oracle，用于查询函数在不同节点上的资源画像。 类型标注：ResourceOracle。
+
+    返回说明：返回值类型标注为 np.ndarray，通常作为后续调度、执行、统计或查询流程的输入。
     """
     resources_types = ['cpu', 'gpu', 'blkio', 'net']
 
@@ -86,7 +87,6 @@ def create_degradation_model_input(calls: List, start_ts, end_ts, node_name: str
 
     
     
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     
     input = []
     for resource in resources_types:
@@ -107,7 +107,6 @@ def create_degradation_model_input(calls: List, start_ts, end_ts, node_name: str
     
     input.append(len(sums['cpu']))
 
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     for resource in resources_types:
         input.append(np.sum(sums[resource]))
 

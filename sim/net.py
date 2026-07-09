@@ -1,35 +1,39 @@
 """
-文件作用：网络安全包装逻辑，在 Ether flow 基础上增加低带宽异常判断，避免资源受限链路被静默使用。
-主要类：LowBandwidthException。
-主要函数：SafeFlow。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+网络流安全包装。
+
+SafeFlow 在 Ether flow 基础上增加低带宽检查，避免链路不可用或带宽过低时仿真静默继续，帮助尽早暴露拓扑或调度错误。
 """
 
 import logging
 
 from ether.core import Flow
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 class LowBandwidthException(BaseException):
     """
-    类作用：LowBandwidthException 类，封装 low、bandwidth、exception 相关状态和业务操作。
-    继承关系：BaseException。
+    链路带宽过低异常。
+
+    SafeFlow 检测到不可接受带宽时抛出，防止网络仿真静默使用异常链路。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     pass
 
 
 def SafeFlow(*args, bw_threshold=0.1, **kwargs):
     """
-    函数作用：创建带低带宽保护的网络 flow，带宽过低时抛出异常。
-    关键流程：
-    - 涉及网络流或镜像/数据传输，网络耗时会影响仿真时钟。
-    - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：bw_threshold：表示 bw、threshold，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建安全网络流。
+
+    当路由带宽不足或不存在时抛出 LowBandwidthException；正常情况下返回 ether 的 Flow 对象，用于模拟字节传输耗时。
+
+    参数说明：
+    - bw_threshold: 最小可接受带宽阈值，低于该值时认为链路不可用。
+    - *args: 可变位置参数。
+    - **kwargs: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+    返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
     """
     flow = Flow(*args, **kwargs)
 

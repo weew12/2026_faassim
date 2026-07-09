@@ -1,7 +1,9 @@
 """
-文件作用：OpenFaaS watchdog 执行模型抽象，模拟 Fork 模式和 HTTP worker 队列模式下函数请求如何进入用户处理逻辑。
-主要类：Watchdog、ForkingWatchdog、HTTPWatchdog。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+函数执行 watchdog 模型。
+
+Watchdog 封装函数调用期间的资源申请、执行和释放流程。不同 watchdog 表达不同运行时模型，例如直接串行执行或按 worker token 限制并发。
+
+阅读建议：重点看 claim_resources、execute、release_resources 如何组成一次函数调用。
 """
 
 import logging
@@ -11,66 +13,101 @@ import simpy
 from .core import FunctionSimulator, FunctionRequest, FunctionReplica
 from ..core import Environment
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 class Watchdog(FunctionSimulator):
 
     """
-    类作用：OpenFaaS watchdog 抽象基类，定义资源声明、资源释放和用户函数执行钩子。
-    继承关系：FunctionSimulator。
-    核心方法：claim_resources、release_resources、execute。
+    函数执行 watchdog 接口。
+
+    把一次函数调用拆成资源申请、执行和资源释放三个阶段。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 方法说明：函数作用：在资源状态中声明函数执行阶段需要占用的资源。
-    # 方法说明：参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-    # 方法说明：返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
-    def claim_resources(self, env: Environment, replica: FunctionReplica, request: FunctionRequest): ...
+    def claim_resources(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
+        """
+        抽象接口方法：claim_resources。
 
-    # 方法说明：函数作用：释放函数执行阶段占用的资源。
-    # 方法说明：参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-    # 方法说明：返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
-    def release_resources(self, env: Environment, replica: FunctionReplica, request: FunctionRequest): ...
+        这里只声明子类必须提供的能力，不包含具体业务实现。阅读运行逻辑时应跳到对应子类查看实际代码。
 
-    # 方法说明：函数作用：模拟用户函数主体逻辑的执行耗时。
-    # 方法说明：参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-    # 方法说明：返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
-    def execute(self, env: Environment, replica: FunctionReplica, request: FunctionRequest): ...
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+        """
+        ...
+
+    def release_resources(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
+        """
+        抽象接口方法：release_resources。
+
+        这里只声明子类必须提供的能力，不包含具体业务实现。阅读运行逻辑时应跳到对应子类查看实际代码。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+        """
+        ...
+
+    def execute(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
+        """
+        抽象接口方法：execute。
+
+        这里只声明子类必须提供的能力，不包含具体业务实现。阅读运行逻辑时应跳到对应子类查看实际代码。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+        """
+        ...
 
 
 class ForkingWatchdog(Watchdog):
 
     """
-    类作用：Fork 模式 watchdog，每个请求独立执行用户函数并承担进程启动开销。
-    继承关系：Watchdog。
-    核心方法：invoke。
+    串行资源控制 watchdog。
+
+    按 claim -> execute -> release 顺序处理一次请求，适合不额外限制 worker token 的执行模型。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         """
-        函数作用：处理一次函数调用请求，包括选择副本、等待可用实例、执行模拟器并记录指标。
-        关键流程：
-        - 把关键事件写入 Metrics，便于实验结束后统计部署、调度、调用或资源指标。
-        - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        按串行 watchdog 模型执行一次函数请求。
+
+        流程为登记当前请求、申请资源、执行函数、释放资源、记录 FET 指标，最后从节点 current_requests 中移除请求。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 requestgen.function_trigger -> env.faas.invoke -> simulate_function_invocation -> replica.simulator.invoke。
         """
         replica.node.current_requests.add(request)
         t_fet_start = env.now
 
         logger.debug('[simtime=%.2f] invoking function %s on node %s', t_fet_start, request, replica.node.name)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.claim_resources(env, replica, request)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.execute(env, replica, request)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.release_resources(env, replica, request)
 
         t_fet_end = env.now
 
-        # 指标记录：把当前业务事件写入结构化结果，便于实验后分析。
         env.metrics.log_fet(replica.fn_name, replica.image, replica.node.name,
                             t_fet_start=t_fet_start, t_fet_end=t_fet_end, replica_id=id(replica),
                             request_id=request.request_id)
@@ -80,50 +117,65 @@ class ForkingWatchdog(Watchdog):
 
 class HTTPWatchdog(Watchdog):
     """
-    类作用：HTTP 模式 watchdog，维护 worker 队列并发处理请求，适合模拟 Flask/HTTP server 模式。
-    继承关系：Watchdog。
-    核心字段：queue：SimPy 资源队列，用于限制 HTTP 模式下的并发 worker 数。。
-    核心方法：__init__、setup、invoke。
+    HTTP worker 池 watchdog。
+
+    通过 simpy.Resource 限制并发 worker 数，请求必须先获取 token 才能执行。
+
+    重要字段：
+    - queue: SimPy Resource 或请求队列，用于限制并发或统计排队长度。
+    - workers: HTTP watchdog 可并发处理请求的 worker 数。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：queue：SimPy 资源队列，用于限制 HTTP 模式下的并发 worker 数。
     queue: simpy.Resource
 
     def __init__(self, workers: int):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：queue、workers。
-        参数：workers：worker 资源池或 worker 数组，用于模拟 HTTP 并发处理能力。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 HTTPWatchdog 对象。
+
+        主要建立字段：workers、queue。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - workers: HTTP watchdog worker 数，也就是同一副本允许的并发请求数。 类型标注：int。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.workers：worker 资源池或 worker 数组，用于模拟 HTTP 并发处理能力。
         self.workers = workers
-        # 字段说明：self.queue：SimPy 资源队列，用于限制 HTTP 模式下的并发 worker 数。
         self.queue = None
 
     def setup(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        关键流程：
-        - 写入对象字段：queue。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为 HTTP watchdog 创建 worker token 池。
+
+        simpy.Resource 的 capacity 等于 workers，用来限制同一副本内可并发执行的请求数量。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：setup 通常只准备状态或外部资源，是否推进仿真时间取决于内部是否包含 yield。
         """
-        # 字段说明：self.queue：SimPy 资源队列，用于限制 HTTP 模式下的并发 worker 数。
         self.queue = simpy.Resource(env, capacity=self.workers)
 
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         """
-        函数作用：处理一次函数调用请求，包括选择副本、等待可用实例、执行模拟器并记录指标。
-        关键流程：
-        - 把关键事件写入 Metrics，便于实验结束后统计部署、调度、调用或资源指标。
-        - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        按 HTTP worker 池模型执行一次函数请求。
+
+        请求先等待 worker token，等待时间会被记录；拿到 token 后执行 claim/execute/release，记录 FET，最后释放 token。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 requestgen.function_trigger -> env.faas.invoke -> simulate_function_invocation -> replica.simulator.invoke。
         """
         token = self.queue.request()
         t_wait_start = env.now
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield token
         t_wait_end = env.now
 
@@ -132,20 +184,16 @@ class HTTPWatchdog(Watchdog):
 
         replica.node.current_requests.add(request)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.claim_resources(env, replica, request)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.execute(env, replica, request)
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from self.release_resources(env, replica, request)
 
         t_fet_end = env.now
 
         replica.node.current_requests.remove(request)
 
-        # 指标记录：把当前业务事件写入结构化结果，便于实验后分析。
         env.metrics.log_fet(replica.fn_name, replica.image, replica.node.name,
                             t_fet_start=t_fet_start, t_fet_end=t_fet_end, replica_id=id(replica),
                             request_id=request.request_id,

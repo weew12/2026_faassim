@@ -1,7 +1,9 @@
 """
-文件作用：资源状态和资源监控实现，记录函数副本在节点上的 CPU、内存、网络、磁盘等资源占用，并按窗口汇总指标。
-主要类：ResourceUtilization、NodeResourceUtilization、ResourceState、ResourceWindow、MetricsServer、ResourceMonitor。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+资源状态、资源窗口与资源监控。
+
+本模块记录函数副本在节点上的资源占用，按副本和节点聚合利用率，并通过 ResourceMonitor 周期性采样写入 MetricsServer。
+
+阅读建议：先看 ResourceState 如何登记资源，再看 ResourceMonitor 如何周期采样。
 """
 
 from collections import defaultdict
@@ -16,28 +18,37 @@ from sim.faas import FunctionReplica, FaasSystem, FunctionState
 
 class ResourceUtilization:
     """
-    类作用：单个副本或对象的资源集合，支持资源添加、移除、复制和按名称读取。
-    核心字段：__resources：内部资源字典，按资源名保存资源占用值。。
-    核心方法：__init__、put_resource、remove_resource、list_resources、copy、get_resource、is_empty。
+    单个副本的资源使用集合。
+
+    按资源名累计占用值，并提供复制、查询和空判断。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：__resources：内部资源字典，按资源名保存资源占用值。
     __resources: Dict[str, float]
 
     def __init__(self):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：__resources。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ResourceUtilization 对象。
+
+        主要建立字段：__resources。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.__resources：内部资源字典，按资源名保存资源占用值。
         self.__resources = {}
 
     def put_resource(self, resource: str, value: float):
         """
-        函数作用：给指定资源名登记一个资源占用值。
-        参数：resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        累加某类资源的占用值。
+
+        资源名不存在时先初始化为 0，再把 value 加到当前占用上。CPU、内存、网络等资源都用同一套字典结构保存。
+
+        参数说明：
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源登记通常在函数执行开始时发生，必须与 release/remove 逻辑配对。
         """
         if self.__resources.get(resource) is None:
             self.__resources[resource] = 0
@@ -45,9 +56,17 @@ class ResourceUtilization:
 
     def remove_resource(self, resource: str, value: float):
         """
-        函数作用：移除指定资源占用。
-        参数：resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        扣减某类资源的占用值。
+
+        函数执行阶段结束时调用该方法释放之前登记的资源占用。
+
+        参数说明：
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源释放通常在函数执行结束时发生，避免后续采样继续看到已结束请求的资源占用。
         """
         if self.__resources.get(resource) is None:
             self.__resources[resource] = 0
@@ -55,19 +74,21 @@ class ResourceUtilization:
 
     def list_resources(self) -> Dict[str, float]:
         """
-        函数作用：列出当前对象持有的资源名。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回资源占用字典的深拷贝。
+
+        调用方拿到的是快照，修改返回值不会影响 ResourceUtilization 内部状态。
+
+        返回说明：返回值类型标注为 Dict[str, float]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return deepcopy(self.__resources)
 
     def copy(self) -> 'ResourceUtilization':
         """
-        函数作用：复制当前对象，避免外部修改影响原状态。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        复制当前资源占用对象。
+
+        新对象拥有独立的资源字典，适合在采样窗口或指标记录中保存某一时刻的状态。
+
+        返回说明：返回值类型标注为 'ResourceUtilization'，通常作为后续调度、执行、统计或查询流程的输入。
         """
         util = ResourceUtilization()
         util.__resources = self.list_resources()
@@ -75,79 +96,96 @@ class ResourceUtilization:
 
     def get_resource(self, resource) -> Optional[float]:
         """
-        函数作用：读取指定资源名对应的占用值。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：resource：资源名称或资源对象。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        读取指定资源的当前占用值。
+
+        资源不存在时返回 None，调用方需要按业务含义决定是否当作 0 处理。
+
+        参数说明：
+        - resource: 资源名，例如 cpu、memory、net 等。
+
+        返回说明：返回值类型标注为 Optional[float]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return self.__resources.get(resource)
 
     def is_empty(self) -> bool:
         """
-        函数作用：判断当前资源集合是否为空。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        判断当前对象是否没有记录任何资源占用。
+
+        返回说明：返回值类型标注为 bool，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return len(self.__resources) == 0
 
 
 class NodeResourceUtilization:
-    # 业务说明：这里处理节点、拓扑或网络连接相关状态。
     """
-    类作用：节点级资源使用视图，按副本聚合资源并计算节点总利用率。
-    核心字段：__resources：内部资源字典，按资源名保存资源占用值。；__replicas：内部副本字典，按副本对象保存其资源使用情况。。
-    核心方法：__init__、put_resource、remove_resource、get_resource_utilization、list_resource_utilization、total_utilization。
+    节点级资源使用聚合。
+
+    按 Pod/副本保存 ResourceUtilization，并可汇总节点总资源占用。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：__resources：内部资源字典，按资源名保存资源占用值。
     __resources: Dict[str, ResourceUtilization]
 
     
-    # 字段说明：__replicas：内部副本字典，按副本对象保存其资源使用情况。
     __replicas: Dict[str, FunctionReplica]
 
     def __init__(self):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：__replicas、__resources。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 NodeResourceUtilization 对象。
+
+        主要建立字段：__resources、__replicas。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.__resources：内部资源字典，按资源名保存资源占用值。
         self.__resources = {}
-        # 字段说明：self.__replicas：内部副本字典，按副本对象保存其资源使用情况。
         self.__replicas = {}
 
     def put_resource(self, replica: FunctionReplica, resource: str, value: float):
         """
-        函数作用：给指定资源名登记一个资源占用值。
-        关键流程：
-        - 向资源状态登记占用，反映函数副本在节点上的运行负载。
-        参数：replica：正在部署、执行或释放的函数副本。；resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为某个副本登记节点上的资源占用。
+
+        副本以 Pod 名为键保存；不存在记录时会自动创建 ResourceUtilization。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源登记通常在函数执行开始时发生，必须与 release/remove 逻辑配对。
         """
         # 资源占用：登记函数当前阶段占用的资源。
         self.get_resource_utilization(replica).put_resource(resource, value)
 
     def remove_resource(self, replica: FunctionReplica, resource: str, value: float):
         """
-        函数作用：移除指定资源占用。
-        关键流程：
-        - 从资源状态移除占用，避免已结束阶段继续影响资源利用率。
-        参数：replica：正在部署、执行或释放的函数副本。；resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        释放某个副本在节点上的资源占用。
+
+        该方法只改变资源计数，不删除副本索引，因此后续监控仍可按 Pod 找到该副本。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源释放通常在函数执行结束时发生，避免后续采样继续看到已结束请求的资源占用。
         """
         # 资源释放：移除函数当前阶段占用，避免影响后续资源统计。
         self.get_resource_utilization(replica).remove_resource(resource, value)
 
     def get_resource_utilization(self, replica: FunctionReplica) -> ResourceUtilization:
         """
-        函数作用：读取某副本或某节点的资源利用率对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回指定副本的资源占用对象。
+
+        如果该副本首次出现，会创建空的 ResourceUtilization 并登记副本引用。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：返回值类型标注为 ResourceUtilization，通常作为后续调度、执行、统计或查询流程的输入。
         """
         name = replica.pod.name
         util = self.__resources.get(name)
@@ -160,10 +198,11 @@ class NodeResourceUtilization:
 
     def list_resource_utilization(self) -> List[Tuple[FunctionReplica, ResourceUtilization]]:
         """
-        函数作用：列出节点上所有副本的资源利用率。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        列出节点上所有副本及其资源占用。
+
+        返回值是 (FunctionReplica, ResourceUtilization) 列表，供资源监控器逐个采样。
+
+        返回说明：返回值类型标注为 List[Tuple[FunctionReplica, ResourceUtilization]]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         functions = []
         for pod_name, utilization in self.__resources.items():
@@ -174,11 +213,11 @@ class NodeResourceUtilization:
     @property
     def total_utilization(self) -> ResourceUtilization:
         """
-        函数作用：汇总节点上所有副本的资源占用。
-        关键流程：
-        - 向资源状态登记占用，反映函数副本在节点上的运行负载。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        汇总节点上所有副本的资源占用。
+
+        逐个遍历副本资源字典，把同名资源加总到新的 ResourceUtilization 中。
+
+        返回说明：返回值类型标注为 ResourceUtilization，通常作为后续调度、执行、统计或查询流程的输入。
         """
         total = ResourceUtilization()
         for _, resource_utilization in self.list_resource_utilization():
@@ -190,31 +229,43 @@ class NodeResourceUtilization:
 
 class ResourceState:
     """
-    类作用：全局资源状态表，按节点维护 NodeResourceUtilization。
-    核心字段：node_resource_utilizations：按节点索引的资源利用率表。。
-    核心方法：__init__、put_resource、remove_resource、get_resource_utilization、list_resource_utilization、get_node_resource_utilization。
+    全局资源状态表。
+
+    按节点维护 NodeResourceUtilization，提供登记、释放和查询副本资源占用的入口。
+
+    重要字段：
+    - node_resource_utilizations: node_resource_utilizations 相关的内部状态或配置；本类方法会在对应业务阶段读取或更新它。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：node_resource_utilizations：按节点索引的资源利用率表。
     node_resource_utilizations: Dict[str, NodeResourceUtilization]
 
     def __init__(self):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：node_resource_utilizations。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ResourceState 对象。
+
+        主要建立字段：node_resource_utilizations。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.node_resource_utilizations：按节点索引的资源利用率表。
         self.node_resource_utilizations = {}
 
     def put_resource(self, function_replica: FunctionReplica, resource: str, value: float):
         """
-        函数作用：给指定资源名登记一个资源占用值。
-        关键流程：
-        - 向资源状态登记占用，反映函数副本在节点上的运行负载。
-        参数：function_replica：表示 function、replica，在当前业务流程中作为输入参数、状态字段或计算结果使用。；resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        登记某个副本在其所在节点上的资源占用。
+
+        方法先根据 replica.node.name 找到节点资源表，再把资源增量写入对应副本。
+
+        参数说明：
+        - function_replica: function_replica 参数，参与当前方法的计算、查询、状态更新或流程控制。 类型标注：FunctionReplica。
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源登记通常在函数执行开始时发生，必须与 release/remove 逻辑配对。
         """
+        # 资源状态按节点分组，因此先由副本找到所在节点，再进入该节点的资源聚合表。
         node_name = function_replica.node.name
         node_resources = self.get_node_resource_utilization(node_name)
         # 资源占用：登记函数当前阶段占用的资源。
@@ -222,11 +273,16 @@ class ResourceState:
 
     def remove_resource(self, replica: 'FunctionReplica', resource: str, value: float):
         """
-        函数作用：移除指定资源占用。
-        关键流程：
-        - 从资源状态移除占用，避免已结束阶段继续影响资源利用率。
-        参数：replica：正在部署、执行或释放的函数副本。；resource：资源名称或资源对象。；value：写入资源表或配置表的具体数值。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        释放某个副本在其所在节点上的资源占用。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：'FunctionReplica'。
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - value: 要记录或累加的数值。 类型标注：float。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：资源释放通常在函数执行结束时发生，避免后续采样继续看到已结束请求的资源占用。
         """
         node_name = replica.node.name
         # 资源释放：移除函数当前阶段占用，避免影响后续资源统计。
@@ -234,35 +290,39 @@ class ResourceState:
 
     def get_resource_utilization(self, replica: 'FunctionReplica') -> 'ResourceUtilization':
         """
-        函数作用：读取某副本或某节点的资源利用率对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        读取某个副本当前的资源占用对象。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：'FunctionReplica'。
+
+        返回说明：返回值类型标注为 'ResourceUtilization'，通常作为后续调度、执行、统计或查询流程的输入。
         """
         node_name = replica.node.name
         return self.get_node_resource_utilization(node_name).get_resource_utilization(replica)
 
     def list_resource_utilization(self, node_name: str) -> List[Tuple['FunctionReplica', 'ResourceUtilization']]:
         """
-        函数作用：列出节点上所有副本的资源利用率。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        列出指定节点上所有副本的资源占用。
+
+        参数说明：
+        - node_name: 节点名称。 类型标注：str。
+
+        返回说明：返回值类型标注为 List[Tuple['FunctionReplica', 'ResourceUtilization']]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return self.get_node_resource_utilization(node_name).list_resource_utilization()
 
     def get_node_resource_utilization(self, node_name: str) -> Optional[NodeResourceUtilization]:
         """
-        函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回指定节点的资源聚合对象，不存在时自动创建。
+
+        参数说明：
+        - node_name: 节点名称。 类型标注：str。
+
+        返回说明：返回值类型标注为 Optional[NodeResourceUtilization]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         node_resources = self.node_resource_utilizations.get(node_name)
         if node_resources is None:
+            # 节点第一次出现时延迟创建资源表，避免初始化阶段必须遍历完整拓扑。
             self.node_resource_utilizations[node_name] = NodeResourceUtilization()
             node_resources = self.node_resource_utilizations[node_name]
         return node_resources
@@ -271,53 +331,73 @@ class ResourceState:
 @dataclass
 class ResourceWindow:
     """
-    类作用：资源监控窗口记录，保存某一时刻某副本的资源快照。
-    核心字段：replica：函数副本对象。；resources：资源集合，表示 CPU、内存、网络、磁盘或 GPU 等占用。；time：记录产生的时间戳。。
+    资源采样窗口。
+
+    记录某副本在时间窗口内的资源占用快照，供 MetricsServer 做窗口聚合。
+
+    重要字段：
+    - replica: replica 相关的内部状态或配置；本类方法会在对应业务阶段读取或更新它。
+    - resources: 资源名称到资源占用值的映射。
+    - time: 记录发生的时间戳，可以来自墙钟或仿真时钟。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：replica：函数副本对象。
     replica: FunctionReplica
-    # 字段说明：resources：资源集合，表示 CPU、内存、网络、磁盘或 GPU 等占用。
     resources: Dict[str, float]
-    # 字段说明：time：记录产生的时间戳。
     time: float
 
 
 class MetricsServer:
     """
-    类作用：简化版指标服务器，缓存资源窗口并计算窗口内平均 CPU/资源利用率。
-    核心方法：__init__、put、get_average_cpu_utilization、get_average_resource_utilization。
+    资源窗口指标服务。
+
+    保存 ResourceWindow 并计算指定时间段内的平均资源利用率。
+
+    重要字段：
+    - _windows: 按节点和 Pod 组织的资源采样窗口。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
 
     def __init__(self):
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：_windows。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 MetricsServer 对象。
+
+        主要建立字段：_windows。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self._windows：表示 windows，在当前业务流程中作为输入参数、状态字段或计算结果使用。
         self._windows = defaultdict(lambda: defaultdict(list))
 
-    # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
     def put(self, window: ResourceWindow):
         """
-        函数作用：向内部索引或仓库写入一个对象。
-        参数：window：表示 window，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        保存一个资源采样窗口。
+
+        窗口按节点名和 Pod 名两级索引，便于后续按副本查询一段时间内的资源利用率。
+
+        参数说明：
+        - window: window 参数，参与当前方法的计算、查询、状态更新或流程控制。 类型标注：ResourceWindow。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         node = window.replica.node.name
         pod = window.replica.pod.name
 
+        # 二级索引让后续查询可以快速定位“某个节点上的某个 Pod”的历史窗口。
         self._windows[node][pod].append(window)
 
     def get_average_cpu_utilization(self, fn_replica: FunctionReplica, window_start: float, window_end: float) -> float:
         """
-        函数作用：按时间窗口计算函数副本的平均 CPU 利用率。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：fn_replica：表示 fn、replica，在当前业务流程中作为输入参数、状态字段或计算结果使用。；window_start：表示 window、start，在当前业务流程中作为输入参数、状态字段或计算结果使用。；window_end：表示 window、end，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        计算指定副本在时间窗口内的平均 CPU 利用率。
+
+        内部先取平均 CPU 使用量，再除以所在节点的 CPU 毫核容量，返回 0 到 1 附近的比例值。
+
+        参数说明：
+        - fn_replica: fn_replica 参数，参与当前方法的计算、查询、状态更新或流程控制。 类型标注：FunctionReplica。
+        - window_start: 统计窗口开始时间。 类型标注：float。
+        - window_end: 统计窗口结束时间。 类型标注：float。
+
+        返回说明：返回值类型标注为 float，通常作为后续调度、执行、统计或查询流程的输入。
         """
         utilization = self.get_average_resource_utilization(fn_replica, 'cpu', window_start, window_end)
         millis = fn_replica.node.capacity.cpu_millis
@@ -326,11 +406,17 @@ class MetricsServer:
     def get_average_resource_utilization(self, fn_replica: FunctionReplica, resource: str, window_start: float,
                                          window_end: float) -> float:
         """
-        函数作用：按时间窗口计算指定资源的平均利用率。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：fn_replica：表示 fn、replica，在当前业务流程中作为输入参数、状态字段或计算结果使用。；resource：资源名称或资源对象。；window_start：表示 window、start，在当前业务流程中作为输入参数、状态字段或计算结果使用。；window_end：表示 window、end，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        计算指定资源在时间窗口内的平均占用。
+
+        方法从最近采样窗口向前扫描，只使用 window_start 到 window_end 范围内的数据。
+
+        参数说明：
+        - fn_replica: fn_replica 参数，参与当前方法的计算、查询、状态更新或流程控制。 类型标注：FunctionReplica。
+        - resource: 资源名，例如 cpu、memory、net 等。 类型标注：str。
+        - window_start: 统计窗口开始时间。 类型标注：float。
+        - window_end: 统计窗口结束时间。 类型标注：float。
+
+        返回说明：返回值类型标注为 float，通常作为后续调度、执行、统计或查询流程的输入。
         """
         node = fn_replica.node.name
         pod = fn_replica.pod.name
@@ -339,6 +425,8 @@ class MetricsServer:
             return 0
         average_windows = []
 
+        # 从最新窗口向前扫描，遇到早于 window_start 的采样即可停止。
+        # 这样在窗口数量较多时不用每次遍历完整历史。
         for window in reversed(windows):
             if window.time <= window_end:
                 if window.time < window_start:
@@ -350,48 +438,59 @@ class MetricsServer:
 
 class ResourceMonitor:
     """
-    类作用：资源监控后台进程，周期采样资源状态并写入 MetricsServer 与 Metrics。
-    核心方法：__init__、run。
+    周期性资源监控进程。
+
+    按照 reconcile_interval 读取资源状态，写入 MetricsServer 和 Metrics。
+
+    重要字段：
+    - env: 全局仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标器和资源状态等上下文。
+    - reconcile_interval: 后台控制循环执行间隔。
+    - metric_server: metric_server 相关的内部状态或配置；本类方法会在对应业务阶段读取或更新它。
+    - logging: logging 相关的内部状态或配置；本类方法会在对应业务阶段读取或更新它。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
 
     def __init__(self, env: Environment, reconcile_interval: int, logging=True):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：env、logging、metric_server、reconcile_interval。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；reconcile_interval：后台控制循环的重调谐间隔，决定伸缩器或监控器多久执行一次判断。；logging：表示 logging，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化资源监控器。
+
+        保存仿真环境、采样周期、MetricsServer 引用和是否写入 Metrics 的开关。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - reconcile_interval: 控制器重新计算决策的周期。 类型标注：int。
+        - logging: logging 参数，参与当前方法的计算、查询、状态更新或流程控制。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.env：仿真全局环境引用，用于访问 SimPy 时钟、拓扑、指标、资源状态和 FaaS 系统。
         self.env = env
-        # 字段说明：self.reconcile_interval：后台控制循环的重调谐间隔，决定伸缩器或监控器多久执行一次判断。
         self.reconcile_interval = reconcile_interval
-        # 字段说明：self.metric_server：资源指标服务器，缓存监控窗口并提供平均资源利用率查询。
         self.metric_server: MetricsServer = env.metrics_server
-        # 字段说明：self.logging：表示 logging，在当前业务流程中作为输入参数、状态字段或计算结果使用。
         self.logging = logging
 
     def run(self):
         """
-        函数作用：启动实验或后台进程的主循环，在仿真时间内持续推进业务行为。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        - 把关键事件写入 Metrics，便于实验结束后统计部署、调度、调用或资源指标。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        周期性采样运行中副本的资源占用。
+
+        每隔 reconcile_interval 遍历所有 RUNNING 副本，跳过空资源记录，将快照写入 MetricsServer，并在 logging 开启时同步写入 Metrics。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：run 方法通常是后台控制循环或实验主流程，阅读时要看循环内的 yield 与 env.process。
         """
         faas: FaasSystem = self.env.faas
         while True:
-            # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
             yield self.env.timeout(self.reconcile_interval)
             now = self.env.now
             for deployment in faas.get_deployments():
                 for replica in faas.get_replicas(deployment.name, FunctionState.RUNNING):
+                    # ResourceMonitor 只采样 RUNNING 副本；未启动或已挂起副本不会进入资源窗口。
                     utilization = self.env.resource_state.get_resource_utilization(replica)
                     if utilization.is_empty():
                         continue
-                    # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
                     if self.logging:
-                        # 指标记录：把当前业务事件写入结构化结果，便于实验后分析。
                         self.env.metrics.log_function_resource_utilization(replica, utilization)
+                    # MetricsServer 保存窗口快照，HPA 后续会按时间窗口计算平均 CPU 利用率。
                     self.metric_server.put(
                         ResourceWindow(replica, utilization.list_resources(), now))

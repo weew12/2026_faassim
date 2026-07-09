@@ -1,8 +1,10 @@
 """
-文件作用：通用 Benchmark 基类，描述实验如何注册镜像、部署函数、启动请求生成器，并在仿真时间内维持工作负载。
-主要类：Benchmark、BenchmarkBase、DegradationBenchmarkBase。
-主要函数：get_model_file、set_degradation。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+Benchmark 场景定义与实验启动流程。
+
+Benchmark 描述一次实验如何准备环境：注册镜像、部署函数、启动请求到达进程，并在指定仿真时长内维持工作负载。
+DegradationBenchmarkBase 在基础场景上额外挂载节点性能退化模型，用于多租户资源竞争实验。
+
+阅读建议：BenchmarkBase.run 是实验入口，串联镜像注册、函数部署和请求生成。
 """
 
 import logging
@@ -21,64 +23,88 @@ from sim.requestgen import function_trigger
 
 class Benchmark:
     
-    # 业务说明：这里处理函数请求生成、调用执行或调用指标记录。
 
     """
-    类作用：Benchmark 抽象基类，规定实验 setup 和 run 两个阶段。
-    核心方法：setup、run。
+    实验场景基类。
+
+    子类通过 setup() 准备环境，通过 run() 启动部署和请求生成。方法通常是 SimPy 生成器，便于与仿真时间对齐。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def setup(self, env: Environment):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        Benchmark 准备阶段接口。
+
+        子类在这里注册镜像、准备数据或修改环境；默认实现为空。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：setup 通常只准备状态或外部资源，是否推进仿真时间取决于内部是否包含 yield。
         """
         pass
 
     def run(self, env: Environment):
         """
-        函数作用：启动实验或后台进程的主循环，在仿真时间内持续推进业务行为。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        Benchmark 运行阶段接口。
+
+        默认只等待 0 仿真时间，子类通常在这里部署函数并启动请求到达进程。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：run 方法通常是后台控制循环或实验主流程，阅读时要看循环内的 yield 与 env.process。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
 
 class BenchmarkBase(Benchmark):
     """
-    类作用：通用 Benchmark 实现，统一处理镜像注册、函数部署、请求生成器启动和实验等待。
-    继承关系：Benchmark。
-    核心方法：__init__、__create_deployments_per_name、setup、register_images、run、wait。
+    通用 Benchmark 实现。
+
+    负责登记镜像、部署函数、等待副本可用、启动请求到达 profile，并在指定 duration 内维持工作负载。
+
+    重要字段：
+    - duration: 实验持续时间，Benchmark 会在该时间后停止继续生成请求。
+    - images: 镜像列表、镜像索引或镜像排序，具体含义取决于所属类。
+    - deployments: 本次实验需要部署的函数部署列表。
+    - deployments_per_name: 函数名到 FunctionDeployment 的索引，便于按名称快速找到部署对象。
+    - arrival_profiles: 函数名到到达间隔生成器的映射，用于为不同函数提供不同负载。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self, images: List[Tuple[str, str, str]], deployments: List[FunctionDeployment],
                  arrival_profiles: Dict[str, Generator], duration: int = None):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：arrival_profiles、deployments、deployments_per_name、duration、images。
-        参数：images：容器镜像集合。；deployments：函数部署集合。；arrival_profiles：请求到达模型集合。；duration：实验持续时间。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 BenchmarkBase 对象。
+
+        主要建立字段：duration、images、deployments、deployments_per_name、arrival_profiles。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - images: 镜像元数据列表或镜像名列表，具体取决于当前函数。 类型标注：List[Tuple[str, str, str]]。
+        - deployments: 函数部署列表，每个元素描述一个需要部署的函数。 类型标注：List[FunctionDeployment]。
+        - arrival_profiles: 函数名到请求到达间隔生成器的映射。 类型标注：Dict[str, Generator]。
+        - duration: 仿真持续时间或采样持续时间。 类型标注：int。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.duration：Benchmark 持续的仿真时间长度。
         self.duration = duration  
-        # 字段说明：self.images：容器镜像元数据集合，供容器仓库注册和部署阶段查找。
         self.images = images
-        # 字段说明：self.deployments：函数部署集合，描述本次实验要上线的函数及其配置。
         self.deployments = deployments
-        # 字段说明：self.deployments_per_name：按函数名分组的部署索引，方便 Benchmark 根据请求目标快速查找部署。
         self.deployments_per_name = self.__create_deployments_per_name()
-        # 字段说明：self.arrival_profiles：请求到达模型集合，决定每个函数的请求强度和时间分布。
         self.arrival_profiles = arrival_profiles
 
     def __create_deployments_per_name(self):
         """
-        函数作用：处理 create、deployments、per、name 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        构造函数名到部署对象的索引。
+
+        该索引用于根据 arrival profile 的函数名快速找到对应 FunctionDeployment。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         deployments_per_name = {}
         for deployment in self.deployments:
@@ -87,18 +113,30 @@ class BenchmarkBase(Benchmark):
 
     def setup(self, env: Environment):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        注册 Benchmark 所需镜像。
+
+        先执行父类准备逻辑，再把 images 列表写入容器仓库。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：setup 通常只准备状态或外部资源，是否推进仿真时间取决于内部是否包含 yield。
         """
         super().setup(env)
         self.register_images(env)
 
     def register_images(self, env: Environment):
         """
-        函数作用：把实验需要使用的容器镜像登记到仿真的容器仓库。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        把镜像元数据写入容器仓库。
+
+        images 中的大小字符串会转换为字节数，架构信息会保留给后续镜像匹配和拉取模拟使用。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         containers: docker.ContainerRegistry = env.container_registry
         for image, size, arch in self.images:
@@ -110,15 +148,18 @@ class BenchmarkBase(Benchmark):
 
     def run(self, env: Environment):
         """
-        函数作用：启动实验或后台进程的主循环，在仿真时间内持续推进业务行为。
-        关键流程：
-        - 通过 env.process 串联子协程，使部署、调用或监控流程按 SimPy 事件顺序执行。
-        - 调用部署接口上线函数或副本。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        执行通用 Benchmark 流程。
+
+        先部署所有函数并等待副本可用，再为每个部署启动请求触发进程；如果设置 duration，则到期后中断请求进程。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：run 方法通常是后台控制循环或实验主流程，阅读时要看循环内的 yield 与 env.process。
         """
         for deployment in self.deployments:
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield from env.faas.deploy(deployment)
         for deployment in self.deployments:
             # 协程同步：等待子过程完成，保证业务阶段按顺序衔接。
@@ -140,18 +181,20 @@ class BenchmarkBase(Benchmark):
         if self.duration is not None:
             env.process(self.wait(env, ps))
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from ps
 
     def wait(self, env, ps):
         """
-        函数作用：等待一组 SimPy 进程完成，用于同步请求生成器或部署过程。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；ps：表示 ps，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        等待指定实验时长后中断请求进程。
+
+        该协程用于让有限时长实验在 duration 后停止继续产生请求。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+        - ps: 需要在指定时间后中断的 SimPy 请求生成进程列表。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(env.now + self.duration)
         for p in ps:
             p.interrupt('stop')
@@ -160,28 +203,46 @@ class BenchmarkBase(Benchmark):
 class DegradationBenchmarkBase(BenchmarkBase):
 
     """
-    类作用：带性能退化模型的 Benchmark，在 setup 阶段加载节点级退化模型。
-    继承关系：BenchmarkBase。
-    核心方法：__init__、setup。
+    带性能退化模型的 Benchmark。
+
+    在普通 Benchmark 初始化后，为节点加载对应退化模型，使后续执行时间估计可以考虑资源竞争。
+
+    重要字段：
+    - model_folder: 性能退化模型文件所在目录。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self, images: List[Tuple[str, str, str]], deployments: List[FunctionDeployment],
                  arrival_profiles: Dict[str, Generator], duration: int = None, model_folder='./data'):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：model_folder。
-        参数：images：容器镜像集合。；deployments：函数部署集合。；arrival_profiles：请求到达模型集合。；duration：实验持续时间。；model_folder：性能退化模型所在目录。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 DegradationBenchmarkBase 对象。
+
+        主要建立字段：model_folder。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - images: 镜像元数据列表或镜像名列表，具体取决于当前函数。 类型标注：List[Tuple[str, str, str]]。
+        - deployments: 函数部署列表，每个元素描述一个需要部署的函数。 类型标注：List[FunctionDeployment]。
+        - arrival_profiles: 函数名到请求到达间隔生成器的映射。 类型标注：Dict[str, Generator]。
+        - duration: 仿真持续时间或采样持续时间。 类型标注：int。
+        - model_folder: model_folder 参数，参与当前方法的计算、查询、状态更新或流程控制。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__(images, deployments, arrival_profiles, duration)
-        # 字段说明：self.model_folder：性能退化模型文件所在目录。
         self.model_folder = model_folder
 
     def setup(self, env: Environment):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        在普通 Benchmark 准备完成后加载性能退化模型。
+
+        模型会挂载到 Environment 的 degradation_models 和各节点 NodeState 中，供执行时间退化估计使用。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：setup 通常只准备状态或外部资源，是否推进仿真时间取决于内部是否包含 yield。
         """
         super().setup(env)
         set_degradation(env, self.model_folder)
@@ -189,12 +250,15 @@ class DegradationBenchmarkBase(BenchmarkBase):
 
 def get_model_file(folder, node_name):
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：folder：输入或输出目录。；node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    根据节点名称选择对应的性能退化模型文件。
+
+    节点名中的硬件类型片段会映射到 .sav 模型文件；无法识别时抛出 ValueError。
+
+    参数说明：
+    - folder: 模型文件或数据文件所在目录。
+    - node_name: 节点名称。
+
+    返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
     """
     if 'xeongpu' in node_name or 'xeoncpu' in node_name:
         file = 'eb-xeongpu.sav'
@@ -221,9 +285,15 @@ def get_model_file(folder, node_name):
 
 def set_degradation(env: Environment, folder: str):
     """
-    函数作用：更新对象内部状态或实验配置。
-    参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；folder：输入或输出目录。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    为环境中的节点加载性能退化模型。
+
+    相同硬件类型的节点会复用同一个已加载模型，避免重复读取模型文件。
+
+    参数说明：
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+    - folder: 模型文件或数据文件所在目录。 类型标注：str。
+
+    返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
     """
     models = {}
     for ether_node in env.topology.get_nodes():
@@ -237,5 +307,4 @@ def set_degradation(env: Environment, folder: str):
 
             env.degradation_models[ether_node.name] = model
         except ValueError:
-            # 业务说明：这里处理节点、拓扑或网络连接相关状态。
             pass

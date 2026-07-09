@@ -1,7 +1,9 @@
 """
-文件作用：仿真指标记录中心，将部署、调度、调用、资源、网络、生命周期等事件写成结构化记录，便于导出 DataFrame 分析。
-主要类：Metrics。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+仿真指标记录中心。
+
+Metrics 封装部署、调度、调用、网络、资源利用率和生命周期事件的记录逻辑，最终把运行过程转成结构化日志记录，便于实验后分析。
+
+阅读建议：把每个 log_* 方法看成一个 measurement 的写入入口。
 """
 
 from collections import defaultdict
@@ -19,70 +21,89 @@ from sim.resource import ResourceUtilization
 
 class Metrics:
     """
-    类作用：仿真指标收集器，集中记录部署、调度、调用、网络、资源和生命周期事件。
-    核心字段：invocations：按函数或副本累计的调用计数。；total_invocations：全局累计调用次数。；last_invocation：函数最近一次调用时间，用于 idler 判断空闲。；utilization：资源利用率记录缓存。。
-    核心方法：__init__、log、log_function_deployment、log_function_definition、log_function_replica、log_flow、log_network、log_scaling、log_invocation、log_fet、log_function_resource_utilization、log_resource_utilization 等。
+    仿真指标记录中心。
+
+    为部署、调度、调用、资源、网络和生命周期事件提供统一记录方法，并可按 measurement 导出 Pandas DataFrame。
+
+    重要字段：
+    - invocations: 按函数名统计的调用次数。
+    - total_invocations: 全部函数调用总数。
+    - last_invocation: 每个函数最后一次调用发生的仿真时间。
+    - utilization: 资源利用率缓存。
+    - env: 全局仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标器和资源状态等上下文。
+    - logger: 底层 RuntimeLogger 或模块日志器。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：invocations：按函数或副本累计的调用计数。
     invocations: Dict[str, int]
-    # 字段说明：total_invocations：全局累计调用次数。
     total_invocations: int
-    # 字段说明：last_invocation：函数最近一次调用时间，用于 idler 判断空闲。
     last_invocation: Dict[str, float]
-    # 字段说明：utilization：资源利用率记录缓存。
     utilization: Dict[str, Dict[str, float]]
 
     def __init__(self, env: Environment, log: RuntimeLogger = None) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：env、invocations、last_invocation、logger、total_invocations、utilization。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；log：表示 log，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化指标中心。
+
+        保存 Environment、底层 RuntimeLogger、总调用数、按函数统计的调用数、最后调用时间和资源利用率缓存。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - log: 底层 RuntimeLogger 实例；为空时使用 NullLogger。 类型标注：RuntimeLogger。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.env：仿真全局环境引用，用于访问 SimPy 时钟、拓扑、指标、资源状态和 FaaS 系统。
         self.env: Environment = env
-        # 字段说明：self.logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
         self.logger: RuntimeLogger = log or NullLogger()
-        # 字段说明：self.total_invocations：全局累计调用次数。
         self.total_invocations = 0
-        # 字段说明：self.invocations：按函数或副本累计的调用计数。
         self.invocations = defaultdict(int)
-        # 字段说明：self.last_invocation：函数最近一次调用时间，用于 idler 判断空闲。
         self.last_invocation = defaultdict(int)
-        # 字段说明：self.utilization：资源利用率记录缓存。
         self.utilization = defaultdict(lambda: defaultdict(float))
 
     def log(self, metric, value, **tags):
         """
-        函数作用：写入一条结构化运行记录。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：metric：表示 metric，在当前业务流程中作为输入参数、状态字段或计算结果使用。；value：写入资源表或配置表的具体数值。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        写入一条原始指标记录。
+
+        metric 作为 measurement，value 作为字段值，tags 作为维度标签，实际存储由 RuntimeLogger 完成。
+
+        参数说明：
+        - metric: 指标 measurement 名称。
+        - value: 要记录或累加的数值。
+        - **tags: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
+
+        业务流程：日志记录不影响仿真控制流，但会影响实验输出、绘图和后续统计。
         """
         return self.logger.log(metric, value, **tags)
 
     def log_function_deployment(self, fn: FunctionDeployment):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：fn：函数定义对象或函数名。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数部署定义事件。
+
+        写入 function_deployments measurement，用于实验后查看哪些函数被部署。
+
+        参数说明：
+        - fn: 函数部署、函数容器或函数名，具体含义由调用位置决定。 类型标注：FunctionDeployment。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
-        # 业务说明：这里将仿真事件写入指标/日志，供实验分析使用。
         record = {'name': fn.name}
         self.log('function_deployments', record, type='deploy')
 
     def log_function_definition(self, fn_name: str, fn: FunctionContainer):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：fn_name：目标函数名称。；fn：函数定义对象或函数名。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数容器定义及镜像大小。
+
+        方法从 Skippy image_states 中读取各架构镜像大小，并写入 functions measurement。
+
+        参数说明：
+        - fn_name: 目标函数名。 类型标注：str。
+        - fn: 函数部署、函数容器或函数名，具体含义由调用位置决定。 类型标注：FunctionContainer。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         record = {'name': fn_name, 'image': fn.image}
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
         image_state = self.env.cluster.image_states[fn.image]
         for arch, size in image_state.size.items():
             record[f'size_{arch}'] = size
@@ -91,13 +112,17 @@ class Metrics:
 
     def log_function_replica(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数副本与 Pod、镜像之间的绑定关系。
+
+        每个容器都会写入 function_replicas measurement，replica_id 用于与后续生命周期事件关联。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         for container in replica.pod.spec.containers:
             record = {'name': replica.function.name, 'pod': replica.pod.name, 'image': container.image}
-            # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
             
             
             
@@ -106,18 +131,34 @@ class Metrics:
 
     def log_flow(self, num_bytes, duration, source, sink, action_type):
         """
-        函数作用：记录一次网络流传输事件。
-        参数：num_bytes：表示 num、bytes，在当前业务流程中作为输入参数、状态字段或计算结果使用。；duration：实验持续时间。；source：源节点或源数据对象，用于网络传输和拓扑构造。；sink：表示 sink，在当前业务流程中作为输入参数、状态字段或计算结果使用。；action_type：表示 action、type，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录一次数据流传输。
+
+        包含传输字节数、耗时、源节点、目标节点和动作类型，可用于分析镜像拉取或请求数据传输成本。
+
+        参数说明：
+        - num_bytes: 网络传输字节数。
+        - duration: 仿真持续时间或采样持续时间。
+        - source: 网络传输源节点或源节点名。
+        - sink: 网络传输目标节点。
+        - action_type: 网络传输动作类型，例如 docker_pull、download 或 upload。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('flow', value={'bytes': num_bytes, 'duration': duration},
                  source=source.name, sink=sink.name, action_type=action_type)
 
     def log_network(self, num_bytes, data_type, link):
         """
-        函数作用：记录网络状态或网络传输指标。
-        参数：num_bytes：表示 num、bytes，在当前业务流程中作为输入参数、状态字段或计算结果使用。；data_type：表示 data、type，在当前业务流程中作为输入参数、状态字段或计算结果使用。；link：表示 link，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录链路级网络流量。
+
+        方法把链路标签和 data_type 合并为 tags，并把传输字节数写入 network measurement。
+
+        参数说明：
+        - num_bytes: 网络传输字节数。
+        - data_type: 网络数据类型标签，用于区分镜像、请求数据或响应数据。
+        - link: 网络链路对象，提供标签和带宽等信息。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         tags = dict(link.tags)
         tags['data_type'] = data_type
@@ -126,17 +167,35 @@ class Metrics:
 
     def log_scaling(self, function_name, replicas):
         """
-        函数作用：记录一次伸缩动作的函数名、副本数变化和触发原因。
-        参数：function_name：目标函数名称。；replicas：副本数量或副本列表。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数扩缩容事件。
+
+        replicas 为正表示扩容，为负表示缩容。
+
+        参数说明：
+        - function_name: 目标函数名。
+        - replicas: 副本数量或副本列表，具体由所在方法决定。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('scale', replicas, function_name=function_name)
 
     def log_invocation(self, function_name, function_image, node_name, t_wait, t_start, t_exec, replica_id, **kwargs):
         """
-        函数作用：记录一次函数调用的排队时间、执行时间、节点和返回码。
-        参数：function_name：目标函数名称。；function_image：表示 function、image，在当前业务流程中作为输入参数、状态字段或计算结果使用。；node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。；t_wait：请求等待可用副本或排队的耗时。；t_start：表示 t、start，在当前业务流程中作为输入参数、状态字段或计算结果使用。；t_exec：函数主体执行耗时。；replica_id：表示 replica、id，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录一次端到端函数调用。
+
+        字段包括等待时间、执行时间、开始时间和函数内存配置；标签包含函数名、镜像、节点和副本 ID。
+
+        参数说明：
+        - function_name: 目标函数名。
+        - function_image: 函数实际运行的镜像字符串。
+        - node_name: 节点名称。
+        - t_wait: 请求等待时间。
+        - t_start: 函数执行阶段开始的仿真时间。
+        - t_exec: 函数执行耗时。
+        - replica_id: 副本对象的 Python id，用于跨 measurement 关联同一个副本。
+        - **kwargs: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         function = self.env.faas.get_function_index()[function_image]
         mem = function.get_resource_requirements().get('memory')
@@ -147,11 +206,22 @@ class Metrics:
 
     def log_fet(self, function_name, function_image, node_name, t_fet_start, t_fet_end, replica_id, request_id,
                 **kwargs):
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：function_name：目标函数名称。；function_image：表示 function、image，在当前业务流程中作为输入参数、状态字段或计算结果使用。；node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。；t_fet_start：表示 t、fet、start，在当前业务流程中作为输入参数、状态字段或计算结果使用。；t_fet_end：表示 t、fet、end，在当前业务流程中作为输入参数、状态字段或计算结果使用。；replica_id：表示 replica、id，在当前业务流程中作为输入参数、状态字段或计算结果使用。；request_id：函数调用请求的唯一编号。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数执行时间窗口。
+
+        FET 表示函数主体执行阶段的开始和结束时间，可与 invocation 的等待时间、网络时间区分分析。
+
+        参数说明：
+        - function_name: 目标函数名。
+        - function_image: 函数实际运行的镜像字符串。
+        - node_name: 节点名称。
+        - t_fet_start: 函数执行时间窗口开始时间。
+        - t_fet_end: 函数执行时间窗口结束时间。
+        - replica_id: 副本对象的 Python id，用于跨 measurement 关联同一个副本。
+        - request_id: 请求唯一编号，用于在历史请求中定位对应调用。
+        - **kwargs: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('fets', {'t_fet_start': t_fet_start, 't_fet_end': t_fet_end, **kwargs},
                  function_name=function_name,
@@ -159,9 +229,15 @@ class Metrics:
 
     def log_function_resource_utilization(self, replica: FunctionReplica, utilization: ResourceUtilization):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。；utilization：资源利用率记录缓存。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录单个函数副本的资源利用率。
+
+        方法会先把资源占用转换为 CPU/内存比例，再写入 function_utilization measurement。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - utilization: 当前资源占用快照。 类型标注：ResourceUtilization。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         node = replica.node
         copy = utilization.copy()
@@ -170,20 +246,31 @@ class Metrics:
 
     def log_resource_utilization(self, node_name: str, capacity: Capacity, utilization: ResourceUtilization):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。；capacity：表示 capacity，在当前业务流程中作为输入参数、状态字段或计算结果使用。；utilization：资源利用率记录缓存。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录节点级资源利用率。
+
+        输入的 ResourceUtilization 会被转换为包含 cpu_util 和 mem_util 的资源快照。
+
+        参数说明：
+        - node_name: 节点名称。 类型标注：str。
+        - capacity: 节点容量对象，包含 CPU 和内存上限。 类型标注：Capacity。
+        - utilization: 当前资源占用快照。 类型标注：ResourceUtilization。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         resources = self.__calculate_util(capacity, utilization)
         self.log('node_utilization', resources, node=node_name)
 
     def __calculate_util(self, capacity, utilization):
         """
-        函数作用：处理 calculate、util 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：capacity：表示 capacity，在当前业务流程中作为输入参数、状态字段或计算结果使用。；utilization：资源利用率记录缓存。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把原始资源占用补充为利用率字段。
+
+        CPU 使用量除以 capacity.cpu_millis 得到 cpu_util，内存使用量除以 capacity.memory 得到 mem_util，同时保留原始资源字段。
+
+        参数说明：
+        - capacity: 节点容量对象，包含 CPU 和内存上限。
+        - utilization: 当前资源占用快照。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         update = {
             'cpu_util': utilization.get_resource('cpu') / capacity.cpu_millis if utilization.get_resource(
@@ -197,9 +284,16 @@ class Metrics:
 
     def log_start_exec(self, request: FunctionRequest, replica: FunctionReplica, **kwargs):
         """
-        函数作用：记录函数请求开始执行的时间点。
-        参数：request：函数调用请求，包含目标函数名、请求 ID 和数据大小。；replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数开始执行。
+
+        这里主要维护调用计数和 last_invocation 时间，供伸缩器和 scale-to-zero 空闲检测使用。
+
+        参数说明：
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - **kwargs: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.invocations[replica.function.name] += 1
         self.total_invocations += 1
@@ -207,53 +301,75 @@ class Metrics:
 
     def log_stop_exec(self, request: FunctionRequest, replica: FunctionReplica, **kwargs):
         """
-        函数作用：记录函数请求执行结束的时间点。
-        参数：request：函数调用请求，包含目标函数名、请求 ID 和数据大小。；replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        函数执行结束钩子。
+
+        当前实现不写指标，保留该入口是为了让更复杂的模拟器在结束阶段扩展统计逻辑。
+
+        参数说明：
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - **kwargs: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         pass
 
     def log_deploy(self, replica: FunctionReplica):
         """
-        函数作用：记录副本部署阶段开始事件。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本 deploy 生命周期事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('replica_deployment', 'deploy', function_name=replica.function.name, node_name=replica.node.name,
                  replica_id=id(replica))
 
     def log_startup(self, replica: FunctionReplica):
         """
-        函数作用：记录副本启动阶段事件。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本 startup 生命周期事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('replica_deployment', 'startup', function_name=replica.function.name, node_name=replica.node.name,
                  replica_id=id(replica))
 
     def log_setup(self, replica: FunctionReplica):
         """
-        函数作用：记录副本 setup 阶段事件。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本 setup 生命周期事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('replica_deployment', 'setup', function_name=replica.function.name, node_name=replica.node.name,
                  replica_id=id(replica))
 
     def log_finish_deploy(self, replica: FunctionReplica):
         """
-        函数作用：记录副本部署完成事件。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本完成部署并即将进入 RUNNING 的事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('replica_deployment', 'finish', function_name=replica.function.name, node_name=replica.node.name,
                  replica_id=id(replica))
 
     def log_teardown(self, replica: FunctionReplica):
         """
-        函数作用：记录副本销毁阶段事件。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本 teardown 生命周期事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         name = replica.fn_name
         node_name = replica.node.name
@@ -262,17 +378,26 @@ class Metrics:
 
     def log_function_deployment_lifecycle(self, fn: FunctionDeployment, event: str):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：fn：函数定义对象或函数名。；event：表示 event，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数部署对象的生命周期事件。
+
+        event 通常为 deploy 或 remove，用 function_id 关联同一个 FunctionDeployment。
+
+        参数说明：
+        - fn: 函数部署、函数容器或函数名，具体含义由调用位置决定。 类型标注：FunctionDeployment。
+        - event: 生命周期事件名称，例如 deploy、remove、startup、finish。 类型标注：str。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         self.log('function_deployment_lifecycle', event, name=fn.name, function_id=id(fn))
 
     def log_queue_schedule(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录副本进入调度队列。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         name = replica.fn_name
         image = replica.image
@@ -281,9 +406,12 @@ class Metrics:
 
     def log_start_schedule(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录调度器开始处理副本。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         name = replica.fn_name
         image = replica.image
@@ -292,9 +420,15 @@ class Metrics:
 
     def log_finish_schedule(self, replica: FunctionReplica, result: SchedulingResult):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。；result：表示 result，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录调度器完成调度。
+
+        若没有 suggested_host，则 node_name 记录为 None，successful 为 False。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - result: 调度器返回的 SchedulingResult。 类型标注：SchedulingResult。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         if not result.suggested_host:
             node_name = 'None'
@@ -307,9 +441,12 @@ class Metrics:
 
     def log_function_deploy(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数副本部署到节点后的函数级事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         fn = replica.container
         image = replica.image
@@ -319,9 +456,12 @@ class Metrics:
 
     def log_function_suspend(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数副本被挂起的事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         fn = replica.container
         image = replica.image
@@ -331,9 +471,12 @@ class Metrics:
 
     def log_function_remove(self, replica: FunctionReplica):
         """
-        函数作用：记录对应业务事件到指标系统。
-        参数：replica：正在部署、执行或释放的函数副本。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        记录函数副本被移除的事件。
+
+        参数说明：
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         fn = replica.function
         image = replica.image
@@ -343,42 +486,50 @@ class Metrics:
 
     def get(self, name, **tags):
         """
-        函数作用：读取指定名称的内部对象、指标表或资源项。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：name：对象名称。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回指定 measurement 和 tags 的日志写入函数。
+
+        这是 RuntimeLogger.get 的代理，便于外部代码把某类指标绑定成回调函数。
+
+        参数说明：
+        - name: name 参数，参与当前方法的计算、查询、状态更新或流程控制。
+        - **tags: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self.logger.get(name, **tags)
 
     @property
     def clock(self):
         """
-        函数作用：返回指标记录所使用的时钟对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回指标日志使用的时间源。
+
+        注意当前实现返回 self.clock，保持了原项目代码行为；读取实际底层时间源通常应查看 self.logger.clock。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self.clock
 
     @property
     def records(self):
         """
-        函数作用：返回当前累计的结构化指标记录。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回底层 RuntimeLogger 已收集的 Record 列表。
+
+        extract_dataframe 会基于这些记录按 measurement 导出表格。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self.logger.records
 
     def extract_dataframe(self, measurement: str):
         """
-        函数作用：把内部指标记录整理为 Pandas DataFrame 结果表。
-        关键流程：
-        - 整理为表格数据，服务于后续实验分析。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：measurement：指标记录的类型名称。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按 measurement 导出 Pandas DataFrame。
+
+        方法会把 Record 的 fields 和 tags 展平成列，并使用记录时间作为 DatetimeIndex。
+
+        参数说明：
+        - measurement: 需要导出的 measurement 名称。 类型标注：str。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         data = list()
 

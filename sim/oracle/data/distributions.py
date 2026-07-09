@@ -1,11 +1,11 @@
 """
-文件作用：统计分布工具文件，封装离散分布采样逻辑，供经验型 Oracle 从历史观测值中抽样。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+Oracle 经验分布配置。
+
+本模块保存启动时间和执行时间的经验分布参数。Oracle 根据主机类型、镜像和缓存状态选择对应分布进行采样。
 """
 
 from srds import ParameterizedDistribution as PDist
 
-# 字段说明：execution_time_distributions：经验分布集合，用于从画像数据中采样启动时间或执行时间。
 execution_time_distributions = {
     ('cloud', 'alexrashed/ml-wf-1-pre'): (0.584, 1.1420000000000001, PDist.lognorm(((0.31449780857108944,), 0.36909628354997315, 0.41583220283981315))),
     ('tegra', 'alexrashed/ml-wf-1-pre'): (0.434, 0.491, PDist.lognorm(((0.4040891723912467,), 0.42388853817361616, 0.026861281861394234))),
@@ -24,7 +24,6 @@ execution_time_distributions = {
 }
 
 
-# 字段说明：startup_time_distributions：启动时间经验分布，供启动时间 Oracle 采样。
 startup_time_distributions = {
     ('eb-xeongpu', 'aicg4t1/resnet50-inference'): (4.845974683761597, 8.010702610015871, PDist.lognorm(((0.0037449457378122934,), -184.7438193180742, 191.23179742021864))),
     ('eb-xeongpu', 'aicg4t1/cpu-load'): (4.845974683761597, 8.010702610015871, PDist.lognorm(((0.0037449457378122934,), -184.7438193180742, 191.23179742021864))),

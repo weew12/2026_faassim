@@ -1,7 +1,7 @@
 """
-文件作用：仿真启动与装配入口，完成环境初始化、容器仓库创建、调度器创建、FaaS 系统挂载和 Benchmark 执行。
-主要类：BadPlacementException、Simulation、DummySimulator、DockerDeploySimMixin、ModeledExecutionSimMixin、SimpleFunctionSimulator、SimpleSimulatorFactory。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+仿真实验装配入口。
+
+Simulation 将拓扑、Benchmark、FaaS 系统、调度器、容器仓库、资源监控和模拟器工厂组装到同一个 Environment 中，并负责启动和运行一次完整实验。
 """
 
 import logging
@@ -19,14 +19,16 @@ from sim.resource import MetricsServer, ResourceState, ResourceMonitor
 from sim.skippy import SimulationClusterContext
 from sim.topology import Topology
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 class BadPlacementException(BaseException):
     """
-    类作用：BadPlacementException 类，封装 bad、placement、exception 相关状态和业务操作。
-    继承关系：BaseException。
+    错误放置异常。
+
+    当调度或部署结果与期望节点不一致时可用该异常显式终止实验。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     pass
 
@@ -34,34 +36,49 @@ class BadPlacementException(BaseException):
 class Simulation:
 
     """
-    类作用：一次仿真实验的装配与运行对象，负责初始化环境并启动 Benchmark。
-    核心方法：__init__、run、init_environment、create_container_registry、create_simulator_factory、create_faas_system、create_scheduler。
+    一次完整 faas-sim 实验的装配器。
+
+    负责创建 Environment，挂载拓扑、容器仓库、FaaS 系统、调度器、模拟器工厂、Benchmark 和监控后台进程，并启动仿真运行。
+
+    重要字段：
+    - env: 全局仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标器和资源状态等上下文。
+    - topology: Ether 拓扑对象，描述节点、链路和路由关系。
+    - benchmark: 实验场景对象，负责注册镜像、部署函数并产生请求负载。
+    - timeout: 墙钟超时时间，用于限制一次实验最长运行时长。
+    - name: 业务对象名称，通常是函数名、节点名或实验名称。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self, topology: Topology, benchmark: Benchmark, env: Environment = None, timeout=None, name=None):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：benchmark、env、name、timeout、topology。
-        参数：topology：Ether 网络拓扑。；benchmark：Benchmark 实验场景。；env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；timeout：仿真最大运行时间。；name：对象名称。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 Simulation 对象。
+
+        主要建立字段：env、topology、benchmark、timeout、name。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - topology: Ether 拓扑对象，描述节点和链路。 类型标注：Topology。
+        - benchmark: Benchmark 场景对象，描述实验如何部署函数和产生负载。 类型标注：Benchmark。
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - timeout: 墙钟超时时间，超过后 timeout_listener 会中断实验。
+        - name: name 参数，参与当前方法的计算、查询、状态更新或流程控制。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
-        # 字段说明：self.env：仿真全局环境引用，用于访问 SimPy 时钟、拓扑、指标、资源状态和 FaaS 系统。
         self.env = env or Environment()
-        # 字段说明：self.topology：Ether 拓扑对象，描述节点、链路、路由和容器仓库位置。
         self.topology = topology
-        # 字段说明：self.benchmark：实验场景对象，定义镜像注册、函数部署和请求生成逻辑。
         self.benchmark = benchmark
-        # 字段说明：self.timeout：仿真实验的最大运行时间，超过后触发停止。
         self.timeout = timeout
-        # 字段说明：self.name：业务对象名称，通常用于函数、节点、镜像或实验标识。
         self.name = name
 
     def run(self):
         """
-        函数作用：启动实验或后台进程的主循环，在仿真时间内持续推进业务行为。
-        关键流程：
-        - 通过 env.process 串联子协程，使部署、调用或监控流程按 SimPy 事件顺序执行。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        装配并运行一次完整仿真实验。
+
+        流程包括挂载环境组件、启动超时监听和资源监控、执行 benchmark setup、启动 FaaS 调度工作进程，并运行 benchmark 主协程直到结束。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：run 方法通常是后台控制循环或实验主流程，阅读时要看循环内的 yield 与 env.process。
         """
         logger.info('initializing simulation, benchmark: %s, topology nodes: %d',
                     type(self.benchmark).__name__, len(self.topology.nodes))
@@ -98,11 +115,14 @@ class Simulation:
 
     def init_environment(self, env):
         """
-        函数作用：把拓扑、FaaS 系统、仓库、调度器、日志、指标等组件挂载到 Environment。
-        关键流程：
-        - 调用调度器或调度评分逻辑，为副本选择候选节点。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        补齐 Environment 中缺失的运行组件。
+
+        包括模拟器工厂、容器仓库、FaaS 系统、指标器、Skippy 集群上下文、调度器、资源状态和资源监控器。已有组件会被保留。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         if not env.simulator_factory:
             env.simulator_factory = env.simulator_factory or self.create_simulator_factory()
@@ -133,39 +153,45 @@ class Simulation:
 
     def create_container_registry(self):
         """
-        函数作用：创建仿真容器镜像仓库对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        创建默认容器仓库。
+
+        子类可覆盖该方法提供预加载镜像或自定义索引实现。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return ContainerRegistry()
 
     def create_simulator_factory(self):
         """
-        函数作用：创建函数模拟器工厂。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        创建默认函数模拟器工厂。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return SimpleSimulatorFactory()
 
     def create_faas_system(self, env):
         """
-        函数作用：创建 FaaS 系统实现并注入环境。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        创建默认 FaaS 系统实现。
+
+        默认返回 DefaultFaasSystem，子类可覆盖以接入自定义平台行为。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return DefaultFaasSystem(env)
 
     def create_scheduler(self, env):
         """
-        函数作用：创建默认 Skippy 调度器及其谓词/优先级配置。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        创建 Skippy 调度器。
+
+        调度器使用 env.cluster 作为集群上下文。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return Scheduler(env.cluster)
 
@@ -173,129 +199,177 @@ class Simulation:
 class DummySimulator(FunctionSimulator):
 
     """
-    类作用：空函数模拟器，用固定超时模拟生命周期阶段，常用于最小化示例或基类兜底。
-    继承关系：FunctionSimulator。
-    核心方法：deploy、startup、setup、invoke、teardown。
+    空操作函数模拟器。
+
+    每个生命周期阶段只消耗 0 仿真时间，适合测试平台控制流或作为 mixin 组合的兜底实现。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def deploy(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：部署函数或函数副本，使其进入平台管理范围并准备后续调用。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        空操作部署阶段。
+
+        只等待 0 仿真时间，用于保持生命周期接口完整。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 Benchmark.run -> env.faas.deploy -> scale_up -> deploy_replica -> scheduler_queue。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
     def startup(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：模拟副本启动阶段耗时，通常对应容器启动或运行时初始化。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        函数副本生命周期协程：startup。
+
+        该阶段可能申请资源、释放资源或用 env.timeout(...) 表示耗时。watchdog 和 simulator 会把多个阶段串联成一次完整函数调用。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
     def setup(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        函数副本生命周期协程：setup。
+
+        该阶段可能申请资源、释放资源或用 env.timeout(...) 表示耗时。watchdog 和 simulator 会把多个阶段串联成一次完整函数调用。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：setup 通常只准备状态或外部资源，是否推进仿真时间取决于内部是否包含 yield。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         """
-        函数作用：处理一次函数调用请求，包括选择副本、等待可用实例、执行模拟器并记录指标。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        空操作调用阶段。
+
+        只等待 0 仿真时间，不模拟真实执行成本。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 requestgen.function_trigger -> env.faas.invoke -> simulate_function_invocation -> replica.simulator.invoke。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
     def teardown(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：模拟函数副本关闭阶段，释放资源并完成生命周期收尾。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        函数副本生命周期协程：teardown。
+
+        该阶段可能申请资源、释放资源或用 env.timeout(...) 表示耗时。watchdog 和 simulator 会把多个阶段串联成一次完整函数调用。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
         """
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(0)
 
 
 class DockerDeploySimMixin:
     """
-    类作用：容器部署混入类，在副本部署阶段模拟镜像拉取和镜像缓存。
-    核心方法：deploy。
+    镜像拉取部署 mixin。
+
+    为函数模拟器提供 deploy()，通过 docker.pull() 模拟镜像下载并把传输耗时计入仿真时间。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def deploy(self, env: Environment, replica: FunctionReplica):
         """
-        函数作用：部署函数或函数副本，使其进入平台管理范围并准备后续调用。
-        关键流程：
-        - 涉及网络流或镜像/数据传输，网络耗时会影响仿真时钟。
-        - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        通过 docker_pull 模拟镜像拉取部署。
+
+        实际耗时由镜像大小、节点架构、缓存状态和拓扑带宽共同决定。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 Benchmark.run -> env.faas.deploy -> scale_up -> deploy_replica -> scheduler_queue。
         """
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from docker_pull(env, replica.image, replica.node.ether_node)
 
 
 class ModeledExecutionSimMixin:
 
     """
-    类作用：模型化执行混入类，在 invoke 阶段通过 FunctionCharacterization 采样执行时间。
-    核心方法：invoke。
+    模型化执行 mixin。
+
+    根据函数画像或 Oracle 采样执行时长，并在 invoke() 中用 env.timeout() 模拟函数主体运行时间。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def invoke(self, env: Environment, replica: FunctionReplica, request: FunctionRequest):
         
-        # 业务说明：这里处理节点、拓扑或网络连接相关状态。
         
         
         """
-        函数作用：处理一次函数调用请求，包括选择副本、等待可用实例、执行模拟器并记录指标。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；replica：正在部署、执行或释放的函数副本。；request：函数调用请求，包含目标函数名、请求 ID 和数据大小。。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        模拟函数主体执行阶段。
+
+        当前实现记录并发信息后等待 1 个仿真时间单位；更复杂的子类可在这里接入 Oracle 或资源竞争模型。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - replica: FunctionReplica，表示某个函数在某个节点上的运行副本。 类型标注：FunctionReplica。
+        - request: FunctionRequest，表示一次待处理的函数调用。 类型标注：FunctionRequest。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+        业务流程：典型调用路径是 requestgen.function_trigger -> env.faas.invoke -> simulate_function_invocation -> replica.simulator.invoke。
         """
         logger.info('invoking %s on %s (%d in parallel)', request.name, replica.node.name,
                     len(replica.node.current_requests))
 
-        # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
         yield env.timeout(1)
 
 
 class SimpleFunctionSimulator(ModeledExecutionSimMixin, DockerDeploySimMixin, DummySimulator):
     """
-    类作用：简单函数模拟器组合类，同时具备 Docker 部署和模型化执行能力。
-    继承关系：ModeledExecutionSimMixin、DockerDeploySimMixin、DummySimulator。
+    默认组合型函数模拟器。
+
+    通过多继承组合 Docker 部署逻辑、模型化执行逻辑和空生命周期兜底逻辑。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     pass
 
 
 class SimpleSimulatorFactory(SimulatorFactory):
     """
-    类作用：简单模拟器工厂，为每个函数副本创建 SimpleFunctionSimulator。
-    继承关系：SimulatorFactory。
-    核心方法：create。
+    默认函数模拟器工厂。
+
+    根据函数容器创建 SimpleFunctionSimulator，使 FaaS 系统能为每个副本挂载生命周期模拟器。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def create(self, env: Environment, fn: FunctionContainer) -> FunctionSimulator:
         """
-        函数作用：根据输入对象创建对应的业务组件实例。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；fn：函数定义对象或函数名。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        为函数容器创建默认模拟器实例。
+
+        返回 SimpleFunctionSimulator，使每个副本拥有独立生命周期模拟器。
+
+        参数说明：
+        - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+        - fn: 函数部署、函数容器或函数名，具体含义由调用位置决定。 类型标注：FunctionContainer。
+
+        返回说明：返回值类型标注为 FunctionSimulator，通常作为后续调度、执行、统计或查询流程的输入。
         """
         return SimpleFunctionSimulator()

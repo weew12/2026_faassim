@@ -1,7 +1,9 @@
 """
-文件作用：性能与资源 Oracle 抽象集合，封装启动时间、执行时间、带宽、成本、资源利用率和拟合分布采样等估计接口。
-主要类：Oracle、EmpiricalOracle、StartupTimeOracle、ExecutionTimeOracle、BandwidthUsageOracle、CostOracle、ResourceUtilizationOracle、FittedStartupTimeOracle、HackedFittedStartupTimeOracle、FittedExecutionTimeOracle、FetOracle、ResourceOracle。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+性能、成本与资源 Oracle。
+
+Oracle 负责根据调度上下文、Pod 和调度结果估计某类指标。经验型 Oracle 从 CSV 数据中采样，拟合型 Oracle 从预定义分布采样，统一返回指标名和值。
+
+阅读建议：把 Oracle 理解为调度或执行过程中的估计器，经验型读 CSV，拟合型读分布。
 """
 
 import glob
@@ -18,43 +20,59 @@ from srds import BoundRejectionSampler, BufferedSampler
 
 from sim.oracle.data.distributions import execution_time_distributions, startup_time_distributions
 
-# 字段说明：Bandwidth：表示 bandwidth，在当前业务流程中作为输入参数、状态字段或计算结果使用。
 Bandwidth = NamedTuple('Bandwidth', [('mbit', int), ('delay', int), ('deviation', int)])
 
-# 字段说明：data_dir：表示 data、dir，在当前业务流程中作为输入参数、状态字段或计算结果使用。
 data_dir = 'sim/oracle/data'
 
 
 class Oracle:
     """
-    类作用：估计器抽象接口，定义根据上下文估计某类性能或资源指标的统一方法。
-    核心方法：estimate。
+    估计器接口。
+
+    根据调度上下文、Pod 和调度结果返回某类指标名和值。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         raise NotImplementedError
 
 
 class EmpiricalOracle:
     """
-    类作用：经验型 Oracle 基类，保存实验观测数据供子类估计使用。
-    核心方法：__init__。
+    经验数据 Oracle 基类。
+
+    加载 CSV 观测数据并进行基本清洗，供启动时间和执行时间 Oracle 采样。
+
+    重要字段：
+    - dataset: 从 CSV 加载并清洗后的经验观测数据。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self, filename):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：dataset。
-        - 整理为表格数据，服务于后续实验分析。
-        参数：filename：表示 filename，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 EmpiricalOracle 对象。
+
+        主要建立字段：dataset。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - filename: 经验数据 CSV 文件路径或通配符。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         csvs = glob.glob(filename)
         dfs = [pd.read_csv(filename) for filename in csvs]
@@ -67,35 +85,45 @@ class EmpiricalOracle:
         df['bandwidth'] = df['bandwidth'].apply(lambda x: 1.25e+8 if x is None else parse_size_string(f'{x.mbit}M') / 8)
         
         df['host'] = df['host'].apply(lambda x: make_tuple(x)[0][:-1])
-        # 字段说明：self.dataset：画像或实验数据集，用于构造 Oracle、统计表或训练输入。
         self.dataset = df
 
 
 class StartupTimeOracle(EmpiricalOracle):
     """
-    类作用：启动时间 Oracle，估计函数副本从创建到可运行的耗时。
-    继承关系：EmpiricalOracle。
-    核心方法：__init__、estimate。
+    经验启动时间 Oracle。
+
+    根据主机类型、镜像、带宽和镜像是否已缓存，从历史数据中采样启动耗时。
+
+    重要字段：
+    - durations: Oracle 使用的耗时采样表。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：durations。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 StartupTimeOracle 对象。
+
+        主要建立字段：durations。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super(StartupTimeOracle, self).__init__(os.path.join(data_dir, 'pod_startup_*.csv'))
-        # 字段说明：self.durations：历史耗时样本集合，用于经验分布采样。
         self.durations = self.dataset[['host', 'bandwidth', 'image', 'image_present', 'duration']]
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'startup_time', None
@@ -126,34 +154,45 @@ class StartupTimeOracle(EmpiricalOracle):
 
 class ExecutionTimeOracle(EmpiricalOracle):
     """
-    类作用：执行时间 Oracle，估计函数请求在指定节点上的执行时长。
-    继承关系：EmpiricalOracle。
-    核心方法：__init__、estimate。
+    经验执行时间 Oracle。
+
+    根据主机类型、镜像和带宽，从历史数据中采样执行耗时。
+
+    重要字段：
+    - durations: Oracle 使用的耗时采样表。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：durations。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ExecutionTimeOracle 对象。
+
+        主要建立字段：durations。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super(ExecutionTimeOracle, self).__init__(os.path.join(data_dir, 'exec_time*.csv'))
-        # 字段说明：self.durations：历史耗时样本集合，用于经验分布采样。
         self.durations = self.dataset[['host', 'bandwidth', 'image', 'duration']]
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'execution_time', None
         host = scheduling_result.suggested_host.name
         host_type = host[host.rindex('_') + 1:]
-        # 业务说明：这里处理节点、拓扑或网络连接相关状态。
         bandwidth = context.get_bandwidth_graph()[host][context.get_next_storage_node(scheduling_result.suggested_host)]
         execution_time = 0
         for container in pod.spec.containers:
@@ -166,22 +205,30 @@ class ExecutionTimeOracle(EmpiricalOracle):
 
 class BandwidthUsageOracle(Oracle):
     """
-    类作用：BandwidthUsageOracle 类，封装 bandwidth、usage、oracle 相关状态和业务操作。
-    继承关系：Oracle。
-    核心方法：estimate。
+    带宽使用量 Oracle。
+
+    估计调度某个 Pod 需要传输的镜像和输入/输出数据量。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'bandwidth_usage', None
 
-        # 业务说明：这里处理镜像或数据下载，相关耗时会进入仿真时间。
         bandwidth_usage = 0
         node = scheduling_result.suggested_host
         for image_name in scheduling_result.needed_images:
@@ -200,33 +247,45 @@ class BandwidthUsageOracle(Oracle):
 
 class CostOracle(Oracle):
     """
-    类作用：成本 Oracle，根据执行时间和资源价格估计函数调用成本。
-    继承关系：Oracle。
-    核心字段：execution_time_oracle：执行时间估计器，供成本或调度评分复用。。
-    核心方法：__init__、estimate。
+    成本 Oracle。
+
+    基于执行时间和节点类型估计云端运行成本。
+
+    重要字段：
+    - execution_time_oracle: 用于估计执行时间的 Oracle，成本 Oracle 会复用它计算费用。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：execution_time_oracle：执行时间估计器，供成本或调度评分复用。
     execution_time_oracle: Oracle
 
     def __init__(self, execution_time_oracle=None) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：execution_time_oracle。
-        参数：execution_time_oracle：执行时间估计器，供成本或调度评分复用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 CostOracle 对象。
+
+        主要建立字段：execution_time_oracle。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - execution_time_oracle: 执行时间 Oracle，用于成本估计或组合估计。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.execution_time_oracle：执行时间估计器，供成本或调度评分复用。
         self.execution_time_oracle = execution_time_oracle or FittedExecutionTimeOracle()
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'cost', None
@@ -234,7 +293,6 @@ class CostOracle(Oracle):
         labels = scheduling_result.suggested_host.labels
         if 'locality.skippy.io/type' in labels and labels['locality.skippy.io/type'] == 'cloud':
             _, time_str = self.execution_time_oracle.estimate(context, pod, scheduling_result)
-            # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
             
             
             cost = 0.000001667 * 10 * float(time_str)
@@ -243,22 +301,29 @@ class CostOracle(Oracle):
 
 class ResourceUtilizationOracle(Oracle):
     """
-    类作用：资源利用率 Oracle，估计或评分函数执行对节点资源的占用。
-    继承关系：Oracle。
-    核心方法：estimate、score_resource_utilization。
+    资源利用率 Oracle。
+
+    根据 Pod 请求和节点容量估计资源使用分数，用于调度评分。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'resource_utilization', None
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
         resource_utilization = 0
         node = scheduling_result.suggested_host
         labels = scheduling_result.suggested_host.labels
@@ -268,11 +333,15 @@ class ResourceUtilizationOracle(Oracle):
 
     def score_resource_utilization(self, pod, node) -> float:
         """
-        函数作用：处理 score、resource、utilization 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：pod：调度器使用的 Pod 视图。；node：候选或目标节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：score_resource_utilization。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - pod: Skippy Pod，表示待调度的工作负载。
+        - node: 目标节点或节点视图。
+
+        返回说明：返回值类型标注为 float，通常作为后续调度、执行、统计或查询流程的输入。
         """
         mem_cap = node.capacity.memory
         cpu_cap = node.capacity.cpu_millis
@@ -287,19 +356,24 @@ class ResourceUtilizationOracle(Oracle):
 class FittedStartupTimeOracle(Oracle):
 
     """
-    类作用：FittedStartupTimeOracle 类，封装 fitted、startup、time、oracle 相关状态和业务操作。
-    继承关系：Oracle。
-    核心方法：__init__、estimate。
+    拟合启动时间 Oracle。
+
+    从预定义分布采样启动耗时，避免依赖完整原始观测数据。
+
+    重要字段：
+    - startup_time_samplers: 启动时间分布采样器索引。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：startup_time_samplers。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 FittedStartupTimeOracle 对象。
+
+        主要建立字段：startup_time_samplers。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.startup_time_samplers：按节点或函数索引的启动时间采样器集合。
         self.startup_time_samplers = {
             k: BoundRejectionSampler(BufferedSampler(dist), xmin, xmax) for k, (xmin, xmax, dist) in
             startup_time_distributions.items()
@@ -307,12 +381,18 @@ class FittedStartupTimeOracle(Oracle):
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'startup_time', None
@@ -340,20 +420,25 @@ class FittedStartupTimeOracle(Oracle):
 
 class HackedFittedStartupTimeOracle(Oracle):
     """
-    类作用：HackedFittedStartupTimeOracle 类，封装 hacked、fitted、startup、time、oracle 相关状态和业务操作。
-    继承关系：Oracle。
-    核心方法：__init__、estimate、get_sampler。
+    带修正逻辑的拟合启动时间 Oracle。
+
+    在基础拟合采样上加入特殊场景处理，用于兼容历史实验数据。
+
+    重要字段：
+    - startup_time_samplers: 启动时间分布采样器索引。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
 
     def __init__(self) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：startup_time_samplers。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 HackedFittedStartupTimeOracle 对象。
+
+        主要建立字段：startup_time_samplers。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.startup_time_samplers：按节点或函数索引的启动时间采样器集合。
         self.startup_time_samplers = {
             k: BoundRejectionSampler(BufferedSampler(dist), xmin, xmax) for k, (xmin, xmax, dist) in
             startup_time_distributions.items()
@@ -361,11 +446,18 @@ class HackedFittedStartupTimeOracle(Oracle):
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'startup_time', None
@@ -395,12 +487,16 @@ class HackedFittedStartupTimeOracle(Oracle):
 
     def get_sampler(self, host_type, image, image_present):
         """
-        函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：host_type：表示 host、type，在当前业务流程中作为输入参数、状态字段或计算结果使用。；image：容器镜像标识。；image_present：表示 image、present，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        读取 sampler 相关状态。
+
+        该方法不推进仿真时间，只根据当前索引、缓存或对象字段返回结果。调用方需要处理返回 None 或空列表的情况。
+
+        参数说明：
+        - host_type: 节点硬件类型字符串。
+        - image: 镜像名或 FunctionImage。
+        - image_present: 目标节点是否已经缓存该镜像。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         image_key = image.split(':')[0]  
 
@@ -414,19 +510,24 @@ class HackedFittedStartupTimeOracle(Oracle):
 class FittedExecutionTimeOracle(Oracle):
 
     """
-    类作用：FittedExecutionTimeOracle 类，封装 fitted、execution、time、oracle 相关状态和业务操作。
-    继承关系：Oracle。
-    核心方法：__init__、estimate、get_sampler。
+    拟合执行时间 Oracle。
+
+    根据主机类型和镜像从分布采样函数执行时间。
+
+    重要字段：
+    - execution_time_samplers: 执行时间分布采样器索引。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：execution_time_samplers。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 FittedExecutionTimeOracle 对象。
+
+        主要建立字段：execution_time_samplers。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.execution_time_samplers：按节点或函数索引的执行时间采样器集合。
         self.execution_time_samplers = {
             k: BoundRejectionSampler(BufferedSampler(dist), xmin, xmax) for k, (xmin, xmax, dist) in
             execution_time_distributions.items()
@@ -434,11 +535,18 @@ class FittedExecutionTimeOracle(Oracle):
 
     def estimate(self, context: ClusterContext, pod: Pod, scheduling_result: SchedulingResult) -> Tuple[str, str]:
         """
-        函数作用：根据上下文估计性能、资源或成本指标。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；scheduling_result：调度器输出结果，包含候选节点选择、可行性和调度评分信息。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        Oracle 估计/采样入口：estimate。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - context: Skippy 调度上下文。 类型标注：ClusterContext。
+        - pod: Skippy Pod，表示待调度的工作负载。 类型标注：Pod。
+        - scheduling_result: 调度器返回的结果，包含 suggested_host 和所需镜像等信息。 类型标注：SchedulingResult。
+
+        返回说明：返回值类型标注为 Tuple[str, str]，通常作为后续调度、执行、统计或查询流程的输入。
+
+        业务流程：Oracle 的 estimate 只计算指标值，不直接改变仿真时间；调用方决定如何使用估计结果。
         """
         if scheduling_result is None or scheduling_result.suggested_host is None:
             return 'execution_time', None
@@ -457,12 +565,15 @@ class FittedExecutionTimeOracle(Oracle):
 
     def get_sampler(self, host_type, image):
         """
-        函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：host_type：表示 host、type，在当前业务流程中作为输入参数、状态字段或计算结果使用。；image：容器镜像标识。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        读取 sampler 相关状态。
+
+        该方法不推进仿真时间，只根据当前索引、缓存或对象字段返回结果。调用方需要处理返回 None 或空列表的情况。
+
+        参数说明：
+        - host_type: 节点硬件类型字符串。
+        - image: 镜像名或 FunctionImage。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         image_key = image.split(':')[0]  
 
@@ -476,16 +587,23 @@ class FittedExecutionTimeOracle(Oracle):
 class FetOracle:
 
     """
-    类作用：函数执行时间采样接口，供 FunctionCharacterization 在节点上采样 FET。
-    核心方法：sample。
+    函数执行时间查询接口。
+
+    按 host 和 image 返回函数执行时间样本。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def sample(self, host: str, image: str) -> Optional[float]:
         """
-        函数作用：从经验分布或画像数据中采样一个函数执行时间。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        参数：host：执行函数的目标主机或节点。；image：容器镜像标识。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        Oracle 估计/采样入口：sample。
+
+        根据调度上下文、节点、镜像或资源画像返回估计值。该类方法通常服务于调度评分、生命周期耗时或性能退化计算。
+
+        参数说明：
+        - host: 主机或节点名称。 类型标注：str。
+        - image: 镜像名或 FunctionImage。 类型标注：str。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         raise NotImplementedError()
 
@@ -493,15 +611,22 @@ class FetOracle:
 class ResourceOracle:
 
     """
-    类作用：资源向量查询接口，供 FunctionCharacterization 获取节点相关资源画像。
-    核心方法：get_resources。
+    函数资源画像查询接口。
+
+    按 host 和 image 返回 FunctionResourceCharacterization。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def get_resources(self, host: str, image: str) -> 'FunctionResourceCharacterization':
         """
-        函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        参数：host：执行函数的目标主机或节点。；image：容器镜像标识。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        读取 resources 相关状态。
+
+        该方法不推进仿真时间，只根据当前索引、缓存或对象字段返回结果。调用方需要处理返回 None 或空列表的情况。
+
+        参数说明：
+        - host: 主机或节点名称。 类型标注：str。
+        - image: 镜像名或 FunctionImage。 类型标注：str。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         raise NotImplementedError()

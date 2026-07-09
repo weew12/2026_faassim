@@ -1,7 +1,7 @@
 """
-文件作用：Ether 拓扑包装层，提供容器仓库节点初始化、节点查找、路由查询和按需带宽图访问。
-主要类：Topology、LazyBandwidthGraph。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+Ether 拓扑包装层。
+
+Topology 为仿真提供节点查找、容器仓库节点初始化、路由和带宽图访问等能力。LazyBandwidthGraph 延迟查询链路带宽，减少提前构造完整矩阵的成本。
 """
 
 from collections import defaultdict
@@ -10,33 +10,43 @@ from typing import Optional
 import ether.topology
 from ether.core import Node, Connection
 
-# 字段说明：DockerRegistry：表示 docker、registry，在当前业务流程中作为输入参数、状态字段或计算结果使用。
 DockerRegistry = Node('registry')
 
 
 class Topology(ether.topology.Topology):
 
     """
-    类作用：Ether 拓扑封装，持有节点/链路图并提供容器仓库、路由和节点查找能力。
-    继承关系：ether.topology.Topology。
-    核心方法：__init__、init_docker_registry、route_by_node_name、find_node。
+    Ether 拓扑包装器。
+
+    提供节点查找、路由访问、容器仓库节点初始化和带宽图访问。
+
+    重要字段：
+    - _node_index: 节点名到 Ether Node 的缓存索引，用于加速重复查找。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
     def __init__(self, incoming_graph_data=None, **attr):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：_node_index。
-        参数：incoming_graph_data：表示 incoming、graph、data，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 Topology 对象。
+
+        主要建立字段：_node_index。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - incoming_graph_data: 传给 networkx/Ether 拓扑构造器的初始图数据。
+        - **attr: 可变关键字参数，通常用于透传指标标签或扩展配置。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__(incoming_graph_data, **attr)
-        # 字段说明：self._node_index：索引表，用于按名称快速查找对象。
         self._node_index = dict()
 
     def init_docker_registry(self):
         """
-        函数作用：把容器仓库作为拓扑中的特殊节点加入网络。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        确保拓扑中存在容器镜像仓库节点。
+
+        如果 registry 节点尚未加入拓扑，则先加入；随后把所有 internet 开头的外部网络节点连接到 registry，使镜像拉取可以通过拓扑路由计算网络耗时。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         if DockerRegistry not in self.nodes:
             self.add_node(DockerRegistry)
@@ -46,12 +56,15 @@ class Topology(ether.topology.Topology):
 
     def route_by_node_name(self, source_name: str, destination_name: str):
         """
-        函数作用：根据节点名称查询两点之间的网络路径。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：source_name：表示 source、name，在当前业务流程中作为输入参数、状态字段或计算结果使用。；destination_name：表示 destination、name，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按节点名查询两点之间的路由。
+
+        方法先把 source_name 和 destination_name 转换为 Ether Node；任一节点不存在时抛出 ValueError，避免后续路由计算静默失败。
+
+        参数说明：
+        - source_name: 源节点名称。 类型标注：str。
+        - destination_name: 目标节点名称。 类型标注：str。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         source = self.find_node(source_name)
         if source is None:
@@ -65,11 +78,14 @@ class Topology(ether.topology.Topology):
 
     def find_node(self, node_name: str) -> Optional[Node]:
         """
-        函数作用：按节点名称在拓扑中查找 Ether 节点对象。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：node_name：节点名称，用于在拓扑、资源状态或调度结果中定位具体节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按节点名查找 Ether Node，并缓存查找结果。
+
+        第一次查找会遍历 topology.get_nodes()，命中后写入 _node_index，后续同名查询可直接返回。
+
+        参数说明：
+        - node_name: 节点名称。 类型标注：str。
+
+        返回说明：返回值类型标注为 Optional[Node]，通常作为后续调度、执行、统计或查询流程的输入。
         """
         if node_name in self._node_index:
             return self._node_index[node_name]
@@ -84,69 +100,89 @@ class Topology(ether.topology.Topology):
 
 class LazyBandwidthGraph:
     """
-    类作用：按需带宽图代理，在调度器访问两个节点时临时查询 Ether 路由带宽。
-    核心字段：topology：Ether 拓扑对象，描述节点、链路、路由和容器仓库位置。。
-    核心方法：__init__、__getitem__。
+    延迟带宽图。
+
+    在访问链路时才查询拓扑路由并计算带宽，避免提前构造完整带宽矩阵。
+
+    重要字段：
+    - topology: Ether 拓扑对象，描述节点、链路和路由关系。
+    - cache: 性能退化估计缓存，避免重复计算同一时间窗口。
+
+    阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
     """
-    # 字段说明：topology：Ether 拓扑对象，描述节点、链路、路由和容器仓库位置。
     topology: Topology
 
     def __init__(self, topology: Topology) -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：cache、topology。
-        参数：topology：Ether 网络拓扑。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 LazyBandwidthGraph 对象。
+
+        主要建立字段：cache、topology。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+        参数说明：
+        - topology: Ether 拓扑对象，描述节点和链路。 类型标注：Topology。
+
+        返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
         """
         super().__init__()
-        # 字段说明：self.cache：缓存表，避免重复构造昂贵对象或重复计算调度/网络结果。
         self.cache = defaultdict(dict)
-        # 字段说明：self.topology：Ether 拓扑对象，描述节点、链路、路由和容器仓库位置。
         self.topology = topology
 
     def __getitem__(self, source):
         """
-        函数作用：按键读取内部字段或资源项。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：source：源节点或源数据对象，用于网络传输和拓扑构造。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回带宽查询解析器，使对象支持 graph[source][destination] 写法。
+
+        第一层下标只固定源节点，真正的路由和带宽计算会在第二层下标访问时发生。
+
+        参数说明：
+        - source: 网络传输源节点或源节点名。
+
+        返回说明：返回当前方法的查询、计算或创建结果；调用方通常会继续把它用于调度、执行、统计或条件判断。
         """
         return self._Resolver(self, source)
 
     class _Resolver:
         """
-        类作用：_Resolver 类，封装 resolver 相关状态和业务操作。
-        核心方法：__init__、__getitem__。
+        带宽图二级下标解析器。
+
+        保存源节点名称，并在读取 destination 时完成 source -> destination 的实际带宽查询。
+
+        重要字段：
+        - bwg: 所属 LazyBandwidthGraph 对象，保存拓扑和带宽缓存。
+        - source: 固定的源节点名，第二层下标会基于它查询到目标节点的带宽。
+
+        阅读提示：先确认这些字段在哪个阶段被初始化，再沿公开方法查看它们如何驱动调度、执行、监控或统计流程。
         """
         def __init__(self, bwg: 'LazyBandwidthGraph', source: str) -> None:
             """
-            函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-            关键流程：
-            - 写入对象字段：bwg、source。
-            参数：bwg：带宽图对象，描述节点间可用带宽。；source：源节点或源数据对象，用于网络传输和拓扑构造。。
-            返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+            初始化 _Resolver 对象。
+
+            主要建立字段：bwg、source。这些字段构成对象后续参与部署、调度、执行、监控或指标记录时需要的内部状态。
+
+            参数说明：
+            - bwg: LazyBandwidthGraph 实例。 类型标注：'LazyBandwidthGraph'。
+            - source: 网络传输源节点或源节点名。 类型标注：str。
+
+            返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
             """
             super().__init__()
-            # 字段说明：self.bwg：带宽图对象，描述节点间可用带宽。
             self.bwg = bwg
-            # 字段说明：self.source：源节点或源数据对象，用于网络传输和拓扑构造。
             self.source = source
 
         def __getitem__(self, destination: str) -> Optional[float]:
             """
-            函数作用：按键读取内部字段或资源项。
-            关键流程：
-            - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-            参数：destination：表示 destination，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-            返回：与该业务步骤对应的对象、指标或计算结果。
+            读取 source 到 destination 的可用带宽。
+
+            同节点通信返回本地默认带宽；跨节点通信先查缓存，未命中时通过拓扑路由取路径中最小链路带宽作为瓶颈带宽。
+
+            参数说明：
+            - destination: 网络传输目标节点或目标节点名。 类型标注：str。
+
+            返回说明：返回值类型标注为 Optional[float]，通常作为后续调度、执行、统计或查询流程的输入。
             """
             if destination in self.bwg.cache[self.source]:
                 return self.bwg.cache[self.source][destination]
 
             if self.source == destination:
-                # 修正提示：这里标记了原实现中需要进一步确认的边界。
                 return 1.25e+8
 
             route = self.bwg.topology.route_by_node_name(self.source, destination)

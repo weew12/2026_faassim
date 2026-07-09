@@ -1,7 +1,9 @@
 """
-文件作用：请求到达模型和工作负载生成器，提供固定、正弦、随机游走、指数分布和预录制到达间隔等请求模式。
-主要函数：constant_rps_profile、sine_rps_profile、randomwalk_rps_profile、static_arrival_profile、expovariate_arrival_profile、pre_recorded_profile、function_trigger、run_arrival_profile、save_requests。
-在整体架构中的位置：属于 faas-sim 核心仿真层，直接参与离散事件推进、平台建模或指标采集。
+请求到达模型与工作负载生成器。
+
+本模块提供固定 RPS、正弦波、随机游走、指数分布、预录制重放等到达模型，并把到达间隔转换为 SimPy 进程中的函数调用请求。
+
+阅读建议：先区分 RPS 生成器和到达间隔生成器，再看 function_trigger 如何提交请求。
 """
 
 import logging
@@ -17,7 +19,6 @@ import simpy
 from sim.core import Environment
 from sim.faas import FunctionRequest, FunctionDeployment
 
-# 字段说明：__all__：模块导出符号列表，控制 from package import * 时暴露哪些对象。
 __all__ = [
     'constant_rps_profile',
     'sine_rps_profile',
@@ -33,24 +34,31 @@ __all__ = [
 
 def constant_rps_profile(rps):
     """
-    函数作用：生成固定 RPS 的请求速率函数。
-    关键流程：
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：rps：每秒请求数，用于控制请求生成强度。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    生成固定 RPS 曲线。
+
+    这是一个无限生成器，每次迭代都返回同一个 rps 值。通常先传给 static_arrival_profile 或 expovariate_arrival_profile，再由这些函数把 RPS 转换为请求到达间隔。
+
+    参数说明：
+    - rps: 每秒请求数。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     while True:
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield rps
 
 
 def sine_rps_profile(env: Environment, max_rps, period):
     """
-    函数作用：生成按正弦曲线波动的请求速率函数。
-    关键流程：
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；max_rps：表示 max、rps，在当前业务流程中作为输入参数、状态字段或计算结果使用。；period：表示 period，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    生成随仿真时间呈正弦变化的 RPS 曲线。
+
+    env.now 决定当前相位，max_rps 决定峰值，period 决定完整波形周期。返回值始终被映射到 0 到 max_rps 之间，适合模拟早晚高峰一类周期性负载。
+
+    参数说明：
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+    - max_rps: RPS 曲线峰值。
+    - period: 正弦 RPS 曲线的周期。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     div = period / (2 * np.pi)  
 
@@ -60,7 +68,6 @@ def sine_rps_profile(env: Environment, max_rps, period):
     while True:
         if env.now == x and y >= 0:
             
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield y
 
         x = env.now
@@ -70,105 +77,117 @@ def sine_rps_profile(env: Environment, max_rps, period):
         y = (y + 1) / 2
         y = y * max_rps
 
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield y
 
 
 def randomwalk_rps_profile(mu, sigma, max_rps, min_rps=0):
     """
-    函数作用：生成随机游走形式的请求速率函数。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：mu：表示 mu，在当前业务流程中作为输入参数、状态字段或计算结果使用。；sigma：表示 sigma，在当前业务流程中作为输入参数、状态字段或计算结果使用。；max_rps：表示 max、rps，在当前业务流程中作为输入参数、状态字段或计算结果使用。；min_rps：表示 min、rps，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    生成随机游走形式的 RPS 曲线。
+
+    每一步从当前均值附近采样新值，并用 min_rps 和 max_rps 截断边界。它适合模拟不规则但相邻时刻有关联的业务流量。
+
+    参数说明：
+    - mu: 随机游走当前均值。
+    - sigma: 随机扰动标准差。
+    - max_rps: RPS 曲线峰值。
+    - min_rps: 随机游走允许的最小 RPS。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     while True:
         nmu = random.normalvariate(mu, sigma)
 
         
         if nmu >= max_rps:
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield max_rps
         elif nmu <= min_rps:
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield min_rps
         else:
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield nmu
             mu = nmu
 
 
 def static_arrival_profile(rps_generator, max_ia=math.inf):
     """
-    函数作用：按固定间隔生成请求到达时间。
-    关键流程：
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：rps_generator：表示 rps、generator，在当前业务流程中作为输入参数、状态字段或计算结果使用。；max_ia：表示 max、ia，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    把 RPS 曲线转换为固定到达间隔曲线。
+
+    若当前 RPS 为 r，则间隔为 1/r；若 RPS 为 0，则返回 max_ia。调用方通常对返回值执行 env.timeout(ia)，从而按仿真时间触发请求。
+
+    参数说明：
+    - rps_generator: RPS 生成器，每次产生当前请求速率。
+    - max_ia: 最大到达间隔，用于限制低负载或 0 RPS 时的等待时间。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     while True:
         rps = next(rps_generator)
         if rps == 0:
-            # 仿真推进：向 SimPy 事件队列交出控制权。
             yield max_ia
 
         ia = 1 / rps
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield min(ia, max_ia)
 
 
 def expovariate_arrival_profile(rps_generator, scale=1.0, max_ia=math.inf):
     """
-    函数作用：按指数分布生成随机请求到达时间。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：rps_generator：表示 rps、generator，在当前业务流程中作为输入参数、状态字段或计算结果使用。；scale：执行时间缩放因子。；max_ia：表示 max、ia，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    把 RPS 曲线转换为泊松到达间隔曲线。
+
+    每次读取当前 lambda，然后用 random.expovariate(lambda) 采样间隔；scale 用于整体拉伸或压缩时间，max_ia 用于限制最大间隔。
+
+    参数说明：
+    - rps_generator: RPS 生成器，每次产生当前请求速率。
+    - scale: 时间缩放因子或扩缩容数量，具体取决于当前函数。
+    - max_ia: 最大到达间隔，用于限制低负载或 0 RPS 时的等待时间。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     while True:
         lam = next(rps_generator)
         ia = random.expovariate(lam) if lam > 0 else 1
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield min(ia * scale, max_ia)
 
 
 def pre_recorded_profile(file: str):
     """
-    函数作用：从预录制的到达间隔列表重放请求模式。
-    关键流程：
-    - 作为 SimPy 协程运行，使用 yield 控制离散事件推进。
-    参数：file：表示 file，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    从 pickle 文件重放预先保存的到达间隔序列。
+
+    文件内容应当是可迭代的间隔列表或生成器数据。该函数用 yield from 逐个返回间隔，适合复现实验工作负载。
+
+    参数说明：
+    - file: 输入或输出文件路径。 类型标注：str。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     with open(file, 'rb') as fd:
-        # 仿真推进：向 SimPy 事件队列交出控制权。
         yield from pickle.load(fd)
 
 
 def function_trigger(env: Environment, deployment: FunctionDeployment, ia_generator, max_requests=None):
     """
-    函数作用：按请求到达事件触发 FaaS 函数调用。
-    关键流程：
-    - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-    - 通过 env.process 串联子协程，使部署、调用或监控流程按 SimPy 事件顺序执行。
-    - 触发函数调用并等待响应，用于工作负载生成或复合调用流程。
-    参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；deployment：函数部署对象，包含函数定义、容器规格和伸缩配置。；ia_generator：表示 ia、generator，在当前业务流程中作为输入参数、状态字段或计算结果使用。；max_requests：最大并发请求数，用于计算队列拥塞或性能退化。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    按到达间隔持续触发函数请求。
+
+    每次从 ia_generator 读取一个间隔，先等待 env.timeout(ia)，再启动 env.faas.invoke(FunctionRequest(...))。max_requests 为 None 时无限运行，否则只发送指定数量请求。
+
+    参数说明：
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：Environment。
+    - deployment: FunctionDeployment，表示一个已部署或待部署函数。 类型标注：FunctionDeployment。
+    - ia_generator: 到达间隔生成器，每次产生下一次请求前需要等待的时间。
+    - max_requests: 最多触发的请求数量，None 表示持续触发。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
+
+    业务流程：这是工作负载进入系统的入口，生成请求但不直接等待请求完成。
     """
     try:
         if max_requests is None:
             while True:
                 ia = next(ia_generator)
-                # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
                 yield env.timeout(ia)
                 # 请求触发：把生成的请求交给 FaaS 系统执行。
                 env.process(env.faas.invoke(FunctionRequest(deployment.name)))
         else:
             for _ in range(max_requests):
                 ia = next(ia_generator)
-                # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
                 yield env.timeout(ia)
                 # 请求触发：把生成的请求交给 FaaS 系统执行。
                 env.process(env.faas.invoke(FunctionRequest(deployment.name)))
@@ -181,30 +200,32 @@ def function_trigger(env: Environment, deployment: FunctionDeployment, ia_genera
 
 def run_arrival_profile(env, ia_gen, until):
     """
-    函数作用：执行一个到达模型并持续产生函数请求。
-    关键流程：
-    - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-    - 通过 env.process 串联子协程，使部署、调用或监控流程按 SimPy 事件顺序执行。
-    - 整理为表格数据，服务于后续实验分析。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。；ia_gen：表示 ia、gen，在当前业务流程中作为输入参数、状态字段或计算结果使用。；until：表示 until，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+    在独立 SimPy 环境中试跑到达间隔生成器。
+
+    函数会记录每次事件发生的仿真时间和间隔，运行到 until 后返回 DataFrame，便于检查生成的流量曲线是否合理。
+
+    参数说明：
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。
+    - ia_gen: 到达间隔生成器。
+    - until: 试跑到达模型的截止仿真时间。
+
+    协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
     """
     x = list()
     y = list()
 
     def event_generator():
         """
-        函数作用：处理 event、generator 相关业务逻辑。
-        关键流程：
-        - 通过 env.timeout 推进仿真时间，用真实/经验耗时近似业务阶段延迟。
-        产出：SimPy 事件序列，调用方通过 yield/env.process 等待该业务阶段完成。
+        SimPy 协程：event_generator。
+
+        函数中的 yield/yield from 会把控制权交还给仿真环境；调用方应使用 yield from 等待完成，或使用 env.process(...) 作为后台进程启动。
+
+        协程行为：该函数包含 yield/yield from，调用后不会一次性完成；它会把控制权交还给 SimPy，由仿真时钟决定后续继续执行的时间。
         """
         while True:
             ia = next(ia_gen)
             x.append(env.now)
             y.append(ia)
-            # 仿真推进：等待经验耗时，模拟该生命周期阶段真实经过的时间。
             yield env.timeout(ia)
 
     then = time.time()
@@ -218,9 +239,17 @@ def run_arrival_profile(env, ia_gen, until):
 
 def save_requests(profile, duration, file: str, env: simpy.Environment = None):
     """
-    函数作用：把生成的请求到达序列保存到文件，便于复现实验。
-    参数：profile：实验 profile 名称或配置，用于选择函数集合和负载类型。；duration：实验持续时间。；file：表示 file，在当前业务流程中作为输入参数、状态字段或计算结果使用。；env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    把某个到达模型生成的请求间隔保存到 pickle 文件。
+
+    profile 应是接收 env 并返回间隔生成器的函数。保存后的文件可由 pre_recorded_profile 读取，用于复现实验。
+
+    参数说明：
+    - profile: 请求到达模型函数。
+    - duration: 仿真持续时间或采样持续时间。
+    - file: 输入或输出文件路径。 类型标注：str。
+    - env: 仿真环境，提供当前仿真时间、事件调度和全局业务组件。 类型标注：simpy.Environment。
+
+    返回说明：无显式返回值，主要通过修改对象状态、写入队列、记录指标或推进仿真事件产生影响。
     """
     if env is None:
         env = simpy.Environment()
