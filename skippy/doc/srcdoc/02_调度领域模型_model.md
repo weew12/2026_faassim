@@ -10,21 +10,22 @@
 
 ```text
 调度结果                节点                   Pod                PodSpec               容器                资源请求
-SchedulingResult ──  Node ──             ──  Pod  ──         ──  PodSpec ──       ──  Container ──     ──  ResourceRequirements
-   suggested_host      │   name            │   name            │   containers       │   image           │   requests
-   feasible_nodes      │   pods            │   namespace       │   labels           │   resources       │   (cpu / memory)
-   needed_images       │   capacity        │   spec            │                    │                   │
-                       │   allocatable     │                   │                    │                   │
-                       │   labels          │                   │                    │                   │
-                       │                   │                   │                    │                   │
-                       └─ Capacity         └───────────────────┴────────────────────┴─ ResourceRequirements
-                          cpu_millis
-                          memory
-                       (也用于累加容器请求)
+SchedulingResult ──  Node ──             ──  Pod  ──         ──  PodSpec ──       ──  Container ──           ──  ResourceRequirements
+   suggested_host      │   name            │   name            │   containers       │   image               │   requests
+   feasible_nodes      │   pods            │   namespace       │   labels           │   resources           │   (cpu / memory)
+   needed_images       │   capacity        │   spec            │                    │   ResourceRequirements│
+                       │   allocatable     │                   │                    │                       │
+                       │   labels          │                   │                    │                       │
+                       │                   │                   │                    │                       │
+                       └─ Capacity         └───────────────────┴────────────────────┴─ 
+                            cpu_millis
+                            memory
+                        (也用于累加容器请求)
 
 辅助类型
-   ImageState            size: Dict[arch, bytes]   # 各架构镜像大小
-                         num_nodes: int            # 已缓存该镜像的节点数
+   ImageState            
+        size: Dict[arch, bytes]   # 各架构镜像大小
+        num_nodes: int            # 已缓存该镜像的节点数
 ```
 
 ## 2. `ImageState` — 容器镜像运行态元数据
