@@ -1,7 +1,7 @@
 """
-文件作用：恒定工作负载 Benchmark，按实验配置选择函数组合、部署函数并持续产生固定强度请求。
-主要类：ConstantBenchmark。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+固定到达率的 Raith21 Benchmark。
+
+本模块根据实验类型创建函数部署与固定请求到达模型，并在 setup 阶段选择 AI、混合或服务型 workload。
 """
 
 from ext.raith21 import images
@@ -17,26 +17,35 @@ from sim.requestgen import expovariate_arrival_profile, constant_rps_profile
 class ConstantBenchmark(BenchmarkBase):
 
     """
-    类作用：恒定负载 Benchmark，按固定请求强度运行一组函数部署并收集结果。
-    继承关系：BenchmarkBase。
-    核心方法：__init__、settings、type、setup、setup_profile、set_mixed_profiles、set_ai_profiles、set_service_profiles、set_deployments。
+    固定请求速率 Benchmark。
+
+    根据 profile 类型构造部署和固定 RPS 到达间隔，为论文策略比较提供稳定 workload。
+
+    关键字段:
+        model_folder: 性能退化模型目录；为空时不加载退化模型。
+        profile: 工作负载类型，可选 service、ai 或 mixed。
+        rps: 固定请求速率。
+        duration: Benchmark 持续时间。
     """
     def __init__(self, profile: str, duration: int, rps=200, model_folder=None):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：duration、model_folder、profile、rps。
-        参数：profile：实验 profile 名称或配置，用于选择函数集合和负载类型。；duration：实验持续时间。；rps：每秒请求数，用于控制请求生成强度。；model_folder：性能退化模型所在目录。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ConstantBenchmark。
+
+        建立字段：model_folder、profile、rps、duration。
+
+        参数:
+            profile: 工作负载类型，可选 service、ai 或 mixed。 类型：str。
+            duration: Benchmark 仿真时长。 类型：int。
+            rps: 固定请求速率。
+            model_folder: 性能退化模型目录。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         all_images = images.all_ai_images
-        # 字段说明：self.model_folder：性能退化模型文件所在目录。
         self.model_folder = model_folder
-        # 字段说明：self.profile：实验 profile 名称或配置，用于选择函数集合和负载类型。
         self.profile = profile
-        # 字段说明：self.rps：每秒请求数，用于控制请求生成强度。
         self.rps = rps
-        # 字段说明：self.duration：Benchmark 持续的仿真时间长度。
         self.duration = duration
         fet_oracle = Raith21FetOracle(ai_execution_time_distributions)
         resource_oracle = Raith21ResourceOracle(ai_resources_per_node_image)
@@ -48,10 +57,10 @@ class ConstantBenchmark(BenchmarkBase):
     @property
     def settings(self):
         """
-        函数作用：处理 settings 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回可序列化的 profile、RPS 和持续时间配置。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return {
             'profile': self.profile,
@@ -62,18 +71,22 @@ class ConstantBenchmark(BenchmarkBase):
     @property
     def type(self):
         """
-        函数作用：处理 type 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回 Benchmark 类型标识 constant。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return 'constant'
 
     def setup(self, env: Environment):
         """
-        函数作用：模拟函数业务初始化阶段，例如加载模型、预热缓存或建立连接。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        根据拓扑调整部署伸缩参数、建立到达模型，并可选加载性能退化模型。
+
+        参数:
+            env: faas-sim 仿真环境。 类型：Environment。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         self.set_deployments(env)
         self.setup_profile()
@@ -83,10 +96,10 @@ class ConstantBenchmark(BenchmarkBase):
 
     def setup_profile(self):
         """
-        函数作用：按实验 profile 装配函数画像、部署集合和请求模式。
-        关键流程：
-        - 在约束不满足或状态非法时抛出异常，阻止仿真继续使用错误状态。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        根据 service、ai 或 mixed profile 选择请求到达模型。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         if self.profile == 'service':
             self.set_service_profiles()
@@ -99,8 +112,10 @@ class ConstantBenchmark(BenchmarkBase):
 
     def set_mixed_profiles(self):
         """
-        函数作用：更新对象内部状态或实验配置。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为混合 workload 配置推理、训练和预处理请求到达率。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         self.arrival_profiles[images.resnet50_inference_function] = \
             expovariate_arrival_profile(constant_rps_profile(self.rps))
@@ -120,8 +135,10 @@ class ConstantBenchmark(BenchmarkBase):
     def set_ai_profiles(self):
 
         """
-        函数作用：更新对象内部状态或实验配置。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为全部 AI workload 配置请求到达率。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         self.arrival_profiles[images.resnet50_inference_function] = \
             expovariate_arrival_profile(constant_rps_profile(self.rps))
@@ -140,8 +157,10 @@ class ConstantBenchmark(BenchmarkBase):
 
     def set_service_profiles(self):
         """
-        函数作用：更新对象内部状态或实验配置。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为 Pi、TensorFlow GPU 和 Fio 服务配置请求到达率。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         self.arrival_profiles[images.pi_function] = \
             expovariate_arrival_profile(constant_rps_profile(self.rps))
@@ -153,9 +172,13 @@ class ConstantBenchmark(BenchmarkBase):
 
     def set_deployments(self, env):
         """
-        函数作用：更新对象内部状态或实验配置。
-        参数：env：仿真环境，提供 SimPy 时钟、拓扑、FaaS 系统、指标和资源状态。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        根据拓扑节点数设置各函数的副本上限、伸缩步长和 RPS 阈值。
+
+        参数:
+            env: faas-sim 仿真环境。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         deployments = self.deployments_per_name
         for deployment in deployments.values():

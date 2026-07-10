@@ -1,13 +1,13 @@
 """
-文件作用：Raith21 设备生成配置文件，定义 hybridbalanced 场景下不同架构和设备属性的概率分布，用于生成可复现的异构节点集合。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+混合均衡设备生成配置。
+
+本模块在云、边缘、不同架构与加速器之间设置较均衡的概率分布。
 """
 
 from ..device import ArchProperties
 from ..generator import GeneratorSettings
 from ..model import *
 
-# 字段说明：hybridbalanced_settings：实验或生成器配置对象，集中保存该场景下的参数。
 hybridbalanced_settings = GeneratorSettings(
     arch={
         Arch.X86: 0.3,

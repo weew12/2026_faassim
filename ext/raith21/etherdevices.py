@@ -1,7 +1,7 @@
 """
-文件作用：Raith21 设备到 Ether 节点的转换文件，定义 Raspberry Pi、Jetson、Xeon、Coral 等典型边缘/云节点的资源参数。
-主要函数：create_rockpi、create_rpi4_node、create_coral、create_xeongpu、create_xeoncpu、create_nano、create_nx、create_node_from_device、create_aarch64_gpu、convert_to_ether_nodes、create_device_from_node、convert_to_devices。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 设备与 Ether 节点之间的转换。
+
+本模块既提供论文中典型硬件节点的固定配置，也能把随机生成的 Device 转换为 Ether Node，并支持从节点反向恢复设备属性。
 """
 
 from typing import List
@@ -15,11 +15,13 @@ from ext.raith21.model import Location, Disk, Bins, Accelerator, Arch, Connectio
 
 def create_rockpi(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建论文设定的 RockPi Ether 节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'rockpi_%d' % next(counters['rockpi'])
 
@@ -33,11 +35,13 @@ def create_rockpi(name=None) -> Node:
 
 def create_rpi4_node(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 Raspberry Pi 4 Ether 节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'rpi4_%d' % next(counters['rpi4'])
 
@@ -54,11 +58,13 @@ def create_rpi4_node(name=None) -> Node:
 
 def create_coral(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建带 Edge TPU 能力的 Coral Ether 节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'coral_%d' % next(counters['coral'])
 
@@ -72,11 +78,13 @@ def create_coral(name=None) -> Node:
 
 def create_xeongpu(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建带 NVIDIA GPU 的 Xeon 云节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'xeongpu_%d' % next(counters['xeongpu'])
 
@@ -93,11 +101,13 @@ def create_xeongpu(name=None) -> Node:
 
 def create_xeoncpu(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建仅使用 CPU 的 Xeon 云节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'xeoncpu_%d' % next(counters['xeoncpu'])
 
@@ -111,11 +121,13 @@ def create_xeoncpu(name=None) -> Node:
 
 def create_nano(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 Jetson Nano 边缘 GPU 节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'nano_%d' % next(counters['nano'])
 
@@ -131,11 +143,13 @@ def create_nano(name=None) -> Node:
 
 def create_nx(name=None) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：name：对象名称。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 Jetson Xavier NX 边缘 GPU 节点。
+
+    参数:
+        name: 对象、节点、bucket 或配置名称。
+
+    返回:
+        Node。
     """
     name = name if name is not None else 'nx_%d' % next(counters['nx'])
 
@@ -151,20 +165,22 @@ def create_nx(name=None) -> Node:
 
 def create_node_from_device(d: Device) -> Node:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：d：单个设备对象的临时变量，用于设备到节点或节点到设备的转换。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把随机 Device 的容量和属性转换为 Ether Node。
+
+    参数:
+        d: 待转换的 Device 或属性字典。 类型：Device。
+
+    返回:
+        Node。
     """
     device = d.copy()
 
     def create():
         """
-        函数作用：根据输入对象创建对应的业务组件实例。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        根据函数容器创建对应 FunctionSimulator。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         if device.arch is Arch.ARM32:
             cpu_cores = device.cores is Bins.MEDIUM or device.cores is Bins.HIGH or device.cores is Bins.VERY_HIGH
@@ -285,11 +301,13 @@ def create_node_from_device(d: Device) -> Node:
 
 def create_aarch64_gpu(device):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：device：单个设备对象，包含架构、资源、位置和连接方式等属性。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    根据 GPU 设备能力创建 AArch64 Ether 节点。
+
+    参数:
+        device: 异构设备对象。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     adevice: GpuDevice
     adevice = device
@@ -347,11 +365,13 @@ def create_aarch64_gpu(device):
 
 def convert_to_ether_nodes(devices: List[Device]) -> List[Node]:
     """
-    函数作用：在不同对象模型之间转换数据表示。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：devices：设备对象列表，用于拓扑生成、异构度统计或节点转换。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    批量把 Device 列表转换为 Ether Node 列表。
+
+    参数:
+        devices: 异构设备集合。 类型：List[Device]。
+
+    返回:
+        List[Node]。
     """
     nodes = []
     for index, device in enumerate(devices):
@@ -362,11 +382,13 @@ def convert_to_ether_nodes(devices: List[Device]) -> List[Node]:
 
 def create_device_from_node(node: Node):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：node：候选或目标节点。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    根据 Ether Node 的名称、标签和容量恢复 Device/GpuDevice。
+
+    参数:
+        node: 候选 Skippy 节点。 类型：Node。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     accelerator = Accelerator[node.labels['device.edgerun.io/accelerator']]
     if accelerator is Accelerator.GPU:
@@ -388,7 +410,6 @@ def create_device_from_node(node: Node):
         )
     else:
         return Device(
-            # 修正提示：这里标记了原实现中需要进一步确认的边界。
             id=node.name[:node.name.rindex('_')],
             arch=Arch[node.labels['device.edgerun.io/arch']],
             accelerator=accelerator,
@@ -405,10 +426,12 @@ def create_device_from_node(node: Node):
 
 def convert_to_devices(nodes: List[Node]):
     """
-    函数作用：在不同对象模型之间转换数据表示。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    批量把 Ether Node 列表转换为 Device 列表。
+
+    参数:
+        nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     return list(map(lambda n: create_device_from_node(n), nodes))

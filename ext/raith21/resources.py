@@ -1,12 +1,12 @@
 """
-文件作用：Raith21 资源画像数据，保存不同函数在不同设备上的 CPU、内存、GPU、网络、块 I/O 使用量。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 函数资源画像数据。
+
+本模块保存不同函数镜像在不同设备类型上的 CPU、内存、网络、块 I/O 和 GPU 占用，供 ResourceOracle 与干扰模型读取。
 """
 
 from sim.faas import FunctionResourceCharacterization
 
 
-# 字段说明：ai_resources_per_node_image：表示 ai、resources、per、node、image，在当前业务流程中作为输入参数、状态字段或计算结果使用。
 ai_resources_per_node_image = {
     ('rockpi', 'faas-workloads/python-pi'): FunctionResourceCharacterization(0.26066751860455545, 0.0, 0,
                                                                              867.0644652888737, 0.02850091195999672),

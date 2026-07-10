@@ -1,8 +1,7 @@
 """
-文件作用：Raith21 函数部署定义文件，创建 ResNet、MobileNet、Speech、TensorFlow、Pi、Fio 等函数部署和镜像排序。
-主要类：DeploymentSettings。
-主要函数：get_resnet50_inference_deployment、get_speech_inference_deployment、get_mobilenet_inference_deployment、get_resnet_training_deployment、get_tf_gpu_deployment、get_pi_deployment、get_fio_deployment、get_resnet_preprocessing_deployment、create_all_deployments。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 论文工作负载的函数部署定义。
+
+本模块定义 ResNet、MobileNet、Speech、TensorFlow、Pi、Fio 和预处理函数的镜像、资源请求、标签、数据依赖、伸缩配置与镜像排序。
 """
 
 from dataclasses import dataclass
@@ -13,49 +12,44 @@ from sim.faas import DeploymentRanking, FunctionDeployment, FunctionImage, \
     FunctionContainer, KubernetesResourceConfiguration, Function, ScalingConfiguration
 from sim.oracle.oracle import ResourceOracle, FetOracle
 
-# 字段说明：default_resnet_inference_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_resnet_inference_ranking = DeploymentRanking(
     [images.resnet50_inference_gpu_manifest, images.resnet50_inference_cpu_manifest])
-# 字段说明：default_speech_inference_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_speech_inference_ranking = DeploymentRanking(
     [images.speech_inference_tflite_manifest, images.speech_inference_gpu_manifest])
-# 字段说明：default_mobilenet_inference_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_mobilenet_inference_ranking = DeploymentRanking(
     [images.mobilenet_inference_tpu_manifest, images.mobilenet_inference_tflite_manifest])
-# 字段说明：default_resnet_training_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_resnet_training_ranking = DeploymentRanking(
     [images.resnet50_training_gpu_manifest, images.resnet50_training_cpu_manifest])
-# 字段说明：default_pi_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_pi_ranking = DeploymentRanking([images.pi_manifest])
-# 字段说明：default_fio_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_fio_ranking = DeploymentRanking([images.fio_manifest])
-# 字段说明：default_tf_gpu_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_tf_gpu_ranking = DeploymentRanking([images.tf_gpu_manifest])
-# 字段说明：default_resnet_preprocessing_ranking：函数镜像部署优先级，决定多镜像场景下优先选择哪个容器规格。
 default_resnet_preprocessing_ranking = DeploymentRanking([images.resnet50_preprocessing_manifest])
 
 
 @dataclass
 class DeploymentSettings:
     """
-    类作用：Raith21 实验的部署排序配置，保存不同函数在不同镜像上的优先级。
-    核心字段：resnet_inference_ranking：ResNet 推理函数的镜像部署优先级。；resnet_preprocessing_ranking：ResNet 预处理函数的镜像部署优先级。；speech_inference_ranking：语音识别推理函数的镜像部署优先级。；mobilenet_inference_ranking：MobileNet 推理函数的镜像部署优先级。；resnet_training_ranking：ResNet 训练函数的镜像部署优先级。；tf_gpu_ranking：TensorFlow GPU 函数的镜像部署优先级。；pi_ranking：Python Pi 计算函数的镜像部署优先级。；fio_ranking：Fio I/O 函数的镜像部署优先级。。
+    函数镜像排序配置集合。
+
+    为每类 Raith21 workload 保存 DeploymentRanking，使实验可以统一替换不同函数的镜像优先顺序。
+
+    关键字段:
+        resnet_inference_ranking: ResNet50 推理镜像排序。
+        resnet_preprocessing_ranking: ResNet50 预处理镜像排序。
+        speech_inference_ranking: 语音推理镜像排序。
+        mobilenet_inference_ranking: MobileNet 推理镜像排序。
+        resnet_training_ranking: ResNet50 训练镜像排序。
+        tf_gpu_ranking: TensorFlow GPU 函数镜像排序。
+        pi_ranking: Pi 计算函数镜像排序。
+        fio_ranking: Fio I/O 函数镜像排序。
     """
-    # 字段说明：resnet_inference_ranking：ResNet 推理函数的镜像部署优先级。
     resnet_inference_ranking: DeploymentRanking = default_resnet_inference_ranking
-    # 字段说明：resnet_preprocessing_ranking：ResNet 预处理函数的镜像部署优先级。
     resnet_preprocessing_ranking: DeploymentRanking = default_resnet_preprocessing_ranking
-    # 字段说明：speech_inference_ranking：语音识别推理函数的镜像部署优先级。
     speech_inference_ranking: DeploymentRanking = default_speech_inference_ranking
-    # 字段说明：mobilenet_inference_ranking：MobileNet 推理函数的镜像部署优先级。
     mobilenet_inference_ranking: DeploymentRanking = default_mobilenet_inference_ranking
-    # 字段说明：resnet_training_ranking：ResNet 训练函数的镜像部署优先级。
     resnet_training_ranking: DeploymentRanking = default_resnet_training_ranking
-    # 字段说明：tf_gpu_ranking：TensorFlow GPU 函数的镜像部署优先级。
     tf_gpu_ranking: DeploymentRanking = default_tf_gpu_ranking
-    # 字段说明：pi_ranking：Python Pi 计算函数的镜像部署优先级。
     pi_ranking: DeploymentRanking = default_pi_ranking
-    # 字段说明：fio_ranking：Fio I/O 函数的镜像部署优先级。
     fio_ranking: DeploymentRanking = default_fio_ranking
 
 
@@ -63,11 +57,14 @@ def get_resnet50_inference_deployment(ranking: DeploymentRanking,
                                       scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 ResNet50 推理部署，提供 GPU/CPU 两种镜像，并声明模型输入数据与显存需求。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     resnet50_cpu_function_image = FunctionImage(image=images.resnet50_inference_cpu_manifest)
     resnet50_gpu_function_image = FunctionImage(image=images.resnet50_inference_gpu_manifest)
@@ -113,11 +110,14 @@ def get_speech_inference_deployment(ranking: DeploymentRanking,
                                     scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建语音推理部署，提供 GPU 与 TFLite 镜像，并为不同模型配置独立数据对象。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     speech_gpu_function_image = FunctionImage(image=images.speech_inference_gpu_manifest)
     speech_tflite_function_image = FunctionImage(image=images.speech_inference_tflite_manifest)
@@ -168,11 +168,14 @@ def get_mobilenet_inference_deployment(ranking: DeploymentRanking,
                                        scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 MobileNet 推理部署，提供 TPU 与 TFLite 镜像及对应加速器标签。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     mobilenet_tpu_function_image = FunctionImage(image=images.mobilenet_inference_tpu_manifest)
 
@@ -229,11 +232,14 @@ def get_resnet_training_deployment(ranking: DeploymentRanking,
                                    scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 ResNet50 训练部署，提供 GPU/CPU 镜像，并声明训练数据读取与模型写回路径。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     resnet_training_gpu_function_image = FunctionImage(image=images.resnet50_training_gpu_manifest)
 
@@ -285,11 +291,14 @@ def get_resnet_training_deployment(ranking: DeploymentRanking,
 def get_tf_gpu_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfiguration = None):
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 TensorFlow GPU 服务部署，并声明 GPU 与显存需求。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     tf_gpu_function_image = FunctionImage(image=images.tf_gpu_manifest)
     tf_gpu_function = Function(
@@ -318,11 +327,14 @@ def get_tf_gpu_deployment(ranking: DeploymentRanking, scaling_config: ScalingCon
 def get_pi_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 CPU 密集型 Pi 计算服务部署。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     pi_function_image = FunctionImage(image=images.pi_manifest)
     pi_function = Function(name=images.pi_function, fn_images=[pi_function_image])
@@ -348,11 +360,14 @@ def get_pi_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfigu
 def get_fio_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfiguration = None) -> FunctionDeployment:
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建磁盘 I/O 密集型 Fio 服务部署。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        FunctionDeployment。
     """
     fio_function_image = FunctionImage(image=images.fio_manifest)
     fio_function = Function(name=images.fio_function, fn_images=[fio_function_image])
@@ -378,11 +393,14 @@ def get_fio_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfig
 def get_resnet_preprocessing_deployment(ranking: DeploymentRanking, scaling_config: ScalingConfiguration = None):
     
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：ranking：镜像/容器部署优先级排序。；scaling_config：函数伸缩策略配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 ResNet50 数据预处理部署，并声明输入数据与预处理结果的存储路径。
+
+    参数:
+        ranking: 函数镜像部署排序。 类型：DeploymentRanking。
+        scaling_config: 函数伸缩配置。 类型：ScalingConfiguration。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     resnet_preprocessing_function_image = FunctionImage(image=images.resnet50_preprocessing_manifest)
     resnet_preprocessing_function = Function(name=images.resnet50_preprocessing_function,
@@ -422,11 +440,15 @@ def get_resnet_preprocessing_deployment(ranking: DeploymentRanking, scaling_conf
 def create_all_deployments(fet_oracle: FetOracle, resource_oracle: ResourceOracle,
                            deployment_rankings: DeploymentSettings = None) -> Dict[str, FunctionDeployment]:
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。；resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。；deployment_rankings：函数部署优先级配置集合，决定每类函数优先选择哪些镜像。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按 DeploymentSettings 创建全部 Raith21 函数部署，并绑定 FET/资源 Oracle。
+
+    参数:
+        fet_oracle: 函数执行时间 Oracle。 类型：FetOracle。
+        resource_oracle: 函数资源画像 Oracle。 类型：ResourceOracle。
+        deployment_rankings: 用于控制当前生成、筛选或配置过程的参数。 类型：DeploymentSettings。
+
+    返回:
+        Dict[str, FunctionDeployment]。
     """
     if deployment_rankings is None:
         deployment_rankings = DeploymentSettings()
@@ -436,9 +458,6 @@ def create_all_deployments(fet_oracle: FetOracle, resource_oracle: ResourceOracl
         images.resnet50_training_function: get_resnet_training_deployment(deployment_rankings.resnet_training_ranking),
         images.mobilenet_inference_function: get_mobilenet_inference_deployment(
             deployment_rankings.mobilenet_inference_ranking),
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
-        # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
         images.speech_inference_function: get_speech_inference_deployment(deployment_rankings.speech_inference_ranking),
         images.resnet50_preprocessing_function: get_resnet_preprocessing_deployment(
             deployment_rankings.resnet_preprocessing_ranking)

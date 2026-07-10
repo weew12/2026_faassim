@@ -1,13 +1,13 @@
 """
-文件作用：Raith21 设备生成配置文件，定义 cloudcpu 场景下不同架构和设备属性的概率分布，用于生成可复现的异构节点集合。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+云端 CPU 节点生成配置。
+
+本模块定义 cloudcpu 场景的设备属性概率，用于生成以云端 CPU 设备为主的集群。
 """
 
 from ..device import ArchProperties
 from ..generator import GeneratorSettings
 from ..model import *
 
-# 字段说明：cloudcpu_settings：实验或生成器配置对象，集中保存该场景下的参数。
 cloudcpu_settings = GeneratorSettings(
     arch={
         Arch.X86: 0.8,

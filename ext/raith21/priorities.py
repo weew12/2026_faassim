@@ -1,7 +1,7 @@
 """
-文件作用：Skippy 调度优先级扩展，根据能力匹配、预计执行时间和资源竞争情况为候选节点打分。
-主要类：CapabilityMatchingPriority、ExecutionTimePriority、ContentionPriority。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 的 workload-aware 调度优先级。
+
+本模块根据设备能力匹配、预计函数执行时间和同节点资源争用为可行节点打分，是论文调度策略的核心实现。
 """
 
 import ast
@@ -16,23 +16,31 @@ from sim.oracle.oracle import FetOracle, ResourceOracle
 
 class CapabilityMatchingPriority(Priority):
     """
-    类作用：能力匹配优先级，越满足函数硬件/位置/资源需求的节点得分越高。
-    继承关系：Priority。
-    核心方法：map_node_score、reduce_mapped_score。
+    设备能力匹配优先级。
+
+    比较 Pod 需求标签与节点能力标签，匹配项越多得分越高。
     """
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         """
-        函数作用：为单个候选节点计算调度优先级分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；node：候选或目标节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        累加节点能力与 Pod 概率需求的匹配权重。
+
+        Pod 的 device.edgerun.io/requirements 标签保存 Requirements.to_dict() 的字符串形式；
+        节点每匹配一个属性取值，就累加该取值在需求分布中的概率。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            node: 候选 Skippy 节点。 类型：Node。
+
+        返回:
+            int。
         """
         priority = 0
         raw_requirements = pod.spec.labels.get('device.edgerun.io/requirements', None)
         if raw_requirements is None:
             return 0
 
+        # 只比较 Raith21 设备标签，忽略 Kubernetes/Skippy 的其他控制标签。
         node_caps = dict(filter(lambda label: 'device.edgerun.io' in label[0], node.labels.items()))
 
         requirements: Dict[str, Dict[str, float]] = ast.literal_eval(raw_requirements)
@@ -45,11 +53,16 @@ class CapabilityMatchingPriority(Priority):
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
         """
-        函数作用：把节点原始分数归一化为调度器使用的最终分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；node_scores：候选节点分数集合，用于调度优先级归一化和最终排序。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把全部候选节点的原始值归一化为 Skippy 优先级分数。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            nodes: Ether 或 Skippy 节点集合。 类型：[Node]。
+            node_scores: 全部候选节点的原始分数列表。 类型：[int]。
+
+        返回:
+            [int]。
         """
         return _scale_scores(node_scores, context.max_priority)
 
@@ -57,40 +70,57 @@ class CapabilityMatchingPriority(Priority):
 class ExecutionTimePriority(Priority):
 
     """
-    类作用：执行时间优先级，利用 FET Oracle 预测候选节点执行速度并转换为调度分数。
-    继承关系：Priority。
-    核心方法：__init__、map_node_score、reduce_mapped_score。
+    预计执行时间优先级。
+
+    通过 FET Oracle 估计 Pod 在各节点上的执行时间，并反向缩放，使更快节点获得更高分。
+
+    关键字段:
+        fet_oracle: 函数执行时间 Oracle。
     """
     def __init__(self, fet_oracle: FetOracle):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：fet_oracle。
-        参数：fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ExecutionTimePriority。
+
+        建立字段：fet_oracle。
+
+        参数:
+            fet_oracle: 函数执行时间 Oracle。 类型：FetOracle。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         super().__init__()
-        # 字段说明：self.fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。
         self.fet_oracle = fet_oracle
 
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         """
-        函数作用：为单个候选节点计算调度优先级分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；node：候选或目标节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回候选节点上预计 FET 的负值。
+
+        _scale_scores 按数值从小到大缩放，因此先取负数可让执行时间更短的节点获得高分。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            node: 候选 Skippy 节点。 类型：Node。
+
+        返回:
+            int。
         """
         fet = self.fet_oracle.sample(node.name, pod.spec.containers[0].image)
         return -fet if fet is not None else 0
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
         """
-        函数作用：把节点原始分数归一化为调度器使用的最终分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；node_scores：候选节点分数集合，用于调度优先级归一化和最终排序。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把全部候选节点的原始值归一化为 Skippy 优先级分数。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            nodes: Ether 或 Skippy 节点集合。 类型：[Node]。
+            node_scores: 全部候选节点的原始分数列表。 类型：[int]。
+
+        返回:
+            [int]。
         """
         return _scale_scores(node_scores, context.max_priority)
 
@@ -98,31 +128,40 @@ class ExecutionTimePriority(Priority):
 class ContentionPriority(Priority):
 
     """
-    类作用：资源竞争优先级，根据磁盘、网络和已有负载估计节点竞争风险并打分。
-    继承关系：Priority。
-    核心方法：__init__、_get_disk_speed、_get_net_speed、map_node_score、reduce_mapped_score。
+    资源争用优先级。
+
+    根据候选节点现有 Pod 的资源画像、节点磁盘和网络能力估计潜在竞争，争用越低得分越高。
+
+    关键字段:
+        fet_oracle: 函数执行时间 Oracle。
+        resource_oracle: 资源画像 Oracle。
     """
     def __init__(self, fet_oracle: FetOracle, resource_oracle: ResourceOracle):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：fet_oracle、resource_oracle。
-        参数：fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。；resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 ContentionPriority。
+
+        建立字段：fet_oracle、resource_oracle。
+
+        参数:
+            fet_oracle: 函数执行时间 Oracle。 类型：FetOracle。
+            resource_oracle: 函数资源画像 Oracle。 类型：ResourceOracle。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         super().__init__()
-        # 字段说明：self.fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。
         self.fet_oracle = fet_oracle
-        # 字段说明：self.resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。
         self.resource_oracle = resource_oracle
 
     def _get_disk_speed(self, disk: str):
         """
-        函数作用：处理 get、disk、speed 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：disk：存储介质类型。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把磁盘类型标签映射为近似顺序吞吐率，单位为字节/秒。
+
+        参数:
+            disk: 节点磁盘类型标签。 类型：str。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         if 'NVME' in disk:
             return 2500e6
@@ -138,13 +177,14 @@ class ContentionPriority(Priority):
         return 1
 
     def _get_net_speed(self, location: str):
-        # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
         """
-        函数作用：处理 get、net、speed 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：location：设备所处层级，例如云、边缘、MEC 或移动端。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按云端/边缘位置返回归一化网络吞吐率，单位为字节/秒。
+
+        参数:
+            location: 节点位置类型标签。 类型：str。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         if 'CLOUD' in location:
             return 1000e6
@@ -153,11 +193,18 @@ class ContentionPriority(Priority):
 
     def map_node_score(self, context: ClusterContext, pod: Pod, node: Node) -> int:
         """
-        函数作用：为单个候选节点计算调度优先级分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；node：候选或目标节点。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        估计把 Pod 加入候选节点后的相对资源争用得分。
+
+        CPU/GPU 画像直接使用归一化占用；网络和块 I/O 会除以节点近似吞吐能力。
+        当前 Pod 需求减去已有 Pod 总占用，空闲程度更高的节点通常得到更大的原始值。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            node: 候选 Skippy 节点。 类型：Node。
+
+        返回:
+            int。
         """
         image = pod.spec.containers[0].image
         host = node.name[:node.name.rindex('_')]
@@ -168,12 +215,12 @@ class ContentionPriority(Priority):
         pod_cpu = usage['cpu']
         pod_gpu = usage['gpu']
 
-        # 业务说明：这里处理节点、拓扑或网络连接相关状态。
         running_cpu = 0
         running_blkio = 0
         running_net = 0
         running_gpu = 0
         counter = 0
+        # 汇总节点上已经放置的 Pod 资源画像，近似表达共享 CPU、GPU、磁盘和网络的压力。
         for running_pod in node.pods:
             image = running_pod.spec.containers[0].image
             usage = self.resource_oracle.get_resources(host, image)
@@ -184,6 +231,7 @@ class ContentionPriority(Priority):
                 running_gpu += usage['gpu']
                 counter += 1
         if counter > 0:
+            # 网络与块 I/O 原始画像除以设备吞吐率后，才能与 CPU/GPU 占用共同比较。
             running_net /= self._get_net_speed(node.labels.get('device.edgerun.io/location'))
             running_blkio /= self._get_disk_speed(node.labels.get('device.edgerun.io/disk'))
 
@@ -198,10 +246,15 @@ class ContentionPriority(Priority):
 
     def reduce_mapped_score(self, context: ClusterContext, pod: Pod, nodes: [Node], node_scores: [int]) -> [int]:
         """
-        函数作用：把节点原始分数归一化为调度器使用的最终分数。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：context：估计器所需上下文。；pod：调度器使用的 Pod 视图。；nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；node_scores：候选节点分数集合，用于调度优先级归一化和最终排序。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把全部候选节点的原始值归一化为 Skippy 优先级分数。
+
+        参数:
+            context: Skippy 集群上下文。 类型：ClusterContext。
+            pod: 待调度 Pod。 类型：Pod。
+            nodes: Ether 或 Skippy 节点集合。 类型：[Node]。
+            node_scores: 全部候选节点的原始分数列表。 类型：[int]。
+
+        返回:
+            [int]。
         """
         return _scale_scores(node_scores, context.max_priority)

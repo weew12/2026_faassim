@@ -1,8 +1,7 @@
 """
-文件作用：Raith21 拓扑构造文件，生成云、城市感知、异构边缘集群等实验拓扑，并组合 Ether 节点、链路和网络单元。
-主要类：XeonCloudlet、FasterMobileConnection、HeterogeneousUrbanSensingScenario。
-主要函数：all_internet_topology、urban_sensing_topology、parts。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 异构边缘拓扑构造器。
+
+本模块把 Xeon、Raspberry Pi、Jetson、Coral、NUC 等节点组织为云、cloudlet、接入点和移动网络拓扑，并同步建立存储索引。
 """
 
 import logging
@@ -20,17 +19,21 @@ from srds import IntegerTruncationSampler
 from ext.raith21 import storage
 from sim.topology import Topology
 
-# 字段说明：logger：模块级日志记录器，用于输出当前模块的运行信息和调试信息。
 logger = logging.getLogger(__name__)
 
 
 def all_internet_topology(nodes: List[Node]) -> Topology:
     """
-    函数作用：处理 all、internet、topology 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建所有计算节点都直接连接互联网的简单拓扑。
+
+    每个节点被放入独立 LANCell，并通过 internet 回程连接；该拓扑用于隔离复杂城市网络
+    结构的影响，适合作为调度和设备能力实验的简单基线。
+
+    参数:
+        nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+
+    返回:
+        Topology。
     """
     t = Topology()
     for node in nodes:
@@ -43,11 +46,17 @@ def all_internet_topology(nodes: List[Node]) -> Topology:
 
 def urban_sensing_topology(nodes: List[Node], storage_index: StorageIndex) -> Topology:
     """
-    函数作用：处理 urban、sensing、topology 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；storage_index：存储节点索引，用于模拟函数输入/输出数据传输。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    创建 Raith21 异构城市感知拓扑。
+
+    HeterogeneousUrbanSensingScenario 会按节点类型构造 cloudlet、接入点、移动链路和存储
+    位置；完成物化后再接入 Docker registry。
+
+    参数:
+        nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+        storage_index: 对象存储位置索引。 类型：StorageIndex。
+
+    返回:
+        Topology。
     """
     t = Topology()
     HeterogeneousUrbanSensingScenario(nodes, storage_index).materialize(t)
@@ -59,26 +68,34 @@ def urban_sensing_topology(nodes: List[Node], storage_index: StorageIndex) -> To
 class XeonCloudlet(LANCell):
 
     """
-    类作用：XeonCloudlet 类，封装 xeon、cloudlet 相关状态和业务操作。
-    继承关系：LANCell。
-    核心方法：__init__、create_nodes、_create_identity。
+    Xeon cloudlet 拓扑组件。
+
+    创建一组 Xeon 节点并通过交换机连接，表示边缘侧小型服务器集群。
+
+    关键字段:
+        name: 拓扑组件名称。
+        xeons: cloudlet 中的 Xeon 节点列表。
+        xeon_vms_per_rack: 每个机架容纳的 Xeon 节点数。
+        racks: 根据节点数量计算的机架数。
     """
     def __init__(self, xeons: List[Node], xeon_vms_per_rack=5, backhaul=None):
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：name、racks、xeon_vms_per_rack、xeons。
-        参数：xeons：Xeon 服务器数量或节点集合。；xeon_vms_per_rack：每个机架上生成的 Xeon 虚拟机数量。；backhaul：表示 backhaul，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 XeonCloudlet。
+
+        建立字段：name、xeons、xeon_vms_per_rack、racks。
+
+        参数:
+            xeons: Xeon 节点列表。 类型：List[Node]。
+            xeon_vms_per_rack: 每个机架的 Xeon 节点数。
+            backhaul: 上联网络或回程链路。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
-        # 字段说明：self.name：业务对象名称，通常用于函数、节点、镜像或实验标识。
         self.name = None
         self._create_identity()
-        # 字段说明：self.xeons：Xeon 服务器数量或节点集合。
         self.xeons = xeons
-        # 字段说明：self.xeon_vms_per_rack：每个机架上生成的 Xeon 虚拟机数量。
         self.xeon_vms_per_rack = xeon_vms_per_rack
-        # 字段说明：self.racks：机架集合，用于云/边缘集群拓扑生成。
         self.racks = int(len(self.xeons) / self.xeon_vms_per_rack)
         nodes = self.create_nodes()
 
@@ -86,10 +103,12 @@ class XeonCloudlet(LANCell):
 
     def create_nodes(self) -> List[LANCell]:
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按 xeon_vms_per_rack 把 Xeon 节点拆成多个机架 LANCell。
+
+        每个机架都连接到 cloudlet switch；最后不足一个完整机架的节点仍会形成独立 LANCell。
+
+        返回:
+            List[LANCell]。
         """
         nodes = []
         rack = []
@@ -106,27 +125,29 @@ class XeonCloudlet(LANCell):
 
     def _create_identity(self):
         """
-        函数作用：处理 create、identity 相关业务逻辑。
-        关键流程：
-        - 写入对象字段：name、nr、switch。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        为 cloudlet 分配递增编号、名称和交换机名称。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         if self.name is None:
-            # 字段说明：self.nr：编号或数量参数，常用于生成节点身份。
             self.nr = next(counters['cloudlet'])
-            # 字段说明：self.name：业务对象名称，通常用于函数、节点、镜像或实验标识。
             self.name = 'cloudlet_%d' % self.nr
-            # 字段说明：self.switch：交换机节点，用于连接同一子网或机架内设备。
             self.switch = 'switch_%s' % self.name
 
 
 def parts(a, b):
     """
-    函数作用：处理 parts 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：a：表示 a，在当前业务流程中作为输入参数、状态字段或计算结果使用。；b：表示 b，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    尽量均匀地把整数 a 分成 b 份。
+
+    前 a % b 份比其余分组多 1，用于给不同加速器类型分配节点数量。
+
+    参数:
+        a: 需要被均分的总数。
+        b: 分组数量。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     q, r = divmod(a, b)
     return [q + 1] * r + [q] * (b - r)
@@ -135,15 +156,19 @@ def parts(a, b):
 class FasterMobileConnection(UpDownLink):
 
     """
-    类作用：FasterMobileConnection 类，封装 faster、mobile、connection 相关状态和业务操作。
-    继承关系：UpDownLink。
-    核心方法：__init__。
+    高速移动网络连接模型。
+
+    在 Ether 移动连接模型基础上使用 Raith21 实验设定的回程链路参数。
     """
     def __init__(self, backhaul='internet') -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        参数：backhaul：表示 backhaul，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 FasterMobileConnection。
+
+        参数:
+            backhaul: 上联网络或回程链路。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
         super().__init__(250, 250, backhaul)
 
@@ -151,53 +176,64 @@ class FasterMobileConnection(UpDownLink):
 class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
     """
-    类作用：HeterogeneousUrbanSensingScenario 类，封装 heterogeneous、urban、sensing、scenario 相关状态和业务操作。
-    继承关系：UrbanSensingScenario。
-    核心方法：__init__、create_city、_create_aot_nodes、create_rockpi_aot_nodes、create_rpi4_aot_nodes、create_rpi3_aot_nodes、create_cloudlet、_get_xeon_nodes、_get_rpi3_nodes、_get_rpi4_nodes、_get_rockpi_nodes、_get_nano_nodes 等。
+    异构城市感知拓扑场景。
+
+    按设备类型分组输入节点，并把云、cloudlet、接入点、移动设备和存储节点组织成完整 Ether 拓扑。
+
+    关键字段:
+        nodes: 场景使用的节点集合。
+        storage_index: 对象数据位置索引。
+        xeon_nodes: Xeon 节点集合。
+        rpi3_nodes: Raspberry Pi 3 节点集合。
+        rpi4_nodes: Raspberry Pi 4 节点集合。
+        rockpi_nodes: RockPi 节点集合。
+        tx2_nodes: Jetson TX2 节点集合。
+        nx_nodes: Jetson Xavier NX 节点集合。
+        nano_nodes: Jetson Nano 节点集合。
+        coral_nodes: Coral TPU 节点集合。
+        nuc_nodes: Intel NUC 节点集合。
     """
     def __init__(self, nodes: List[Node], storage_index: StorageIndex, num_cells=default_num_cells,
                  cell_density=default_cell_density,
                  cloudlet_size=default_cloudlet_size, internet='internet') -> None:
         """
-        函数作用：初始化对象字段，并把外部配置转换为后续业务流程可直接读取的内部状态。
-        关键流程：
-        - 写入对象字段：coral_nodes、nano_nodes、nodes、nuc_nodes、nx_nodes、rockpi_nodes、rpi3_nodes、rpi4_nodes、storage_index、tx2_nodes、xeon_nodes。
-        参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；storage_index：存储节点索引，用于模拟函数输入/输出数据传输。；num_cells：表示 num、cells，在当前业务流程中作为输入参数、状态字段或计算结果使用。；cell_density：表示 cell、density，在当前业务流程中作为输入参数、状态字段或计算结果使用。；cloudlet_size：表示 cloudlet、size，在当前业务流程中作为输入参数、状态字段或计算结果使用。；internet：表示 internet，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-        返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+        初始化 HeterogeneousUrbanSensingScenario。
+
+        建立字段：nodes、storage_index、xeon_nodes、rpi3_nodes、rpi4_nodes、rockpi_nodes、tx2_nodes、nx_nodes、nano_nodes、coral_nodes、nuc_nodes。
+
+        参数:
+            nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+            storage_index: 对象存储位置索引。 类型：StorageIndex。
+            num_cells: 城市拓扑中的 cell 数量。
+            cell_density: 每个 cell 的节点密度采样配置。
+            cloudlet_size: cloudlet 节点规模。
+            internet: 互联网回程节点名称。
+
+        返回:
+            无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
         """
-        # 字段说明：self.nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。
         self.nodes = nodes
-        # 字段说明：self.storage_index：存储节点索引，用于模拟函数输入/输出数据传输。
         self.storage_index = storage_index
-        # 字段说明：self.xeon_nodes：Xeon 节点集合。
         self.xeon_nodes = self._get_xeon_nodes()
-        # 字段说明：self.rpi3_nodes：Raspberry Pi 3 节点集合。
         self.rpi3_nodes = self._get_rpi3_nodes()
-        # 字段说明：self.rpi4_nodes：Raspberry Pi 4 节点集合。
         self.rpi4_nodes = self._get_rpi4_nodes()
-        # 字段说明：self.rockpi_nodes：RockPi 节点集合。
         self.rockpi_nodes = self._get_rockpi_nodes()
-        # 字段说明：self.tx2_nodes：Jetson TX2 节点集合。
         self.tx2_nodes = self._get_tx2_nodes()
-        # 字段说明：self.nx_nodes：Jetson NX 节点集合。
         self.nx_nodes = self._get_nx_nodes()
-        # 字段说明：self.nano_nodes：Jetson Nano 节点集合。
         self.nano_nodes = self._get_nano_nodes()
-        # 字段说明：self.coral_nodes：Coral DevBoard 节点集合。
         self.coral_nodes = self._get_coral_nodes()
-        # 字段说明：self.nuc_nodes：Intel NUC 节点集合。
         self.nuc_nodes = self._get_nuc_nodes()
 
         super().__init__(num_cells, cell_density, cloudlet_size, internet)
 
     def create_city(self) -> GeoCell:
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 使用随机采样生成设备属性、请求间隔或性能取值。
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        构造异构城市感知网络拓扑。
+
+        返回:
+            GeoCell。
         """
+        # AOT 节点是接入点附近的普通 SBC，随后会按 cell density 分配到多个 neighborhood。
         aot_nodes = []
         aot_nodes.extend(self.create_rpi3_aot_nodes())
         aot_nodes.extend(self.create_rpi4_aot_nodes())
@@ -230,18 +266,13 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
             choices = random.choices(['tx2', 'nano', 'coral', 'nx'], weights=split, k=take)
 
             def select_nodes(nodes, n):
-                """
-                函数作用：处理 select、nodes 相关业务逻辑。
-                关键流程：
-                - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-                参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；n：数量参数。。
-                返回：与该业务步骤对应的对象、指标或计算结果。
-                """
+                """从节点列表头部取最多 n 个节点，并返回剩余节点与已选节点。"""
                 if n > len(nodes):
                     diff = n - len(nodes)
                     n -= diff
                 return nodes[selected_size:], nodes[:selected_size]
 
+            # 按前面生成的 split，把 TX2/NX/Nano/Coral 加速节点分配到当前 neighborhood。
             selected_accelerator_nodes = []
             for i in range(take):
                 node = choices[i]
@@ -273,6 +304,7 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
                 selected_aot_nodes = aot_nodes[:size]
                 aot_nodes = aot_nodes[size:]
+            # 加速节点通过 IoTComputeBox 聚合；普通 SBC 与可选 NUC 共享当前接入链路。
             if len(selected_accelerator_nodes) > 0:
                 box = IoTComputeBox(selected_accelerator_nodes)
                 neighborhood = SharedLinkCell(
@@ -316,11 +348,15 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
         def get_first_non_empty_node(neighorbood):
             """
-            函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-            关键流程：
-            - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-            参数：neighorbood：表示 neighorbood，在当前业务流程中作为输入参数、状态字段或计算结果使用。。
-            返回：与该业务步骤对应的对象、指标或计算结果。
+            返回 neighborhood 中第一个实际计算节点。
+
+            存储 bucket 会登记在这个节点上；空列表和空计算盒会被跳过。
+
+            参数:
+                neighorbood: 当前 SharedLinkCell neighborhood。
+
+            返回:
+                第一个 Ether Node；找不到时返回 None。
             """
             for n in neighorbood.nodes:
                 if type(n) is list and len(n) > 0:
@@ -347,11 +383,14 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
     def _create_aot_nodes(self, nodes: List[Node], size: int):
         """
-        函数作用：处理 create、aot、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。；size：请求数据大小，影响网络传输耗时。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按固定组大小把普通边缘节点包装为 IoTComputeBox。
+
+        参数:
+            nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+            size: 节点组或数据对象大小。 类型：int。
+
+        返回:
+            IoTComputeBox 列表。
         """
         collected = []
         aot_nodes = []
@@ -366,46 +405,46 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
     def create_rockpi_aot_nodes(self):
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        为每个 RockPi 创建独立 IoTComputeBox。
+
+        返回:
+            RockPi IoTComputeBox 列表。
         """
         return self._create_aot_nodes(self.rockpi_nodes, 1)
 
     def create_rpi4_aot_nodes(self):
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        每两个 Raspberry Pi 4 组成一个 IoTComputeBox。
+
+        返回:
+            Raspberry Pi 4 IoTComputeBox 列表。
         """
         return self._create_aot_nodes(self.rpi4_nodes, 2)
 
     def create_rpi3_aot_nodes(self):
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        每三个 Raspberry Pi 3 组成一个 IoTComputeBox。
+
+        返回:
+            Raspberry Pi 3 IoTComputeBox 列表。
         """
         return self._create_aot_nodes(self.rpi3_nodes, 3)
 
     def create_cloudlet(self) -> XeonCloudlet:
         """
-        函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        创建并连接 Xeon cloudlet。
+
+        返回:
+            XeonCloudlet。
         """
         return XeonCloudlet(self.xeon_nodes, self.cloudlet_size[0], backhaul=FiberToExchange(self.internet))
 
     def _get_xeon_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、xeon、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回全部 Xeon CPU 和 Xeon GPU 节点。
+
+        返回:
+            List[Node]。
         """
         xeongpus = list(filter(lambda l: 'xeongpu' in l.name, self.nodes))
         xeoncpus = list(filter(lambda l: 'xeoncpu' in l.name, self.nodes))
@@ -414,82 +453,84 @@ class HeterogeneousUrbanSensingScenario(UrbanSensingScenario):
 
     def _get_rpi3_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、rpi3、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 rpi3 的节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('rpi3')
 
     def _get_rpi4_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、rpi4、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 rpi4 的节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('rpi4')
 
     def _get_rockpi_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、rockpi、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 rockpi 的节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('rockpi')
 
     def _get_nano_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、nano、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 nano 的 Jetson 节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('nano')
 
     def _get_tx2_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、tx2、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 tx2 的 Jetson 节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('tx2')
 
     def _get_nx_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、nx、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 nx 的 Jetson 节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('nx')
 
     def _get_nuc_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、nuc、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 nuc 的 Intel NUC 节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('nuc')
 
     def _get_coral_nodes(self) -> List[Node]:
         """
-        函数作用：处理 get、coral、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回名称包含 coral 的 TPU 节点。
+
+        返回:
+            List[Node]。
         """
         return self._filter_nodes('coral')
 
     def _filter_nodes(self, name: str) -> List[Node]:
         """
-        函数作用：处理 filter、nodes 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：name：对象名称。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        按节点名称子串筛选场景输入节点。
+
+        参数:
+            name: 对象、节点、bucket 或配置名称。 类型：str。
+
+        返回:
+            List[Node]。
         """
         return list(filter(lambda n: name in n.name, self.nodes))

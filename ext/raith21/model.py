@@ -1,7 +1,7 @@
 """
-文件作用：Raith21 扩展实验的设备属性与需求模型，定义架构、位置、磁盘、加速器、连接方式、GPU/CPU 型号和资源需求枚举。
-主要类：Bins、Location、Disk、Accelerator、Connection、Arch、GpuModel、CpuModel、Requirements。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 异构设备属性与需求模型。
+
+本模块定义资源等级、位置、磁盘、加速器、网络连接、CPU/GPU 架构等枚举，以及用于描述目标设备分布的 Requirements 数据类。
 """
 
 from dataclasses import dataclass
@@ -22,174 +22,133 @@ Network: | <= 150Mbps | <= 500 Mbps  | <=1 Gbit     | >= 10 Gbit
 
 class Bins(Enum):
     """
-    类作用：Bins 枚举类，定义 bins 相关的可选取值。
-    继承关系：Enum。
-    核心字段：LOW：低资源或低能力等级。；MEDIUM：中等资源或能力等级。；HIGH：高资源或能力等级。；VERY_HIGH：很高资源或能力等级。。
+    离散资源能力等级：LOW、MEDIUM、HIGH、VERY_HIGH。
     """
-    # 字段说明：LOW：低资源或低能力等级。
     LOW = 1
-    # 字段说明：MEDIUM：中等资源或能力等级。
     MEDIUM = 2
-    # 字段说明：HIGH：高资源或能力等级。
     HIGH = 3
-    # 字段说明：VERY_HIGH：很高资源或能力等级。
     VERY_HIGH = 4
 
 
 class Location(Enum):
     """
-    类作用：Location 枚举类，定义 location 相关的可选取值。
-    继承关系：Enum。
-    核心字段：CLOUD：云端或中心数据中心位置。；EDGE：边缘侧位置。；MEC：多接入边缘计算位置。；MOBILE：移动网络连接。。
+    设备部署位置：CLOUD、EDGE、MEC、MOBILE。
     """
-    # 字段说明：CLOUD：云端或中心数据中心位置。
     CLOUD = 1
-    # 字段说明：EDGE：边缘侧位置。
     EDGE = 2
-    # 字段说明：MEC：多接入边缘计算位置。
     MEC = 3
-    # 字段说明：MOBILE：移动网络连接。
     MOBILE = 4
 
 
 class Disk(Enum):
     """
-    类作用：Disk 枚举类，定义 disk 相关的可选取值。
-    继承关系：Enum。
-    核心字段：HDD：机械硬盘。；SSD：固态硬盘。；NVME：NVMe 高速固态盘。；FLASH：闪存存储。；SD：SD 卡存储。。
+    存储介质类型：HDD、SSD、NVME、FLASH、SD。
     """
-    # 字段说明：HDD：机械硬盘。
     HDD = 1
-    # 字段说明：SSD：固态硬盘。
     SSD = 2
-    # 字段说明：NVME：NVMe 高速固态盘。
     NVME = 3
-    # 字段说明：FLASH：闪存存储。
     FLASH = 4
-    # 字段说明：SD：SD 卡存储。
     SD = 5
 
 
 class Accelerator(Enum):
     """
-    类作用：Accelerator 枚举类，定义 accelerator 相关的可选取值。
-    继承关系：Enum。
-    核心字段：NONE：无专用加速器。；GPU：GPU 加速器。；TPU：TPU 加速器。。
+    加速器类型：NONE、GPU、TPU。
     """
-    # 字段说明：NONE：无专用加速器。
     NONE = 1
-    # 字段说明：GPU：GPU 加速器。
     GPU = 2
-    # 字段说明：TPU：TPU 加速器。
     TPU = 3
 
 
 class Connection(Enum):
     """
-    类作用：Connection 枚举类，定义 connection 相关的可选取值。
-    继承关系：Enum。
-    核心字段：MOBILE：移动网络连接。；WIFI：WiFi 无线连接。；ETHERNET：有线以太网连接。。
+    网络接入方式：MOBILE、WIFI、ETHERNET。
     """
-    # 字段说明：MOBILE：移动网络连接。
     MOBILE = 1
-    # 字段说明：WIFI：WiFi 无线连接。
     WIFI = 2
-    # 字段说明：ETHERNET：有线以太网连接。
     ETHERNET = 3
 
 
 class Arch(Enum):
     """
-    类作用：Arch 枚举类，定义 arch 相关的可选取值。
-    继承关系：Enum。
-    核心字段：ARM32：32 位 ARM 架构。；X86：x86 架构。；AARCH64：64 位 ARM 架构。。
+    CPU 指令集架构：ARM32、X86、AARCH64。
     """
-    # 字段说明：ARM32：32 位 ARM 架构。
     ARM32 = 1
-    # 字段说明：X86：x86 架构。
     X86 = 2
-    # 字段说明：AARCH64：64 位 ARM 架构。
     AARCH64 = 3
 
 
 class GpuModel(Enum):
     """
-    类作用：GpuModel 枚举类，定义 gpu、model 相关的可选取值。
-    继承关系：Enum。
-    核心字段：TURING：NVIDIA Turing GPU。；PASCAL：NVIDIA Pascal GPU。；MAXWELL：NVIDIA Maxwell GPU。；VOLTA：NVIDIA Volta GPU。。
+    GPU 微架构类别：TURING、PASCAL、MAXWELL、VOLTA。
     """
-    # 字段说明：TURING：NVIDIA Turing GPU。
     TURING = 1
-    # 字段说明：PASCAL：NVIDIA Pascal GPU。
     PASCAL = 2
-    # 字段说明：MAXWELL：NVIDIA Maxwell GPU。
     MAXWELL = 3
-    # 字段说明：VOLTA：NVIDIA Volta GPU。
     VOLTA = 4
 
 
 class CpuModel(Enum):
     """
-    类作用：CpuModel 枚举类，定义 cpu、model 相关的可选取值。
-    继承关系：Enum。
-    核心字段：I7：Intel i7 CPU。；XEON：Intel Xeon CPU。；ARM：ARM CPU。。
+    CPU 类型：I7、XEON、ARM。
     """
-    # 字段说明：I7：Intel i7 CPU。
     I7 = 1
-    # 字段说明：XEON：Intel Xeon CPU。
     XEON = 2
-    # 字段说明：ARM：ARM CPU。
     ARM = 3
 
 
 @dataclass
 class Requirements:
     """
-    类作用：函数或设备需求向量，按架构、加速器、资源、位置和连接方式组织调度匹配字段。
-    核心字段：arch：CPU 架构属性，例如 x86、arm32、aarch64。；accelerator：加速器能力，例如 GPU、TPU 或无。；cores：CPU 核心数量等级或数值。；disk：存储介质类型。；location：设备所处层级，例如云、边缘、MEC 或移动端。；connection：网络接入方式，例如以太网、WiFi 或移动网络。；network：网络吞吐能力等级或数值。；cpu_mhz：CPU 主频等级或数值。 等。
-    核心方法：__str__、__map、to_dict、characteristics、fields。
+    目标设备属性概率向量。
+
+    每个字段把枚举取值映射到概率，用于生成设备并计算实际集群与目标分布之间的异构度。
+
+    关键字段:
+        arch: CPU 架构及其概率分布。
+        accelerator: 加速器类型及其概率分布。
+        cores: CPU 核心数等级及其概率分布。
+        disk: 磁盘类型及其概率分布。
+        location: 设备位置类型及其概率分布。
+        connection: 网络接入方式及其概率分布。
+        network: 网络能力等级及其概率分布。
+        cpu_mhz: CPU 主频等级及其概率分布。
+        cpu: CPU 型号或 CPU 占用画像。
+        ram: 内存等级或内存占用画像。
+        gpu_vram: GPU 显存等级及其概率分布。
+        gpu_mhz: GPU 主频等级及其概率分布。
+        gpu_model: GPU 型号及其概率分布。
     """
-    # 字段说明：arch：CPU 架构属性，例如 x86、arm32、aarch64。
     arch: Dict[Arch, float]
-    # 字段说明：accelerator：加速器能力，例如 GPU、TPU 或无。
     accelerator: Dict[Accelerator, float]
-    # 字段说明：cores：CPU 核心数量等级或数值。
     cores: Dict[Bins, float]
-    # 字段说明：disk：存储介质类型。
     disk: Dict[Disk, float]
-    # 字段说明：location：设备所处层级，例如云、边缘、MEC 或移动端。
     location: Dict[Location, float]
-    # 字段说明：connection：网络接入方式，例如以太网、WiFi 或移动网络。
     connection: Dict[Connection, float]
-    # 字段说明：network：网络吞吐能力等级或数值。
     network: Dict[Bins, float]
-    # 字段说明：cpu_mhz：CPU 主频等级或数值。
     cpu_mhz: Dict[Bins, float]
-    # 字段说明：cpu：CPU 使用量或 CPU 资源请求。
     cpu: Dict[CpuModel, float]
-    # 字段说明：ram：内存使用量。
     ram: Dict[Bins, float]
-    # 字段说明：gpu_vram：GPU 显存大小。
     gpu_vram: Dict[Bins, float]
-    # 字段说明：gpu_mhz：GPU 主频。
     gpu_mhz: Dict[Bins, float]
-    # 字段说明：gpu_model：GPU 型号。
     gpu_model: Dict[GpuModel, float]
 
     def __str__(self):
         """
-        函数作用：将对象转换为便于日志和调试阅读的字符串。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把 Requirements 各属性概率格式化为便于检查的多段文本。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         def join(d: Dict) -> str:
             """
-            函数作用：处理 join 相关业务逻辑。
-            关键流程：
-            - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-            参数：d：单个设备对象的临时变量，用于设备到节点或节点到设备的转换。。
-            返回：与该业务步骤对应的对象、指标或计算结果。
+            把单个属性概率字典格式化为多行文本。
+
+            参数:
+                d: 待转换的 Device 或属性字典。 类型：Dict。
+
+            返回:
+                str。
             """
             return "\n".join(['%s:: %s' % (key, value) for (key, value) in d.items()])
 
@@ -202,11 +161,13 @@ class Requirements:
 
     def __map(self, d: Dict[Enum, float]) -> Dict[str, float]:
         """
-        函数作用：处理 map 相关业务逻辑。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        参数：d：单个设备对象的临时变量，用于设备到节点或节点到设备的转换。。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把枚举键转换为枚举名称字符串。
+
+        参数:
+            d: 待转换的 Device 或属性字典。 类型：Dict[Enum, float]。
+
+        返回:
+            Dict[str, float]。
         """
         data = {}
         for k, v in d.items():
@@ -215,10 +176,10 @@ class Requirements:
 
     def to_dict(self) -> Dict[str, Dict[str, float]]:
         """
-        函数作用：把需求向量转换为普通字典，便于序列化或统计。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把 Requirements 转换为以 device.edgerun.io 标签为键的普通字典。
+
+        返回:
+            Dict[str, Dict[str, float]]。
         """
         return {
             'device.edgerun.io/arch': self.__map(self.arch),
@@ -239,10 +200,10 @@ class Requirements:
     @property
     def characteristics(self):
         """
-        函数作用：返回参与异构度计算的需求属性集合。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回异构度计算使用的枚举类型与概率字典列表。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return [
             (Arch, self.arch),
@@ -263,10 +224,10 @@ class Requirements:
     @staticmethod
     def fields():
         """
-        函数作用：返回需求对象包含的字段名集合。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回 Requirements 字段名及对应枚举类型。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return [
             ('arch', Arch),

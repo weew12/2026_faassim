@@ -1,7 +1,7 @@
 """
-文件作用：Raith21 设备抽象文件，将随机生成或真实设备参数封装为 Device/GpuDevice，并转换为调度标签。
-主要类：ArchProperties、Device、GpuDevice。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+异构设备领域模型。
+
+本模块用 ArchProperties、Device 和 GpuDevice 表示架构、计算能力、存储、位置、网络和 GPU 属性，并提供转换为 Skippy 节点标签的入口。
 """
 
 from dataclasses import dataclass, field
@@ -13,44 +13,46 @@ from ext.raith21.model import Location, Disk, Bins, Accelerator, Arch, Connectio
 @dataclass
 class ArchProperties:
     """
-    类作用：设备属性概率集合，描述某种 CPU 架构下各类资源属性出现的概率。
-    核心字段：arch：CPU 架构属性，例如 x86、arm32、aarch64。；accelerator：加速器能力，例如 GPU、TPU 或无。；cores：CPU 核心数量等级或数值。；disk：存储介质类型。；location：设备所处层级，例如云、边缘、MEC 或移动端。；connection：网络接入方式，例如以太网、WiFi 或移动网络。；network：网络吞吐能力等级或数值。；cpu_mhz：CPU 主频等级或数值。 等。
-    核心方法：values。
+    设备属性概率配置。
+
+    每个字段保存某类设备属性的候选值及其概率，用于 GeneratorSettings 随机生成异构设备。
+
+    关键字段:
+        arch: CPU 架构及其概率分布。
+        accelerator: 加速器类型及其概率分布。
+        cores: CPU 核心数等级及其概率分布。
+        disk: 磁盘类型及其概率分布。
+        location: 设备位置类型及其概率分布。
+        connection: 网络接入方式及其概率分布。
+        network: 网络能力等级及其概率分布。
+        cpu_mhz: CPU 主频等级及其概率分布。
+        cpu: CPU 型号或 CPU 占用画像。
+        ram: 内存等级或内存占用画像。
+        gpu_vram: GPU 显存等级及其概率分布。
+        gpu_mhz: GPU 主频等级及其概率分布。
+        gpu_model: GPU 型号及其概率分布。
     """
-    # 字段说明：arch：CPU 架构属性，例如 x86、arm32、aarch64。
     arch: Arch
-    # 字段说明：accelerator：加速器能力，例如 GPU、TPU 或无。
     accelerator: Dict[Accelerator, float]
-    # 字段说明：cores：CPU 核心数量等级或数值。
     cores: Dict[Bins, float]
-    # 字段说明：disk：存储介质类型。
     disk: Dict[Disk, float]
-    # 字段说明：location：设备所处层级，例如云、边缘、MEC 或移动端。
     location: Dict[Location, float]
-    # 字段说明：connection：网络接入方式，例如以太网、WiFi 或移动网络。
     connection: Dict[Connection, float]
-    # 字段说明：network：网络吞吐能力等级或数值。
     network: Dict[Bins, float]
-    # 字段说明：cpu_mhz：CPU 主频等级或数值。
     cpu_mhz: Dict[Bins, float]
-    # 字段说明：cpu：CPU 使用量或 CPU 资源请求。
     cpu: Dict[CpuModel, float]
-    # 字段说明：ram：内存使用量。
     ram: Dict[Bins, float]
-    # 字段说明：gpu_vram：GPU 显存大小。
     gpu_vram: Dict[Bins, float] = field(default_factory=dict)
-    # 字段说明：gpu_mhz：GPU 主频。
     gpu_mhz: Dict[Bins, float] = field(default_factory=dict)
-    # 字段说明：gpu_model：GPU 型号。
     gpu_model: Dict[GpuModel, float] = field(default_factory=dict)
 
     @property
     def values(self):
         """
-        函数作用：返回属性对象内部的枚举概率映射。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回各设备属性的候选值到概率映射。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return [
             (Accelerator, self.accelerator),
@@ -71,40 +73,42 @@ class ArchProperties:
 @dataclass
 class Device:
     """
-    类作用：异构设备描述对象，保存架构、核心数、位置、网络、CPU、内存等基础属性。
-    核心字段：id：设备或请求的唯一标识。；arch：CPU 架构属性，例如 x86、arm32、aarch64。；accelerator：加速器能力，例如 GPU、TPU 或无。；cores：CPU 核心数量等级或数值。；disk：存储介质类型。；location：设备所处层级，例如云、边缘、MEC 或移动端。；connection：网络接入方式，例如以太网、WiFi 或移动网络。；network：网络吞吐能力等级或数值。 等。
-    核心方法：labels、copy。
+    通用计算设备。
+
+    保存设备的架构、CPU、内存、磁盘、位置、网络和加速器属性，并可转换为 Skippy 使用的 device.edgerun.io 标签。
+
+    关键字段:
+        id: 设备唯一编号。
+        arch: CPU 架构及其概率分布。
+        accelerator: 加速器类型及其概率分布。
+        cores: CPU 核心数等级及其概率分布。
+        disk: 磁盘类型及其概率分布。
+        location: 设备位置类型及其概率分布。
+        connection: 网络接入方式及其概率分布。
+        network: 网络能力等级及其概率分布。
+        cpu_mhz: CPU 主频等级及其概率分布。
+        cpu: CPU 型号或 CPU 占用画像。
+        ram: 内存等级或内存占用画像。
     """
-    # 字段说明：id：设备或请求的唯一标识。
     id: str
-    # 字段说明：arch：CPU 架构属性，例如 x86、arm32、aarch64。
     arch: Arch
-    # 字段说明：accelerator：加速器能力，例如 GPU、TPU 或无。
     accelerator: Accelerator
-    # 字段说明：cores：CPU 核心数量等级或数值。
     cores: Bins
-    # 字段说明：disk：存储介质类型。
     disk: Disk
-    # 字段说明：location：设备所处层级，例如云、边缘、MEC 或移动端。
     location: Location
-    # 字段说明：connection：网络接入方式，例如以太网、WiFi 或移动网络。
     connection: Connection
-    # 字段说明：network：网络吞吐能力等级或数值。
     network: Bins
-    # 字段说明：cpu_mhz：CPU 主频等级或数值。
     cpu_mhz: Bins
-    # 字段说明：cpu：CPU 使用量或 CPU 资源请求。
     cpu: CpuModel
-    # 字段说明：ram：内存使用量。
     ram: Bins
 
     @property
     def labels(self) -> Dict[str, str]:
         """
-        函数作用：把设备属性转换为调度器可识别的标签集合。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把设备属性编码为 Skippy 节点标签。
+
+        返回:
+            Dict[str, str]。
         """
         return {
             'device.edgerun.io/arch': str(self.arch.name),
@@ -121,10 +125,10 @@ class Device:
 
     def copy(self):
         """
-        函数作用：复制当前对象，避免外部修改影响原状态。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回当前设备对象的独立副本。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return Device(
             id=self.id,
@@ -144,25 +148,26 @@ class Device:
 @dataclass
 class GpuDevice(Device):
     """
-    类作用：带 GPU 的设备描述对象，在 Device 基础上增加显存、GPU 频率和 GPU 型号。
-    继承关系：Device。
-    核心字段：vram：GPU 显存容量。；gpu_mhz：GPU 主频。；gpu_model：GPU 型号。。
-    核心方法：labels、copy。
+    带 GPU 细节的设备。
+
+    在 Device 基础上增加显存、GPU 主频和 GPU 型号，并把这些能力编码到节点标签中。
+
+    关键字段:
+        vram: GPU 显存容量。
+        gpu_mhz: GPU 主频等级及其概率分布。
+        gpu_model: GPU 型号及其概率分布。
     """
-    # 字段说明：vram：GPU 显存容量。
     vram: Bins
-    # 字段说明：gpu_mhz：GPU 主频。
     gpu_mhz: Bins
-    # 字段说明：gpu_model：GPU 型号。
     gpu_model: GpuModel
 
     @property
     def labels(self) -> Dict[str, str]:
         """
-        函数作用：把设备属性转换为调度器可识别的标签集合。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        把设备属性编码为 Skippy 节点标签。
+
+        返回:
+            Dict[str, str]。
         """
         super_labels = super().labels
         super_labels['device.edgerun.io/vram_bin'] = str(self.vram.name)
@@ -172,10 +177,10 @@ class GpuDevice(Device):
 
     def copy(self):
         """
-        函数作用：复制当前对象，避免外部修改影响原状态。
-        关键流程：
-        - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-        返回：与该业务步骤对应的对象、指标或计算结果。
+        返回当前设备对象的独立副本。
+
+        返回:
+            计算、查询或构造得到的结果。
         """
         return GpuDevice(
             id=self.id,

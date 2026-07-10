@@ -1,7 +1,7 @@
 """
-文件作用：设备集合统计与异构度计算工具，用于衡量生成设备与需求向量之间的属性覆盖和差异。
-主要函数：count_attribute、get_gpu_model_count、calculate_requirements、calculate_heterogeneity。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+设备集合统计与异构度计算。
+
+本模块统计设备属性分布，把 Requirements 中的目标概率与实际设备集合进行比较，并生成异构度指标。主要用于检查设备生成器是否产生了符合实验设定的集群。
 """
 
 from collections import Counter
@@ -16,11 +16,15 @@ from .model import Arch, Accelerator, Bins, Location, Connection, Disk, Requirem
 
 def count_attribute(devices: List[Device], values: List, getter: Callable[[Device], Enum]):
     """
-    函数作用：统计集合中指定属性或设备类型的数量。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：devices：设备对象列表，用于拓扑生成、异构度统计或节点转换。；values：候选属性值或统计值集合，用于概率抽样和异构度计算。；getter：属性读取函数，用于从设备对象中提取待统计字段。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    统计设备集合中各候选属性值的出现次数。
+
+    参数:
+        devices: 异构设备集合。 类型：List[Device]。
+        values: 待统计或待采样的候选值集合。 类型：List。
+        getter: 从 Device 读取目标属性的函数。 类型：Callable[[Device], Enum]。
+
+    返回:
+        属性枚举值到实际占比的字典；设备列表为空时返回空字典。
     """
     counter = {}
     if len(devices) == 0:
@@ -38,11 +42,13 @@ def count_attribute(devices: List[Device], values: List, getter: Callable[[Devic
 
 def get_gpu_model_count(devices: List[Device]):
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：devices：设备对象列表，用于拓扑生成、异构度统计或节点转换。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    统计 GPU 设备中各 GPU 型号的数量。
+
+    参数:
+        devices: 异构设备集合。 类型：List[Device]。
+
+    返回:
+        GPU 型号、GPU 主频和显存等级的占比字典三元组。
     """
     model_counts = Counter()
     gpu_mhz_counts = Counter()
@@ -74,11 +80,13 @@ def get_gpu_model_count(devices: List[Device]):
 
 def calculate_requirements(devices: List[Device]) -> Requirements:
     """
-    函数作用：计算实验统计指标或异构性指标。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：devices：设备对象列表，用于拓扑生成、异构度统计或节点转换。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把设备集合转换为各属性的实际概率分布。
+
+    参数:
+        devices: 异构设备集合。 类型：List[Device]。
+
+    返回:
+        Requirements。
     """
     arch = count_attribute(devices, list(Arch), lambda d: d.arch)
     accelerator = count_attribute(devices, list(Accelerator), lambda d: d.accelerator)
@@ -110,11 +118,17 @@ def calculate_requirements(devices: List[Device]) -> Requirements:
 
 def calculate_heterogeneity(p: Requirements, q: Requirements) -> float:
     """
-    函数作用：计算实验统计指标或异构性指标。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：p：第一个概率分布或特征向量。；q：第二个概率分布或特征向量。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    计算两组设备属性概率分布的对数熵差。
+
+    方法逐属性、逐枚举值累计 p*log(p) 与 q*log(q)，并返回两者之差。极小正数用于
+    替代 0，避免 log(0)。该值用于筛选接近目标异构度的生成器配置。
+
+    参数:
+        p: 第一组 Requirements 概率分布。 类型：Requirements。
+        q: 第二组 Requirements 概率分布。 类型：Requirements。
+
+    返回:
+        float。
     """
     entropy_p = 0
     entropy_q = 0

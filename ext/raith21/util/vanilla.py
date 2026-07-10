@@ -1,7 +1,7 @@
 """
-文件作用：源码模块，包含 0 个类和 2 个顶层函数，承担 vanilla 相关的仿真支撑逻辑。
-主要函数：get_predicates、get_priorities。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Kubernetes 风格基线策略装配工具。
+
+本模块返回基础资源谓词和等价基线优先级，用于与 Skippy 及 Raith21 workload-aware 策略对比。
 """
 
 from skippy.core.priorities import ImageLocalityPriority, BalancedResourcePriority
@@ -11,21 +11,24 @@ from ext.raith21.util import predicates
 
 def get_predicates(fet_oracle, resource_oracle):
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：fet_oracle：函数执行时间 Oracle，用于按节点采样 FET。；resource_oracle：资源画像 Oracle，用于按节点读取函数资源向量。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    返回当前实验策略使用的 Skippy 谓词列表。
+
+    参数:
+        fet_oracle: 函数执行时间 Oracle。
+        resource_oracle: 函数资源画像 Oracle。
+
+    返回:
+        Kubernetes 风格基础资源谓词列表。
     """
     return predicates.get_predicates(fet_oracle, resource_oracle)
 
 
 def get_priorities():
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    返回当前实验策略使用的加权优先级列表。
+
+    返回:
+        vanilla 基线优先级列表。
     """
     return [
         (1, BalancedResourcePriority()),

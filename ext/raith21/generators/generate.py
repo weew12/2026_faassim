@@ -1,7 +1,7 @@
 """
-文件作用：Raith21 设备生成配置文件，定义 generate 场景下不同架构和设备属性的概率分布，用于生成可复现的异构节点集合。
-主要函数：count_devices、counter_to_csv、format_device、convert_to_dict、main。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+设备生成结果导出工具。
+
+本模块批量生成异构设备，统计设备类型和属性分布，并输出适合检查与实验记录的 CSV 结构。
 """
 
 import os
@@ -28,11 +28,13 @@ from ..utils import extract_model_type
 
 def count_devices(nodes: List[Node]):
     """
-    函数作用：统计集合中指定属性或设备类型的数量。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：nodes：候选节点集合或拓扑节点列表，供调度、拓扑生成和统计过程使用。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按设备类别统计生成结果。
+
+    参数:
+        nodes: Ether 或 Skippy 节点集合。 类型：List[Node]。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     counter = Counter()
     for node in nodes:
@@ -43,11 +45,13 @@ def count_devices(nodes: List[Node]):
 
 def counter_to_csv(counter: Counter) -> List[str]:
     """
-    函数作用：处理 counter、to、csv 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：counter：计数器对象，用于统计设备、属性或请求数量。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把 Counter 转换为 CSV 行结构。
+
+    参数:
+        counter: 统计计数器。 类型：Counter。
+
+    返回:
+        List[str]。
     """
     lines = ['device_type,percentage,count\n']
     n = sum(counter.values())
@@ -58,11 +62,13 @@ def counter_to_csv(counter: Counter) -> List[str]:
 
 def format_device(device: str) -> str:
     """
-    函数作用：处理 format、device 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：device：单个设备对象，包含架构、资源、位置和连接方式等属性。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把 Device 格式化为可导出的字典。
+
+    参数:
+        device: 异构设备对象。 类型：str。
+
+    返回:
+        str。
     """
     if 'tx2' in device:
         return 'Nvidia TX2'
@@ -88,11 +94,13 @@ def format_device(device: str) -> str:
 
 def convert_to_dict(counter: Counter) -> Dict:
     """
-    函数作用：在不同对象模型之间转换数据表示。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：counter：计数器对象，用于统计设备、属性或请求数量。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把多组统计 Counter 合并为普通字典。
+
+    参数:
+        counter: 统计计数器。 类型：Counter。
+
+    返回:
+        Dict。
     """
     data = defaultdict(list)
     n = sum(counter.values())
@@ -106,10 +114,10 @@ def convert_to_dict(counter: Counter) -> Dict:
 
 def main():
     """
-    函数作用：处理 main 相关业务逻辑。
-    关键流程：
-    - 整理为表格数据，服务于后续实验分析。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    处理 main。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     configs = [
         (500, hybridbalanced_settings, 'hybrid_balanced'),
@@ -130,7 +138,6 @@ def main():
     
     
     
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     
 
     dfs = []

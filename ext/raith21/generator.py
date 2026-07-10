@@ -1,8 +1,7 @@
 """
-文件作用：异构设备生成器，按架构和属性概率生成设备集合，用于资源规划和大规模仿真实验。
-主要类：GeneratorSettings。
-主要函数：xeon_reqs、create_generator、create_t_setting、create_settings、create_and_save_settings、save_setting、choose_attribute_settings、process_arches、filter_invalid_settings、generate_settings、generate_probabilities、generate_arch_probs 等。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+异构设备概率生成器。
+
+本模块根据 GeneratorSettings 中的属性概率生成 Device/GpuDevice 集合，并提供随机属性采样、约束过滤、配置保存和命令行入口。
 """
 
 import datetime
@@ -27,21 +26,24 @@ from .model import Arch, Requirements, Accelerator, Bins, Disk, Location, Connec
 @dataclass
 class GeneratorSettings:
     """
-    类作用：异构设备生成配置，保存架构概率和架构内各属性概率分布。
-    核心字段：arch：CPU 架构属性，例如 x86、arm32、aarch64。；properties：按架构组织的设备属性概率分布。。
+    设备生成器配置。
+
+    保存目标 Requirements、随机种子和设备数量，用于可复现地生成异构设备集合。
+
+    关键字段:
+        arch: CPU 架构及其概率分布。
+        properties: 各 CPU 架构对应的 ArchProperties。
     """
-    # 字段说明：arch：CPU 架构属性，例如 x86、arm32、aarch64。
     arch: Dict[Arch, float]
-    # 字段说明：properties：按架构组织的设备属性概率分布。
     properties: Dict[Arch, ArchProperties]
 
 
 def xeon_reqs():
     """
-    函数作用：处理 xeon、reqs 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    返回只生成单一 Xeon CPU 设备的基准 Requirements。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     xeon_single_device_req = Requirements(
         arch={
@@ -83,11 +85,17 @@ def xeon_reqs():
 
 def create_generator(arches, t, heterogeneity_score, base_req, folder):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：arches：CPU 架构候选集合，用于设备生成和场景配置。；t：目标异构度或临时数值参数，参与设备生成配置计算。；heterogeneity_score：目标异构度分数，用于控制生成设备集合的差异程度。；base_req：基础需求向量，用于推导设备生成配置。；folder：输入或输出目录。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把一组架构概率和属性概率组合装配为 GeneratorSettings，并保存到文件。
+
+    参数:
+        arches: CPU 架构及概率配置。
+        t: 单个属性概率组合。
+        heterogeneity_score: 比较目标分布与实际分布的函数。
+        base_req: 基准 Requirements。
+        folder: 模型或输出文件所在目录。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     gen_settings = {}
     arch_settings = {}
@@ -103,11 +111,14 @@ def create_generator(arches, t, heterogeneity_score, base_req, folder):
 
 def create_t_setting(i, t):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：i：循环索引或配置编号。；t：目标异构度或临时数值参数，参与设备生成配置计算。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把第 i 类属性的概率元组转换为枚举到概率的字典。
+
+    参数:
+        i: 用于控制当前生成、筛选或配置过程的参数。
+        t: 单个属性概率组合。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     setting = {}
     for k, prob in t[i]:
@@ -118,9 +129,17 @@ def create_t_setting(i, t):
 def create_settings(arches, base_req, tuples, heterogeneity_score: Callable[[Requirements, Requirements], float]
                     , folder: str):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    参数：arches：CPU 架构候选集合，用于设备生成和场景配置。；base_req：基础需求向量，用于推导设备生成配置。；tuples：属性概率元组集合，用于组合设备生成配置。；heterogeneity_score：目标异构度分数，用于控制生成设备集合的差异程度。；folder：输入或输出目录。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    遍历各属性概率组合的笛卡尔积，为每个组合创建生成器配置。
+
+    参数:
+        arches: CPU 架构及概率配置。
+        base_req: 基准 Requirements。
+        tuples: 各属性候选概率组合。
+        heterogeneity_score: 比较目标分布与实际分布的函数。 类型：Callable[[Requirements, Requirements], float]。
+        folder: 模型或输出文件所在目录。 类型：str。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     product = itertools.product(*tuples)
     list((map(lambda t: create_generator(arches, t, heterogeneity_score, base_req, folder), product)))
@@ -128,9 +147,17 @@ def create_settings(arches, base_req, tuples, heterogeneity_score: Callable[[Req
 
 def create_and_save_settings(arches, base_requirement, tuples, heterogeneity_score, folder):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    参数：arches：CPU 架构候选集合，用于设备生成和场景配置。；base_requirement：基础需求向量，用于生成目标异构场景。；tuples：属性概率元组集合，用于组合设备生成配置。；heterogeneity_score：目标异构度分数，用于控制生成设备集合的差异程度。；folder：输入或输出目录。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    提取各架构的概率组合并批量生成、保存 GeneratorSettings。
+
+    参数:
+        arches: CPU 架构及概率配置。
+        base_requirement: 基准 Requirements。
+        tuples: 各属性候选概率组合。
+        heterogeneity_score: 比较目标分布与实际分布的函数。
+        folder: 模型或输出文件所在目录。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     combs = list(tuples.values())
     create_settings(arches, base_requirement, combs, heterogeneity_score, folder)
@@ -138,11 +165,14 @@ def create_and_save_settings(arches, base_requirement, tuples, heterogeneity_sco
 
 def save_setting(folder, setting):
     """
-    函数作用：处理 save、setting 相关业务逻辑。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    参数：folder：输入或输出目录。；setting：单个设备生成配置对象。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    用时间戳和随机后缀命名，将 GeneratorSettings 序列化为 pickle。
+
+    参数:
+        folder: 模型或输出文件所在目录。
+        setting: 待保存的 GeneratorSettings。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     now = datetime.datetime.now()
     now = now.strftime('%Y_%m_%d_%H_%M_%S_%f')
@@ -153,12 +183,14 @@ def save_setting(folder, setting):
 
 def choose_attribute_settings(values, percentage):
     """
-    函数作用：处理 choose、attribute、settings 相关业务逻辑。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：values：候选属性值或统计值集合，用于概率抽样和异构度计算。；percentage：抽样比例或属性保留比例。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    从属性概率候选集中按比例抽样，至少保留一个候选。
+
+    参数:
+        values: 待统计或待采样的候选值集合。
+        percentage: 候选值抽样比例。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     if type(values) is tuple:
         return np.array([values])
@@ -170,9 +202,17 @@ def choose_attribute_settings(values, percentage):
 
 def process_arches(arch_probs, probs_for_archs, base_req, heterogeneity_score, folder):
     """
-    函数作用：处理 process、arches 相关业务逻辑。
-    参数：arch_probs：表示 arch、probs，在当前业务流程中作为输入参数、状态字段或计算结果使用。；probs_for_archs：按架构组织的属性概率配置。；base_req：基础需求向量，用于推导设备生成配置。；heterogeneity_score：目标异构度分数，用于控制生成设备集合的差异程度。；folder：输入或输出目录。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    遍历架构概率候选，为每种架构组合生成属性配置文件。
+
+    参数:
+        arch_probs: 架构概率候选集合。
+        probs_for_archs: 各架构的属性概率候选集合。
+        base_req: 基准 Requirements。
+        heterogeneity_score: 比较目标分布与实际分布的函数。
+        folder: 模型或输出文件所在目录。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     for arches in arch_probs:
         tuples = {}
@@ -191,11 +231,13 @@ def process_arches(arch_probs, probs_for_archs, base_req, heterogeneity_score, f
 def filter_invalid_settings(old_probs_per_arch):
     
     """
-    函数作用：处理 filter、invalid、settings 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：old_probs_per_arch：过滤前的架构属性概率配置。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    删除架构与硬件不兼容的属性组合，例如 ARM32 + x86 CPU 或无 GPU + GPU 属性。
+
+    参数:
+        old_probs_per_arch: 待过滤的不合法架构属性组合。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     old_probs_per_arch[Arch.ARM32]['accelerator'] = ((Accelerator.NONE, 1), (Accelerator.GPU, 0), (Accelerator.TPU, 0))
     del old_probs_per_arch[Arch.ARM32]['gpu_vram']
@@ -232,7 +274,6 @@ def filter_invalid_settings(old_probs_per_arch):
     
     old_probs_per_arch[Arch.X86]['connection'] = list(
         filter(lambda f: f[1][1] == 0, old_probs_per_arch[Arch.X86]['connection']))
-    # 业务说明：这里处理资源请求、资源占用或资源利用率统计。
     old_probs_per_arch[Arch.X86]['cpu'] = list(filter(lambda f: f[2][1] == 0, old_probs_per_arch[Arch.X86]['cpu']))
     
     old_probs_per_arch[Arch.X86]['gpu_model'] = list(
@@ -266,7 +307,6 @@ def filter_invalid_settings(old_probs_per_arch):
     old_probs_per_arch[Arch.AARCH64]['disk'] = list(
         filter(lambda f: f[1][1] == 0, old_probs_per_arch[Arch.AARCH64]['disk']))
     
-    # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
     old_probs_per_arch[Arch.AARCH64]['disk'] = list(
         filter(lambda f: f[3][1] == 0, old_probs_per_arch[Arch.AARCH64]['disk']))
     
@@ -284,9 +324,19 @@ def generate_settings(base_requirement: Requirements,
                       percentage: float = 1,
                       folder: str = './data', cores: int = None) -> None:
     """
-    函数作用：处理 generate、settings 相关业务逻辑。
-    参数：base_requirement：基础需求向量，用于生成目标异构场景。；heterogeneity_score：目标异构度分数，用于控制生成设备集合的差异程度。；steps：概率离散化步数，用于生成候选概率组合。；arch_steps：架构概率离散化步数。；percentage：抽样比例或属性保留比例。；folder：输入或输出目录。；cores：CPU 核心数量等级或数值。。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    生成离散概率网格，并筛选出满足异构度范围的 GeneratorSettings。
+
+    参数:
+        base_requirement: 基准 Requirements。 类型：Requirements。
+        heterogeneity_score: 比较目标分布与实际分布的函数。 类型：Callable[[Requirements, Requirements], float]。
+        steps: 属性概率离散步数。 类型：int。
+        arch_steps: 架构概率离散步数。 类型：int。
+        percentage: 候选值抽样比例。 类型：float。
+        folder: 模型或输出文件所在目录。 类型：str。
+        cores: 用于控制当前生成、筛选或配置过程的参数。 类型：int。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     probs_for_archs = generate_arch_probs(arch_steps)
     old_probs_per_arch = generate_probabilities(steps)
@@ -318,13 +368,14 @@ def generate_settings(base_requirement: Requirements,
 
 
 def generate_probabilities(steps: int):
-    # 待办：这里保留了后续完善点，需要结合实验目标继续细化。
     """
-    函数作用：处理 generate、probabilities 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：steps：概率离散化步数，用于生成候选概率组合。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    生成枚举属性的离散概率分布候选。
+
+    参数:
+        steps: 属性概率离散步数。 类型：int。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     space = np.linspace(0, 1, num=steps)
     probs = defaultdict(lambda: defaultdict(list))
@@ -355,11 +406,13 @@ def generate_probabilities(steps: int):
 
 def generate_arch_probs(arch_steps: int):
     """
-    函数作用：处理 generate、arch、probs 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：arch_steps：架构概率离散化步数。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    生成 CPU 架构的离散概率分布候选。
+
+    参数:
+        arch_steps: 架构概率离散步数。 类型：int。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     space = np.linspace(0, 1, num=arch_steps)
     probs = defaultdict(lambda: defaultdict(list))
@@ -391,11 +444,13 @@ def generate_arch_probs(arch_steps: int):
 
 def random_network_throughput(bin: Bins) -> Tuple[int, int]:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：bin：资源等级桶，用于从低/中/高/很高等离散等级中抽样。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按网络能力等级采样具体吞吐率。
+
+    参数:
+        bin: 资源能力等级。 类型：Bins。
+
+    返回:
+        Tuple[int, int]。
     """
     if bin is Bins.LOW:
         return 125, 25
@@ -409,12 +464,13 @@ def random_network_throughput(bin: Bins) -> Tuple[int, int]:
 
 def random_ram_size(bin: Bins) -> int:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：bin：资源等级桶，用于从低/中/高/很高等离散等级中抽样。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按内存等级采样具体内存容量。
+
+    参数:
+        bin: 资源能力等级。 类型：Bins。
+
+    返回:
+        int。
     """
     if bin is Bins.LOW:
         return random.choice([1, 2, 4])
@@ -428,12 +484,13 @@ def random_ram_size(bin: Bins) -> int:
 
 def random_cpu_cores(bin: Bins) -> int:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：bin：资源等级桶，用于从低/中/高/很高等离散等级中抽样。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按核心数等级采样具体 CPU 核数。
+
+    参数:
+        bin: 资源能力等级。 类型：Bins。
+
+    返回:
+        int。
     """
     if bin is Bins.LOW:
         return random.randint(1, 2)
@@ -447,11 +504,15 @@ def random_cpu_cores(bin: Bins) -> int:
 
 def create_tuples(probs, name, enum):
     """
-    函数作用：创建指定业务对象，并填充后续仿真流程需要的关键字段。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：probs：概率分布，用于随机选择属性值。；name：对象名称。；enum：枚举类型，用于把概率分布映射到具体属性取值。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    把枚举值与概率列表组合为可供笛卡尔积使用的候选元组。
+
+    参数:
+        probs: 枚举值到概率的映射。
+        name: 对象、节点、bucket 或配置名称。
+        enum: 属性枚举类型。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     values = list(enum)
     return [tuple(values)] * len(probs[name][values[0]])
@@ -459,56 +520,53 @@ def create_tuples(probs, name, enum):
 
 def random_arch():
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按架构概率采样 CPU 架构。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     return random.choice(list(Arch))
 
 
 def random_bin():
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按概率采样资源能力等级。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     return random.choice(list(Bins))
 
 
 def random_connection():
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按概率采样网络接入方式。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     return random.choice(list(Connection))
 
 
 def random_location():
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按概率采样设备位置。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     return random.choice(list(Location))
 
 
 def random_cpu(arch: Arch) -> CpuModel:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：arch：CPU 架构属性，例如 x86、arm32、aarch64。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    在目标架构允许的 CPU 型号中按概率采样。
+
+    参数:
+        arch: 用于控制当前生成、筛选或配置过程的参数。 类型：Arch。
+
+    返回:
+        CpuModel。
     """
     if arch is Arch.AARCH64:
         return CpuModel.ARM
@@ -520,12 +578,13 @@ def random_cpu(arch: Arch) -> CpuModel:
 
 def random_accelerator(arch: Arch) -> Accelerator:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：arch：CPU 架构属性，例如 x86、arm32、aarch64。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    在目标架构允许的加速器类型中按概率采样。
+
+    参数:
+        arch: 用于控制当前生成、筛选或配置过程的参数。 类型：Arch。
+
+    返回:
+        Accelerator。
     """
     if arch is Arch.AARCH64:
         return random.choice(list(Accelerator))
@@ -537,12 +596,13 @@ def random_accelerator(arch: Arch) -> Accelerator:
 
 def random_gpu_model(arch: Arch) -> GpuModel:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：arch：CPU 架构属性，例如 x86、arm32、aarch64。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    在目标架构允许的 GPU 型号中按概率采样。
+
+    参数:
+        arch: 用于控制当前生成、筛选或配置过程的参数。 类型：Arch。
+
+    返回:
+        GpuModel。
     """
     if arch is Arch.X86:
         return GpuModel.TURING
@@ -552,23 +612,23 @@ def random_gpu_model(arch: Arch) -> GpuModel:
 
 def random_disk() -> Disk:
     """
-    函数作用：从预设分布中随机抽取一个设备或资源属性。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    按概率采样磁盘类型。
+
+    返回:
+        Disk。
     """
     return random.choice(list(Disk))
 
 
 def get_property_with_probs(probs: Dict[Enum, float]):
     """
-    函数作用：读取或构造指定业务对象，作为部署、调度、统计或实验装配的输入。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：probs：概率分布，用于随机选择属性值。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    使用随机数和累计概率选择一个枚举属性值。
+
+    参数:
+        probs: 枚举值到概率的映射。 类型：Dict[Enum, float]。
+
+    返回:
+        计算、查询或构造得到的结果。
     """
     values = list(probs[1].keys())
     probs = list(probs[1].values())
@@ -580,11 +640,14 @@ def get_property_with_probs(probs: Dict[Enum, float]):
 
 def generate_devices_with_settings(n: int, settings: GeneratorSettings) -> List[Device]:
     """
-    函数作用：处理 generate、devices、with、settings 相关业务逻辑。
-    关键流程：
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：n：数量参数。；settings：实验或设备生成设置，保存场景参数和概率分布。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    根据 GeneratorSettings 连续生成 n 个 Device/GpuDevice。
+
+    参数:
+        n: 需要生成、选择或统计的数量。 类型：int。
+        settings: 设备生成或实验配置。 类型：GeneratorSettings。
+
+    返回:
+        List[Device]。
     """
     devices = []
     device_id = 0
@@ -602,12 +665,14 @@ def generate_devices_with_settings(n: int, settings: GeneratorSettings) -> List[
 
 def generate_devices(n: int, settings: GeneratorSettings = None) -> List[Device]:
     """
-    函数作用：处理 generate、devices 相关业务逻辑。
-    关键流程：
-    - 使用随机采样生成设备属性、请求间隔或性能取值。
-    - 返回计算结果或被创建的业务对象，供上层流程继续使用。
-    参数：n：数量参数。；settings：实验或设备生成设置，保存场景参数和概率分布。。
-    返回：与该业务步骤对应的对象、指标或计算结果。
+    读取生成器配置文件并生成指定数量的异构设备。
+
+    参数:
+        n: 需要生成、选择或统计的数量。 类型：int。
+        settings: 设备生成或实验配置。 类型：GeneratorSettings。
+
+    返回:
+        List[Device]。
     """
     if settings is not None:
         return generate_devices_with_settings(n, settings)
@@ -664,8 +729,10 @@ def generate_devices(n: int, settings: GeneratorSettings = None) -> List[Device]
 
 def main():
     """
-    函数作用：处理 main 相关业务逻辑。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    运行默认设备生成任务并输出生成结果。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     generate_settings_main()
 
@@ -673,8 +740,10 @@ def main():
 def generate_settings_main():
     
     """
-    函数作用：处理 generate、settings、main 相关业务逻辑。
-    返回：无显式返回值，主要通过对象状态、指标记录或仿真事件产生影响。
+    并行生成候选 GeneratorSettings 文件。
+
+    返回:
+        无显式返回值；主要通过更新对象状态、写入指标或产生文件输出生效。
     """
     steps = 4
     

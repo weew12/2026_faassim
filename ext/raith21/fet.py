@@ -1,12 +1,12 @@
 """
-文件作用：Raith21 函数执行时间画像数据，保存不同函数在不同设备上的平均或分布式 FET 估计。
-在整体架构中的位置：属于 Raith21 论文实验扩展层，为异构设备、函数画像和调度策略提供可复现实验配置。
+Raith21 函数执行时间画像数据。
+
+本模块保存不同函数镜像在不同设备类型上的执行时间分布、最小最大值和均值，供 Raith21FetOracle 采样。
 """
 
 from srds import ParameterizedDistribution as PDist
 
 
-# 字段说明：ai_execution_time_distributions：AI 函数执行时间经验分布，供 FET Oracle 采样。
 ai_execution_time_distributions = {
     ('rpi3', 'faas-workloads/python-pi'): (1.909987211227417, 2.203219413757324, PDist.lognorm(
         ((1.5561351906586467,), 1.9092154433285176, 0.03832589013392289))),
@@ -171,7 +171,6 @@ ai_execution_time_distributions = {
         ((1.4344624279117903,), 0.5247122204199652, 0.03296898373982664))),
 }
 
-# 字段说明：ai_min_max_execution_times：AI 函数执行时间最小/最大值表，用于约束采样范围或统计展示。
 ai_min_max_execution_times = {'faas-workloads/tf-gpu': (0.36531192779541016, 1.8881448245048522),
                               'faas-workloads/speech-inference-gpu': (0.747898964881897, 4.544314980506897),
                               'faas-workloads/resnet-training-gpu': (32.12711091739376, 847.171815255109),
@@ -185,7 +184,6 @@ ai_min_max_execution_times = {'faas-workloads/tf-gpu': (0.36531192779541016, 1.8
                               'faas-workloads/resnet-inference-gpu': (0.12844885587692262, 0.7286638289081807),
                               'faas-workloads/mobilenet-inference-tpu': (0.5475386333465576, 0.5475386333465576)}
 
-# 字段说明：ai_mean_execution_times：AI 函数平均执行时间表，用于快速估计不同设备上的 FET。
 ai_mean_execution_times = {
     'faas-workloads/tf-gpu': {'nx': 1.1731165671348571, 'nano': 0.6205120253562927, 'xeongpu': 0.36531192779541016,
                               'tx2': 1.8881448245048522},
