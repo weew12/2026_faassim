@@ -19,7 +19,7 @@ ether/
   util.py              容量字符串解析工具
 ```
 
-## 2. core.py：核心类型与网络流
+## 2. `core.py`：核心类型与网络流
 
 `core.py` 是 Ether 最底层、最重要的文件。
 
@@ -44,7 +44,7 @@ ether/
 - 多个 `Flow` 共享链路时，会触发带宽重分配。
 - 正在传输的流会被 `simpy.Interrupt` 打断，然后重算剩余传输时间。
 
-## 3. topology.py：拓扑图与路由缓存
+## 3. `topology.py`：拓扑图与路由缓存
 
 `Topology` 继承自 `networkx.DiGraph`。
 
@@ -87,7 +87,7 @@ Node -> Link -> switch -> Link -> Node
 
 后续调用会复用路径，但在实际使用时可以重新采样随机时延。
 
-## 4. cell.py：组合式拓扑 DSL
+## 4. `cell.py`：组合式拓扑 DSL
 
 `cell.py` 让用户不用手工一条条添加 `Connection`，而是像搭积木一样创建拓扑。
 
@@ -202,7 +202,7 @@ topology.add(UrbanSensingScenario())
 
 `Connection` 可以使用固定时延，也可以使用这些随机时延分布。
 
-## 9. converter、vis、export
+## 9. `converter`、`vis`、`export`
 
 这些模块用于可视化和导出：
 
@@ -211,4 +211,3 @@ topology.add(UrbanSensingScenario())
 - `export.py`：导出 JSON 结构。
 
 它们不是仿真核心，但对调试拓扑很有用。
-

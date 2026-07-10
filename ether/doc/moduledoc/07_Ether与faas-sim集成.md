@@ -263,4 +263,3 @@ print(state.ether_node)
 print(state.skippy_node)
 print(state.docker_images)
 ```
-

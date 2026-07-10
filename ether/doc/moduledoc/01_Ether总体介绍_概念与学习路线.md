@@ -135,8 +135,8 @@ Ether 的重要设计是：带宽不是记录在 `Node -> Node` 边上，而是�
 
 ```text
 Node -- Connection --> Link -- Connection --> switch -- Connection --> Link -- Connection --> Node
-                         │                                      │
-                         └──────── Flow 会消耗这里的带宽 ───────┘
+                         │                                                │
+                         └──────── Flow 会消耗这里的带宽───────────────────┘
 ```
 
 不要把 Ether 理解为“节点之间有一条边就能传输”。Ether 的建模重点是：
@@ -146,4 +146,3 @@ Node -- Connection --> Link -- Connection --> switch -- Connection --> Link -- C
 - `Connection` 是图上的连通关系。
 - `Route` 是路径。
 - `Flow` 是沿路径传输的数据。
-
