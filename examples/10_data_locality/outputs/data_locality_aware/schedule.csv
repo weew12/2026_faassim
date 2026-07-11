@@ -1,4 +1,4 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-07 22:35:59.461198,queue,data-locality-python-pi,data-locality-python-pi-cpu,2193917985520,,
-2026-07-07 22:35:59.461360,start,data-locality-python-pi,data-locality-python-pi-cpu,2193917985520,,
-2026-07-07 22:35:59.463273,finish,data-locality-python-pi,data-locality-python-pi-cpu,2193917985520,edge_near,True
+2026-07-11 14:32:23.025242,queue,data-locality-python-pi,data-locality-python-pi-cpu,1787374152592,,
+2026-07-11 14:32:23.025242,start,data-locality-python-pi,data-locality-python-pi-cpu,1787374152592,,
+2026-07-11 14:32:23.026240,finish,data-locality-python-pi,data-locality-python-pi-cpu,1787374152592,edge_near,True

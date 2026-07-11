@@ -1,6 +1,6 @@
 ﻿time,all_nodes,feasible_nodes_full,returned_feasible_nodes,needed_images_count,simtime,pod_name,selected_node,needed_images
-2026-07-07 19:16:02.443349,4,1,1,1,0.0,pod-skippy-large-1,server_0,skippy-large-cpu:latest
-2026-07-07 19:16:02.444404,4,2,2,1,0.0011472702026367188,pod-skippy-medium-1,server_1,skippy-medium-cpu:latest
-2026-07-07 19:16:02.444853,4,1,1,1,0.0017237663269042969,pod-skippy-medium-2,server_2,skippy-medium-cpu:latest
-2026-07-07 19:16:02.445295,4,4,4,1,0.0019502639770507812,pod-skippy-small-1,server_3,skippy-small-cpu:latest
-2026-07-07 19:16:02.445629,4,4,4,0,0.002244234085083008,pod-skippy-small-2,server_3,
+2026-07-11 14:31:30.342687,4,1,1,1,0.0,pod-skippy-large-1,server_0,skippy-large-cpu:latest
+2026-07-11 14:31:30.343683,4,2,2,1,0.0009980201721191406,pod-skippy-medium-1,server_1,skippy-medium-cpu:latest
+2026-07-11 14:31:30.344680,4,1,1,1,0.0009980201721191406,pod-skippy-medium-2,server_2,skippy-medium-cpu:latest
+2026-07-11 14:31:30.344680,4,4,4,1,0.001995563507080078,pod-skippy-small-1,server_3,skippy-small-cpu:latest
+2026-07-11 14:31:30.345678,4,4,4,0,0.001995563507080078,pod-skippy-small-2,server_3,

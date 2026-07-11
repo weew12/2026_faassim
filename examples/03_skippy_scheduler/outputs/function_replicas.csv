@@ -1,6 +1,6 @@
 ﻿time,name,pod,image,replica_id
-2026-07-07 19:16:02.441709,skippy-large,pod-skippy-large-1,skippy-large-cpu,2381233423424
-2026-07-07 19:16:02.442182,skippy-medium,pod-skippy-medium-1,skippy-medium-cpu,2381233318608
-2026-07-07 19:16:02.443410,skippy-medium,pod-skippy-medium-2,skippy-medium-cpu,2381233322448
-2026-07-07 19:16:02.443554,skippy-small,pod-skippy-small-1,skippy-small-cpu,2381233229760
-2026-07-07 19:16:02.443584,skippy-small,pod-skippy-small-2,skippy-small-cpu,2381233231888
+2026-07-11 14:31:30.340695,skippy-large,pod-skippy-large-1,skippy-large-cpu,3241780520528
+2026-07-11 14:31:30.341688,skippy-medium,pod-skippy-medium-1,skippy-medium-cpu,3241780517264
+2026-07-11 14:31:30.342687,skippy-medium,pod-skippy-medium-2,skippy-medium-cpu,3241780517600
+2026-07-11 14:31:30.342687,skippy-small,pod-skippy-small-1,skippy-small-cpu,3241780514384
+2026-07-11 14:31:30.342687,skippy-small,pod-skippy-small-2,skippy-small-cpu,3241780516784

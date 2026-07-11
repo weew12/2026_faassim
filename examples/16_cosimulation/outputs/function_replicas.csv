@@ -1,3 +1,3 @@
 ﻿time,name,pod,image,replica_id
-2026-07-08 01:11:33.976813,cosim-python-pi,pod-cosim-python-pi-1,cosim-python-pi-cpu,2001280075824
-2026-07-08 01:11:33.977032,cosim-python-pi,pod-cosim-python-pi-2,cosim-python-pi-cpu,2001279917008
+2026-07-11 14:33:08.085921,cosim-python-pi,pod-cosim-python-pi-1,cosim-python-pi-cpu,1812184834848
+2026-07-11 14:33:08.085921,cosim-python-pi,pod-cosim-python-pi-2,cosim-python-pi-cpu,1812184827408

@@ -1,2 +1,2 @@
 ﻿time,download_duration,storage_node_count,t_start,t_end,simtime,scenario,function_name,node_name,data_path,data_size,storage_nodes,replica_id
-2026-07-07 22:35:59.524466,52.879505154639176,1,39.85777477814979,92.73727993278897,92.73727993278897,forced_remote,data-locality-python-pi,edge_far,video-bucket/frame-seq-001,64M,storage_near,2193918382544
+2026-07-11 14:32:23.065136,52.879505154639176,1,39.85762886597938,92.73713402061856,92.73713402061856,forced_remote,data-locality-python-pi,edge_far,video-bucket/frame-seq-001,64M,storage_near,1787374068560

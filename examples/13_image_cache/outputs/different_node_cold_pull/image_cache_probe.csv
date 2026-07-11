@@ -1,3 +1,3 @@
 ﻿time,image_size,cache_hit_before,cache_hit_after,pull_duration,cached_image_count_before,cached_image_count_after,scenario,function_name,image,node_name,replica_id,image_arch
-2026-07-08 00:16:30.265248,128000000,False,True,5.317350515463917,0,1,different_node_cold_pull,image-cache-first,image-cache-shared-cpu,server_0,2206418722704,x86
-2026-07-08 00:16:30.265860,128000000,False,True,5.317350515463917,0,1,different_node_cold_pull,image-cache-second,image-cache-shared-cpu,server_1,2206418235648,x86
+2026-07-11 14:32:43.946263,128000000,False,True,5.317350515463917,0,1,different_node_cold_pull,image-cache-first,image-cache-shared-cpu,server_0,2710687091968,x86
+2026-07-11 14:32:43.948256,128000000,False,True,5.317350515463917,0,1,different_node_cold_pull,image-cache-second,image-cache-shared-cpu,server_1,2710686958832,x86

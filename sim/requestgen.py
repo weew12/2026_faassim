@@ -6,18 +6,22 @@
 阅读建议：先区分 RPS 生成器和到达间隔生成器，再看 function_trigger 如何提交请求。
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import pickle
 import random
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import simpy
 
-from sim.core import Environment
-from sim.faas import FunctionRequest, FunctionDeployment
+if TYPE_CHECKING:
+    from sim.core import Environment
+    from sim.faas import FunctionDeployment
 
 __all__ = [
     'constant_rps_profile',
@@ -178,6 +182,10 @@ def function_trigger(env: Environment, deployment: FunctionDeployment, ia_genera
 
     业务流程：这是工作负载进入系统的入口，生成请求但不直接等待请求完成。
     """
+    # 只有真正向 FaaS 系统发送请求时才加载完整领域模型。这样仅使用
+    # RPS/到达曲线工具的分析脚本无需同时安装调度、回归模型等重依赖。
+    from sim.faas import FunctionRequest
+
     try:
         if max_requests is None:
             while True:

@@ -1,5 +1,5 @@
 ﻿time,event_type,fault_type,severity,extra_delay,fault_name,target_node,description
-2026-07-07 23:26:18.962158,start,node_outage,hard,0.0,node_outage_server_0,server_0,server_0 在该窗口内不可用，请求快速失败。
-2026-07-07 23:26:18.962503,end,node_outage,hard,0.0,node_outage_server_0,server_0,server_0 在该窗口内不可用，请求快速失败。
-2026-07-07 23:26:18.962771,start,network_degradation,soft,0.45,network_degradation_server_0,server_0,server_0 网络路径退化，请求仍成功但执行时间增加。
-2026-07-07 23:26:18.963903,end,network_degradation,soft,0.45,network_degradation_server_0,server_0,server_0 网络路径退化，请求仍成功但执行时间增加。
+2026-07-11 14:32:29.703342,start,node_outage,hard,0.0,node_outage_server_0,server_0,server_0 在该窗口内不可用，请求快速失败。
+2026-07-11 14:32:29.703342,end,node_outage,hard,0.0,node_outage_server_0,server_0,server_0 在该窗口内不可用，请求快速失败。
+2026-07-11 14:32:29.704338,start,network_degradation,soft,0.45,network_degradation_server_0,server_0,server_0 网络路径退化，请求仍成功但执行时间增加。
+2026-07-11 14:32:29.706331,end,network_degradation,soft,0.45,network_degradation_server_0,server_0,server_0 网络路径退化，请求仍成功但执行时间增加。

@@ -1,10 +1,10 @@
 ﻿time,value,function_name,image,replica_id,node_name,successful
-2026-07-07 18:31:36.066962,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387507104,,
-2026-07-07 18:31:36.067012,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387413264,,
-2026-07-07 18:31:36.067036,start,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387507104,,
-2026-07-07 18:31:36.068577,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387507104,server_0,True
-2026-07-07 18:31:36.068632,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387417424,,
-2026-07-07 18:31:36.069332,start,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387413264,,
-2026-07-07 18:31:36.069570,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387413264,server_0,True
-2026-07-07 18:31:36.069903,start,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387417424,,
-2026-07-07 18:31:36.070084,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,1923387417424,server_0,True
+2026-07-11 14:31:22.675556,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384879632,,
+2026-07-11 14:31:22.675556,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384884432,,
+2026-07-11 14:31:22.675556,start,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384879632,,
+2026-07-11 14:31:22.677550,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384879632,server_0,True
+2026-07-11 14:31:22.677550,queue,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384878672,,
+2026-07-11 14:31:22.677550,start,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384884432,,
+2026-07-11 14:31:22.677550,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384884432,server_0,True
+2026-07-11 14:31:22.678547,start,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384878672,,
+2026-07-11 14:31:22.678547,finish,load-balanced-python-pi,load-balanced-python-pi-cpu,2083384878672,server_0,True

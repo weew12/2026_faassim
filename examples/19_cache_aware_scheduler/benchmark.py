@@ -28,7 +28,8 @@ from sim.faas import (
     FunctionContainer,
     KubernetesResourceConfiguration,
 )
-from sim.requestgen import FunctionRequest as SimFunctionRequest
+
+from sim.faas import FunctionRequest as SimFunctionRequest
 
 from workload import SchedulerRequest
 

@@ -1,5 +1,5 @@
 ﻿name,pod,image,replica_id
-fft,pod-fft-2,fft-cache-aware-cpu,2255235294192
-img-resize,pod-img-resize-2,img-resize-cache-aware-cpu,2255235687216
-json-parse,pod-json-parse-2,json-parse-cache-aware-cpu,2255235635664
-ml-infer,pod-ml-infer-2,ml-infer-cache-aware-cpu,2255235638656
+fft,pod-fft-2,fft-cache-aware-cpu,2193386534848
+img-resize,pod-img-resize-2,img-resize-cache-aware-cpu,2193387520400
+json-parse,pod-json-parse-2,json-parse-cache-aware-cpu,2193387522416
+ml-infer,pod-ml-infer-2,ml-infer-cache-aware-cpu,2193387524288
